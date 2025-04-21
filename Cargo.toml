@@ -4,3 +4,24 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+nalgebra = { version = "0.33.2", features = ["serde-serialize"] }
+num-complex = "0.4.6"
+rand = "0.9.1"
+thiserror = "2.0.12"
+
+# Optimize dependencies in release mode
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true  # Strip symbols from binary
+debug = false
+
+# Development profile with some optimizations but faster compile times
+[profile.dev]
+opt-level = 1  # Basic optimizations without slowing compilation too much
+
+# Enable better error messages in debug builds
+[profile.dev.package."*"]
+debug = true
