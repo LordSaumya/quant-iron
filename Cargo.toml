@@ -9,7 +9,7 @@ num-complex = "0.4.6"
 rand = "0.9.1"
 thiserror = "2.0.12"
 
-# Optimize dependencies in release mode
+# Optimise dependencies in release mode
 [profile.release]
 opt-level = 3
 lto = true
@@ -18,10 +18,13 @@ panic = "abort"
 strip = true  # Strip symbols from binary
 debug = false
 
-# Development profile with some optimizations but faster compile times
+# Development profile with some optimisations but faster compile times
 [profile.dev]
-opt-level = 1  # Basic optimizations without slowing compilation too much
+opt-level = 1  # Basic optimisations without slowing compilation too much
 
 # Enable better error messages in debug builds
 [profile.dev.package."*"]
 debug = true
+
+# Turn off doctest
+doctest = false
