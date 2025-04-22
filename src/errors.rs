@@ -1,4 +1,4 @@
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone, PartialEq)]
 pub enum Error {
     #[error("Invalid number of qubits: {0}")]
     InvalidNumberOfQubits(usize),

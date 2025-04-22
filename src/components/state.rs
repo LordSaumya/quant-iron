@@ -4,6 +4,7 @@ use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct State {
     /// The state vector of the system, represented as a complex vector.
     /// Each element of the vector represents a probability amplitude for a particular state.
@@ -29,7 +30,6 @@ impl State {
     /// * Returns an error if the state vector is empty.
     /// * Returns an error if the state vector is not normalised (i.e., the square norm is not 1).
     /// * Returns an error if the number of qubits is invalid (i.e., the length of the state vector is not a power of 2).
-    /// * Returns an error if the number of qubits is 0.
     pub fn new(state_vector: Vec<Complex<f64>>) -> Result<Self, Error> {
         // Check if the state vector is empty
         if state_vector.is_empty() {
