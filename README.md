@@ -82,4 +82,4 @@ This project is licensed under the [GNU General Public License v3.0](https://www
 - **Hardware Acceleration**: GPU/CUDA or OpenCL support for large-scale state-vector simulations.
 - **Density Matrix Support**: Extend to mixed states and density matrices for more complex quantum systems.
 - **Circuit Visualisation**: Graphical representation of quantum circuits for better understanding and debugging.
-- **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g., QFT, Grover, VQE).
+- **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g., QFT, Grover, VQE). 
