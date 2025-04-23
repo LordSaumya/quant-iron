@@ -520,7 +520,7 @@ impl State {
     /// 
     /// # Arguments
     /// 
-    /// * `qubit` - The index of the qubit to apply the Hadamard gate to.
+    /// * `index` - The index of the qubit to apply the Hadamard gate to.
     /// 
     /// # Returns
     /// 
@@ -529,8 +529,8 @@ impl State {
     /// # Errors
     /// 
     /// * Returns an error if the index is out of bounds for the state vector.
-    pub fn h(&self, qubits: &[usize]) -> Result<Self, Error> {
-        Hadamard{}.apply(self, qubits, None)
+    pub fn h(&self, index: usize) -> Result<Self, Error> {
+        Hadamard{}.apply(self, &[index], None)
     }
 
     /// Applies the Hadamard gate to the specified qubits in the state vector in the given order.
@@ -561,7 +561,7 @@ impl State {
     /// 
     /// # Arguments
     /// 
-    /// * `qubit` - The index of the qubit to apply the Pauli-X gate to.
+    /// * `index` - The index of the qubit to apply the Pauli-X gate to.
     /// 
     /// # Returns
     /// 
@@ -570,8 +570,8 @@ impl State {
     /// # Errors
     /// 
     /// * Returns an error if the index is out of bounds for the state vector.
-    pub fn x(&self, qubits: &[usize]) -> Result<Self, Error> {
-        Pauli::X.apply(self, qubits, None)
+    pub fn x(&self, index: usize) -> Result<Self, Error> {
+        Pauli::X.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
@@ -602,7 +602,7 @@ impl State {
     /// 
     /// # Arguments
     /// 
-    /// * `qubit` - The index of the qubit to apply the Pauli-Y gate to.
+    /// * `index` - The index of the qubit to apply the Pauli-Y gate to.
     /// 
     /// # Returns
     /// 
@@ -611,8 +611,8 @@ impl State {
     /// # Errors
     /// 
     /// * Returns an error if the index is out of bounds for the state vector.
-    pub fn y(&self, qubits: &[usize]) -> Result<Self, Error> {
-        Pauli::Y.apply(self, qubits, None)
+    pub fn y(&self, index: usize) -> Result<Self, Error> {
+        Pauli::Y.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-Y gate to the specified qubits in the state vector in the given order.
@@ -643,7 +643,7 @@ impl State {
     /// 
     /// # Arguments
     /// 
-    /// * `qubit` - The index of the qubit to apply the Pauli-Z gate to.
+    /// * `index` - The index of the qubit to apply the Pauli-Z gate to.
     /// 
     /// # Returns
     /// 
@@ -652,8 +652,8 @@ impl State {
     /// # Errors
     /// 
     /// * Returns an error if the index is out of bounds for the state vector.
-    pub fn z(&self, qubits: &[usize]) -> Result<Self, Error> {
-        Pauli::Z.apply(self, qubits, None)
+    pub fn z(&self, index: usize) -> Result<Self, Error> {
+        Pauli::Z.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-Z gate to the specified qubits in the state vector in the given order.
