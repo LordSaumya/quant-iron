@@ -111,7 +111,7 @@ fn test_state_new_minus_errors() {
 
 #[test]
 fn test_state_probability_success() {
-    let state = State::new_plus(1).unwrap();
+    let state: State = State::new_plus(1).unwrap();
     let expected_probability: f64 = 0.5;
 
     let probability: f64 = state.probability(0).unwrap();
