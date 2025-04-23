@@ -1,6 +1,15 @@
 use crate::components::state::State;
 use std::ops::Deref;
 
+#[derive(Debug, Clone, PartialEq)]
+/// Represents the result of a measurement on a quantum state.
+/// 
+/// # Fields
+/// 
+/// * `basis` - The basis of measurement (e.g., computational basis).
+/// * `indices` - The indices of the measured qubits.
+/// * `outcomes` - The measurement outcomes for the qubits.
+/// * `new_state` - The new state vector after the measurement.
 pub struct MeasurementResult {
     /// The basis of measurement
     pub basis: MeasurementBasis,
@@ -60,6 +69,8 @@ impl MeasurementResult {
     }
 }
 
+/// Represents the basis of measurement for qubits.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MeasurementBasis {
     /// The computational basis |0> and |1>.
     Computational,
