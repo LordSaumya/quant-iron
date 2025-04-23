@@ -5,7 +5,7 @@ use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct State {
     /// The state vector of the system, represented as a complex vector.
     /// Each element of the vector represents a probability amplitude for a particular state.
@@ -735,3 +735,30 @@ impl State {
         Toffoli{}.apply(self, &[target], Some(&[control1, control2]))
     }
 }
+
+impl PartialEq for State {
+    fn eq(&self, other: &Self) -> bool {
+        // Check if the number of qubits is the same
+        if self.num_qubits != other.num_qubits {
+            return false;
+        }
+        
+        // Check if the state vectors have the same length (should be redundant with num_qubits check)
+        if self.state_vector.len() != other.state_vector.len() {
+            return false;
+        }
+        
+        // Check if each element in the state vectors is approximately equal within epsilon
+        for (a, b) in self.state_vector.iter().zip(other.state_vector.iter()) {
+            let real_diff = (a.re - b.re).abs();
+            let imag_diff = (a.im - b.im).abs();
+            
+            if real_diff > f64::EPSILON || imag_diff > f64::EPSILON {
+                return false;
+            }
+        }
+        
+        true
+    }
+}
+
