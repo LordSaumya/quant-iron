@@ -261,30 +261,30 @@ impl State {
                 let probabilities: Vec<f64> = (0..num_outcomes)
                     .into_par_iter()
                     .map(|outcome_val| {
-                    let mut amplitude_sum_sqr: f64 = 0.0;
+                        let mut amplitude_sum_sqr: f64 = 0.0;
 
-                    let mut outcome_base_index = 0;
-                    for (bit_index, &qubit_index) in actual_measured_qubits.iter().enumerate() {
-                        if ((outcome_val >> bit_index) & 1) != 0 {
-                            outcome_base_index |= 1 << qubit_index;
-                        }
-                    }
-
-                    for unmeasured_comb_val in 0..(1 << num_unmeasured) {
-                        let mut unmeasured_part_index = 0;
-                        for (unmeasured_bit_index, &global_qubit_index) in
-                            unmeasured_qubit_indices.iter().enumerate()
-                        {
-                            if ((unmeasured_comb_val >> unmeasured_bit_index) & 1) != 0 {
-                                unmeasured_part_index |= 1 << global_qubit_index;
+                        let mut outcome_base_index = 0;
+                        for (bit_index, &qubit_index) in actual_measured_qubits.iter().enumerate() {
+                            if ((outcome_val >> bit_index) & 1) != 0 {
+                                outcome_base_index |= 1 << qubit_index;
                             }
                         }
-                        // Combine the measured bits (in outcome_base_index) with the unmeasured bits (in unmeasured_part_index)
-                        let basis_state_index: usize = outcome_base_index | unmeasured_part_index;
 
-                        // Add the probability contribution of this matching basis state
-                        amplitude_sum_sqr += self.state_vector[basis_state_index].norm_sqr();
-                    }
+                        for unmeasured_comb_val in 0..(1 << num_unmeasured) {
+                            let mut unmeasured_part_index = 0;
+                            for (unmeasured_bit_index, &global_qubit_index) in
+                                unmeasured_qubit_indices.iter().enumerate()
+                            {
+                                if ((unmeasured_comb_val >> unmeasured_bit_index) & 1) != 0 {
+                                    unmeasured_part_index |= 1 << global_qubit_index;
+                                }
+                            }
+                            // Combine the measured bits (in outcome_base_index) with the unmeasured bits (in unmeasured_part_index)
+                            let basis_state_index: usize = outcome_base_index | unmeasured_part_index;
+
+                            // Add the probability contribution of this matching basis state
+                            amplitude_sum_sqr += self.state_vector[basis_state_index].norm_sqr();
+                        }
                         amplitude_sum_sqr
                     })
                     .collect();
@@ -370,5 +370,59 @@ impl State {
                 })
             }
         }
+    }
+
+    /// Measures the state vector `n` times in the specified basis and returns the measurement results.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `basis` - The basis to measure in.
+    /// * `indices` - The indices of the qubits to measure. If `indices` is empty, all qubits are measured.
+    /// * `n` - The number of measurements to perform.
+    /// 
+    /// # Returns
+    /// 
+    /// * `results` - A result containing a vector of measurement results if successful, or an error if the measurement fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the measurement fails.
+    /// * Returns an error if the number of qubits is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if `n` is 0.
+    pub fn measure_n(
+        &self,
+        basis: MeasurementBasis,
+        measured_qubits: &[usize],
+        n: usize,
+    ) -> Result<Vec<MeasurementResult>, Error> {
+        if n == 0 {
+            return Err(Error::InvalidNumberOfMeasurements(0));
+        }
+
+        // If no indices are provided, measure all qubits
+        let all_indices: Vec<usize> = (0..self.num_qubits).collect();
+        let actual_measured_qubits: &[usize] = if measured_qubits.is_empty() {
+            &all_indices
+        } else {
+            measured_qubits
+        };
+
+        // Check for valid indices
+        let num_measured: usize = actual_measured_qubits.len();
+        if num_measured > self.num_qubits {
+            return Err(Error::InvalidNumberOfQubits(self.num_qubits as usize));
+        }
+        for &index in actual_measured_qubits {
+            if index >= self.num_qubits {
+                return Err(Error::InvalidQubitIndex(index, self.num_qubits));
+            }
+        }
+
+        let results: Vec<MeasurementResult> = (0..n)
+            .into_par_iter()
+            .map(|_| self.measure(basis, actual_measured_qubits))
+            .collect::<Result<Vec<MeasurementResult>, Error>>()?;
+        Ok(results)
     }
 }
