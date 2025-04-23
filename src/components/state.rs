@@ -200,6 +200,36 @@ impl State {
         Ok(amplitude.norm_sqr())
     }
 
+    /// Returns the number of qubits in the state vector.
+    /// 
+    /// # Returns
+    /// 
+    /// * `num_qubits` - The number of qubits in the state vector.
+    pub fn num_qubits(&self) -> usize {
+        self.num_qubits
+    }
+
+    /// Returns the amplitude of the basis state at index `n` in the state vector.
+    ///     
+    /// # Arguments
+    /// 
+    /// * `n` - The index of the basis state to get the amplitude for.
+    /// 
+    /// # Returns
+    /// 
+    /// * `amplitude` - The amplitude of the basis state at index `n`.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if `n` is out of bounds for the state vector.
+    pub fn amplitude(&self, n: usize) -> Result<Complex<f64>, Error> {
+        if n >= self.state_vector.len() {
+            return Err(Error::InvalidQubitIndex(n, self.num_qubits));
+        }
+        Ok(self.state_vector[n])
+    }
+
+
     /// Measures the state vector in the specified basis and returns the measurement result.
     ///
     /// # Arguments
