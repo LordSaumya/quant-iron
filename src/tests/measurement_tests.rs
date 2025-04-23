@@ -1,4 +1,4 @@
-use crate::{errors::Error, components::{measurement::MeasurementResult, measurement::MeasurementBasis, state::State}};
+use crate::{errors::Error, components::{measurement::MeasurementResult, measurement::MeasurementBasis, state::{State, ChainableState}}};
 use num_complex::Complex;
 
 #[test]
