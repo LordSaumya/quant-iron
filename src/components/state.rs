@@ -3,6 +3,7 @@ use crate::errors::Error;
 use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct State {
@@ -218,11 +219,17 @@ impl State {
     pub fn measure(
         &self,
         basis: MeasurementBasis,
-        measured_qubits: Vec<usize>,
+        measured_qubits: &[usize],
     ) -> Result<MeasurementResult, Error> {
         // If no indices are provided, measure all qubits
-        let actual_measured_qubits: Vec<usize> = if measured_qubits.is_empty() {
+        let all_qubits: Vec<usize> = if measured_qubits.is_empty() {
             (0..self.num_qubits).collect()
+        } else {
+            Vec::new()
+        };
+        
+        let actual_measured_qubits: &[usize] = if measured_qubits.is_empty() {
+            &all_qubits
         } else {
             measured_qubits
         };
@@ -232,7 +239,7 @@ impl State {
         if num_measured > self.num_qubits {
             return Err(Error::InvalidNumberOfQubits(self.num_qubits as usize));
         }
-        for &index in &actual_measured_qubits {
+        for &index in actual_measured_qubits {
             if index >= self.num_qubits {
                 return Err(Error::InvalidQubitIndex(index, self.num_qubits));
             }
@@ -241,9 +248,7 @@ impl State {
         match basis {
             MeasurementBasis::Computational => {
                 let num_outcomes: usize = 1 << num_measured;
-                let mut probabilities: Vec<f64> = vec![0.0; num_outcomes];
-
-                let num_unmeasured = self.num_qubits - num_measured;
+                let num_unmeasured: usize = self.num_qubits - num_measured;
 
                 let measured_mask: usize = actual_measured_qubits
                     .iter()
@@ -253,7 +258,9 @@ impl State {
                     .collect();
 
                 // Calculate probabilities for each outcome (outcome as a single integer 0..num_outcomes-1)
-                for outcome_val in 0..num_outcomes {
+                let probabilities: Vec<f64> = (0..num_outcomes)
+                    .into_par_iter()
+                    .map(|outcome_val| {
                     let mut amplitude_sum_sqr: f64 = 0.0;
 
                     let mut outcome_base_index = 0;
@@ -278,17 +285,19 @@ impl State {
                         // Add the probability contribution of this matching basis state
                         amplitude_sum_sqr += self.state_vector[basis_state_index].norm_sqr();
                     }
-                    probabilities[outcome_val] = amplitude_sum_sqr;
-                }
+                        amplitude_sum_sqr
+                    })
+                    .collect();
 
                 // Normalise probabilities
                 let total_probability: f64 = probabilities.iter().sum();
                 if total_probability < f64::EPSILON {
                     return Err(Error::UnknownError);
                 }
-                for prob in &mut probabilities {
-                    *prob /= total_probability;
-                }
+                let normalised_probabilities: Vec<f64> = probabilities
+                    .iter()
+                    .map(|&prob| prob / total_probability)
+                    .collect();
 
                 // Sample an outcome based on the probabilities
                 let mut rng = rand::rng();
@@ -298,7 +307,7 @@ impl State {
                 let mut sampled_outcome_int: usize = 0;
 
                 // Sample loop
-                for (i, &prob) in probabilities.iter().enumerate() {
+                for (i, &prob) in normalised_probabilities.iter().enumerate() {
                     cumulative_probability += prob;
                     // Sample if random_value falls into the cumulative probability bin
                     if random_value < cumulative_probability {
@@ -340,8 +349,7 @@ impl State {
 
                 // Renormalise the new collapsed state vector
                 if normalisation_sq > f64::EPSILON {
-                    // Use a small epsilon for comparison
-                    let norm_factor = normalisation_sq.sqrt();
+                    let norm_factor: f64 = normalisation_sq.sqrt();
                     for amplitude in collapsed_state_data.iter_mut() {
                         *amplitude /= norm_factor;
                     }
@@ -356,7 +364,7 @@ impl State {
                 // Create the measurement result
                 Ok(MeasurementResult {
                     basis,
-                    indices: actual_measured_qubits,
+                    indices: actual_measured_qubits.to_vec(),
                     outcomes: outcome_binary_vec,
                     new_state: State::new(collapsed_state_data)?,
                 })
