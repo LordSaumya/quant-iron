@@ -59,7 +59,7 @@ fn main() {
     let measurement = State::new_plus(2)?
         .h(0)               // Hadamard on qubit 0
         .x(1)               // Pauli-X on qubit 1
-        .h_multi(&[0, 1])  // Hadamard on both qubits
+        .h_multi(&[0, 1])   // Hadamard on both qubits
         .cnot(0, 1)         // CNOT with control=0, target=1
         .measure_n(MeasurementBasis::Computational, &[0, 1], 100)?; // Measure both qubits 100 times
 
