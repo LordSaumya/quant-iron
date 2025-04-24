@@ -153,7 +153,9 @@ impl Operator for Pauli {
                 Pauli::Y => {
                     // Flip target qubit and apply phase
                     let j: usize = i ^ (1 << target_qubit); // Index with the target bit flipped
-                    if target_bit == 0 {
+                    let current_target_bit_value = (i >> target_qubit) & 1; // Check the bit value at index i
+
+                    if current_target_bit_value == 0 {
                         new_state[j] = state.state_vector[i] * Complex::new(0.0, 1.0);
                     } else {
                         new_state[j] = state.state_vector[i] * Complex::new(0.0, -1.0);
@@ -162,7 +164,8 @@ impl Operator for Pauli {
 
                 Pauli::Z => {
                     // Apply a phase to the target qubit if it is 1
-                    if target_bit == 0 {
+                    let current_target_bit_value = (i >> target_qubit) & 1; // Check the bit value at index i
+                    if current_target_bit_value == 0 {
                         new_state[i] = state.state_vector[i]; // No change
                     } else {
                         new_state[i] = -state.state_vector[i]; // Phase flip
