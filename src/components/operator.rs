@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::{errors::Error, components::state::State};
 use num_complex::Complex;
 
@@ -392,5 +394,341 @@ impl Operator for Toffoli {
 
     fn base_qubits(&self) -> usize {
         3 // Toffoli acts on 3 qubits (2 control, 1 target)
+    }
+}
+
+/// Defines an identity operator
+/// 
+/// A single-qubit operator that does not change the state of the qubit.
+#[derive(Debug, Clone, Copy)]
+pub struct Identity;
+
+impl Operator for Identity {
+    /// Applies the identity operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Identity does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the identity operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply identity operator (no change)
+        Ok(state.clone())
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Identity acts on 1 qubit only
+    }
+}
+
+/// Defines a Phase S operator.
+/// 
+/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the S gate or Phase gate.
+#[derive(Debug, Clone, Copy)]
+pub struct PhaseS;
+
+impl Operator for PhaseS {
+    /// Applies the Phase S operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase S does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the Phase S operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply Phase S operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
+
+        for i in 0..dim {
+            let target_bit: usize = (i >> target_qubit) & 1;
+
+            if target_bit == 1 {
+                // Apply phase shift to |1> state
+                new_state[i] = state.state_vector[i] * Complex::new(0.0, 1.0); // Phase shift of pi/2
+            } else {
+                // No change if |0> state
+                new_state[i] = state.state_vector[i];
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Phase S acts on 1 qubit only
+    }
+}
+
+/// Defines a Phase T operator.
+/// 
+/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T gate or π/8 gate.s
+pub struct PhaseT;
+
+impl Operator for PhaseT {
+    /// Applies the Phase T operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase T does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the Phase T operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply Phase T operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
+
+        for i in 0..dim {
+            let target_bit: usize = (i >> target_qubit) & 1;
+
+            if target_bit == 1 {
+                // Apply phase shift to |1> state
+                let invroot2: f64 = 1.0 / (2.0f64).sqrt();
+                new_state[i] = state.state_vector[i] * Complex::new(invroot2, invroot2); // Phase shift of pi/4
+            } else {
+                // No change if |0> state
+                new_state[i] = state.state_vector[i];
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Phase T acts on 1 qubit only
+    }
+}
+
+/// Defines a Phase Sdag operator.
+/// 
+/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the S† gate or Phase† gate. Inverse of S gate.
+#[derive(Debug, Clone, Copy)]
+pub struct PhaseSdag;
+
+impl Operator for PhaseSdag {
+    /// Applies the Phase Sdag operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase Sdag does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the Phase Sdag operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply Phase Sdag operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
+
+        for i in 0..dim {
+            let target_bit: usize = (i >> target_qubit) & 1;
+
+            if target_bit == 1 {
+                // Apply phase shift to |1> state
+                new_state[i] = state.state_vector[i] * Complex::new(0.0, -1.0); // Phase shift of -pi/2
+            } else {
+                // No change if |0> state
+                new_state[i] = state.state_vector[i];
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Phase Sdag acts on 1 qubit only
+    }
+}
+
+/// Defines a Phase Tdag operator.
+/// 
+/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T† gate or π/8† gate. Inverse of T gate.
+pub struct PhaseTdag;
+
+impl Operator for PhaseTdag {
+    /// Applies the Phase Tdag operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase Tdag does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the Phase Tdag operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply Phase Tdag operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
+
+        for i in 0..dim {
+            let target_bit: usize = (i >> target_qubit) & 1;
+
+            if target_bit == 1 {
+                // Apply phase shift to |1> state
+                let invroot2: f64 = 1.0 / (2.0f64).sqrt();
+                new_state[i] = state.state_vector[i] * Complex::new(invroot2, -invroot2); // Phase shift of -pi/4
+            } else {
+                // No change if |0> state
+                new_state[i] = state.state_vector[i];
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Phase Tdag acts on 1 qubit only
+    }
+}
+
+/// Defines the phase shift operator
+/// 
+/// A single-qubit operator that applies a phase shift of the provided angle to the |1> state. Also known as the phase shift gate.
+pub struct PhaseShift {
+    angle: f64,
+}
+
+impl PhaseShift {
+    /// Creates a new PhaseShift operator with the given angle.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `angle` - The angle of the phase shift in radians.
+    pub fn new(angle: f64) -> Self {
+        PhaseShift { angle }
+    }
+}
+
+impl Operator for PhaseShift {
+    /// Applies the phase shift operator to the given state's target qubit.
+    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply phase shift operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
+
+        for i in 0..dim {
+            let target_bit: usize = (i >> target_qubit) & 1;
+
+            if target_bit == 1 {
+                // Apply phase shift to |1> state
+                new_state[i] = state.state_vector[i] * Complex::new(self.angle.cos(), self.angle.sin()); // Phase shift of angle
+            } else {
+                // No change if |0> state
+                new_state[i] = state.state_vector[i];
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // Phase shift acts on 1 qubit only
     }
 }
