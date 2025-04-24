@@ -4,7 +4,7 @@ use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
-use std::ops::Mul;
+use std::ops::{Add, Sub, Mul};
 
 #[derive(Debug, Clone)]
 pub struct State {
@@ -1374,6 +1374,58 @@ impl Mul<State> for Complex<f64> {
         State {
             state_vector: new_state_vector,
             num_qubits: rhs.num_qubits,
+        }
+    }
+}
+
+// Implement addition for State + State
+impl Add<State> for State {
+    type Output = Self;
+
+    /// Adds two state vectors element-wise.
+    /// Panics if the states do not have the same number of qubits.
+    /// Note: This operation typically results in an unnormalised state.
+    fn add(self, rhs: State) -> Self::Output {
+        if self.num_qubits != rhs.num_qubits {
+            panic!("Cannot add states with different numbers of qubits: {} != {}", self.num_qubits, rhs.num_qubits);
+        }
+
+        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+            .into_par_iter()
+            .zip(rhs.state_vector.into_par_iter())
+            .map(|(a, b)| a + b)
+            .collect();
+
+        // Create a new State directly
+        State {
+            state_vector: new_state_vector,
+            num_qubits: self.num_qubits,
+        }
+    }
+}
+
+// Implement subtraction for State - State
+impl Sub<State> for State {
+    type Output = Self;
+
+    /// Subtracts the right-hand state vector from the left-hand state vector element-wise.
+    /// Panics if the states do not have the same number of qubits.
+    /// Note: This operation typically results in an unnormalised state.
+    fn sub(self, rhs: State) -> Self::Output {
+        if self.num_qubits != rhs.num_qubits {
+            panic!("Cannot subtract states with different numbers of qubits: {} != {}", self.num_qubits, rhs.num_qubits);
+        }
+
+        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+            .into_par_iter()
+            .zip(rhs.state_vector.into_par_iter())
+            .map(|(a, b)| a - b)
+            .collect();
+
+        // Create a new State directly
+        State {
+            state_vector: new_state_vector,
+            num_qubits: self.num_qubits,
         }
     }
 }
