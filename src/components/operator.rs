@@ -1,5 +1,3 @@
-use std::f64::consts::PI;
-
 use crate::{errors::Error, components::state::State};
 use num_complex::Complex;
 
@@ -634,7 +632,7 @@ impl Operator for PhaseTdag {
     /// # Returns:
     /// 
     /// * The new state after applying the Phase Tdag operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -730,5 +728,226 @@ impl Operator for PhaseShift {
 
     fn base_qubits(&self) -> usize {
         1 // Phase shift acts on 1 qubit only
+    }
+}
+
+/// Defines the rotate-X operator
+/// 
+/// A single-qubit operator that applies a rotation around the X axis of the Bloch sphere by the given angle. Also known as the RX gate.
+pub struct RotateX {
+    angle: f64,
+}
+
+impl RotateX {
+    /// Creates a new RotateX operator with the given angle.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `angle` - The angle of rotation in radians.
+    pub fn new(angle: f64) -> Self {
+        RotateX { angle }
+    }
+}
+
+impl Operator for RotateX {
+    /// Applies the RotateX operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateX does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the RotateX operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply RotateX operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
+        let half_angle = self.angle / 2.0;
+        let cos_half = half_angle.cos();
+        let sin_half = half_angle.sin();
+        let neg_i_sin_half = Complex::new(0.0, -sin_half);
+
+        for i in 0..dim {
+            if (i >> target_qubit) & 1 == 0 { // Target qubit is |0>
+                let j = i | (1 << target_qubit); // Index where target qubit is |1>
+                let amp_i = state.amplitude(i)?;
+                let amp_j = state.amplitude(j)?;
+
+                new_state[i] = cos_half * amp_i + neg_i_sin_half * amp_j;
+                new_state[j] = neg_i_sin_half * amp_i + cos_half * amp_j;
+            }
+            // Handle pairs of indices, so skip when bit = 1.
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // RotateX acts on 1 qubit only
+    }
+}
+
+/// Defines the rotate-Y operator
+/// 
+/// A single-qubit operator that applies a rotation around the Y axis of the Bloch sphere by the given angle. Also known as the RY gate.
+pub struct RotateY {
+    angle: f64,
+}
+
+impl RotateY {
+    /// Creates a new RotateY operator with the given angle.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `angle` - The angle of rotation in radians.
+    pub fn new(angle: f64) -> Self {
+        RotateY { angle }
+    }
+}
+
+impl Operator for RotateY {
+    /// Applies the RotateY operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateY does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the RotateY operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply RotateY operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
+        let half_angle = self.angle / 2.0;
+        let cos_half = half_angle.cos();
+        let sin_half = half_angle.sin();
+
+        for i in 0..dim {
+            if (i >> target_qubit) & 1 == 0 { // Target qubit is |0>
+                let j = i | (1 << target_qubit); // Index where target qubit is |1>
+                let amp_i = state.amplitude(i)?;
+                let amp_j = state.amplitude(j)?;
+
+                new_state[i] = cos_half * amp_i - sin_half * amp_j;
+                new_state[j] = sin_half * amp_i + cos_half * amp_j;
+            }
+            // Handle pairs of indices, so skip when bit = 1.
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // RotateY acts on 1 qubit only
+    }
+}
+
+/// Defines the rotate-Z operator
+/// 
+/// A single-qubit operator that applies a rotation around the Z axis of the Bloch sphere by the given angle. Also known as the RZ gate.
+pub struct RotateZ {
+    angle: f64,
+}
+
+impl RotateZ {
+    /// Creates a new RotateZ operator with the given angle.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `angle` - The angle of rotation in radians.
+    pub fn new(angle: f64) -> Self {
+        RotateZ { angle }
+    }
+}
+
+impl Operator for RotateZ {
+    /// Applies the RotateZ operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateZ does not require control qubits.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the RotateZ operator.
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+        // Validation
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let target_qubit: usize = target_qubits[0];
+
+        if target_qubit >= state.num_qubits() {
+            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
+        }
+
+        // Apply RotateZ operator
+        let dim: usize = 1 << state.num_qubits();
+        let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
+        let half_angle = self.angle / 2.0;
+        let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin()); // exp(-i*theta/2)
+        let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());  // exp(i*theta/2)
+
+        for i in 0..dim {
+            let target_bit_is_set = (i >> target_qubit) & 1 == 1;
+
+            if target_bit_is_set {
+                new_state[i] = state.state_vector[i] * phase_1;
+            } else {
+                new_state[i] = state.state_vector[i] * phase_0;
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state,
+            num_qubits: state.num_qubits(),
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1 // RotateZ acts on 1 qubit only
     }
 }
