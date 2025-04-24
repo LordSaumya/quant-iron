@@ -808,61 +808,17 @@ pub trait ChainableState {
     fn measure_n(self, basis: MeasurementBasis, measured_qubits: &[usize], n: usize) -> Result<Vec<MeasurementResult>, Error>;
 }
 
+macro_rules! impl_chainable_state {
+    ($($method:ident($($arg:ident: $arg_type:ty),*) -> $return_type:ty);* $(;)?) => {
 impl ChainableState for Result<State, Error> {
-    fn h(self, index: usize) -> Result<State, Error> {
-        self.and_then(|state| state.h(index))
+            $(
+                fn $method(self, $($arg: $arg_type),*) -> $return_type {
+                    self.and_then(|state| state.$method($($arg),*))
     }
-    
-    fn h_multi(self, qubits: &[usize]) -> Result<State, Error> {
-        self.and_then(|state| state.h_multi(qubits))
-    }
-    
-    fn x(self, index: usize) -> Result<State, Error> {
-        self.and_then(|state| state.x(index))
-    }
-    
-    fn x_multi(self, qubits: &[usize]) -> Result<State, Error> {
-        self.and_then(|state| state.x_multi(qubits))
-    }
-    
-    fn y(self, index: usize) -> Result<State, Error> {
-        self.and_then(|state| state.y(index))
-    }
-    
-    fn y_multi(self, qubits: &[usize]) -> Result<State, Error> {
-        self.and_then(|state| state.y_multi(qubits))
-    }
-    
-    fn z(self, index: usize) -> Result<State, Error> {
-        self.and_then(|state| state.z(index))
-    }
-    
-    fn z_multi(self, qubits: &[usize]) -> Result<State, Error> {
-        self.and_then(|state| state.z_multi(qubits))
-    }
-    
-    fn cnot(self, control: usize, target: usize) -> Result<State, Error> {
-        self.and_then(|state| state.cnot(control, target))
-    }
-    
-    fn swap(self, qubit1: usize, qubit2: usize) -> Result<State, Error> {
-        self.and_then(|state| state.swap(qubit1, qubit2))
-    }
-    
-    fn toffoli(self, control1: usize, control2: usize, target: usize) -> Result<State, Error> {
-        self.and_then(|state| state.toffoli(control1, control2, target))
-    }
-    
-    fn operate(self, unitary: impl Operator, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error> {
-        self.and_then(|state| state.operate(unitary, target_qubits, control_qubits))
-    }
-    
-    fn measure(self, basis: MeasurementBasis, measured_qubits: &[usize]) -> Result<MeasurementResult, Error> {
-        self.and_then(|state| state.measure(basis, measured_qubits))
-    }
-    
-    fn measure_n(self, basis: MeasurementBasis, measured_qubits: &[usize], n: usize) -> Result<Vec<MeasurementResult>, Error> {
-        self.and_then(|state| state.measure_n(basis, measured_qubits, n))
+            )*
+        }
+    };
+}
     }
 }
 
