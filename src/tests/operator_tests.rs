@@ -12,8 +12,7 @@ fn test_state_hadamard_success() {
     let plus_state: State = State::new_plus(1).unwrap();
     let minus_state: State = State::new_minus(1).unwrap();
 
-    assert_eq!(zero_state.h(0).x(0)
-    .unwrap(), plus_state);
+    assert_eq!(zero_state.h(0).unwrap(), plus_state);
     assert_eq!(one_state.h(0).unwrap(), minus_state);
     assert_eq!(plus_state.h(0).unwrap(), zero_state);
     assert_eq!(minus_state.h(0).unwrap(), one_state);
