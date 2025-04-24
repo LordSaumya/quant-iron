@@ -4,6 +4,7 @@ use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
+use std::ops::Mul;
 
 #[derive(Debug, Clone)]
 pub struct State {
@@ -1293,4 +1294,86 @@ impl_chainable_state! {
     operate(unitary: impl Operator, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     measure(basis: MeasurementBasis, measured_qubits: &[usize]) -> Result<MeasurementResult, Error>;
     measure_n(basis: MeasurementBasis, measured_qubits: &[usize], n: usize) -> Result<Vec<MeasurementResult>, Error>;
+}
+
+// Implement multiplication by Complex<f64>
+impl Mul<Complex<f64>> for State {
+    type Output = Self;
+
+    /// Multiplies each amplitude in the state vector by a complex scalar.
+    /// Note: This operation typically results in an unnormalised state.
+    fn mul(self, rhs: Complex<f64>) -> Self::Output {
+        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+            .into_par_iter() // Use parallel iterator for potential performance gain
+            .map(|amplitude| amplitude * rhs)
+            .collect();
+
+        // Create a new State directly, bypassing the normalization check in `new`
+        State {
+            state_vector: new_state_vector,
+            num_qubits: self.num_qubits,
+        }
+    }
+}
+
+// Implement multiplication by f64
+impl Mul<f64> for State {
+    type Output = Self;
+
+    /// Multiplies each amplitude in the state vector by a real scalar.
+    /// Note: This operation typically results in an unnormalised state.
+    fn mul(self, rhs: f64) -> Self::Output {
+        let complex_rhs = Complex::new(rhs, 0.0); // Convert f64 to Complex<f64>
+        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+            .into_par_iter() // Use parallel iterator
+            .map(|amplitude| amplitude * complex_rhs)
+            .collect();
+
+        // Create a new State directly
+        State {
+            state_vector: new_state_vector,
+            num_qubits: self.num_qubits,
+        }
+    }
+}
+
+// Implement multiplication State = f64 * State
+impl Mul<State> for f64 {
+    type Output = State;
+
+    /// Multiplies each amplitude in the state vector by a real scalar from the left.
+    /// Note: This operation typically results in an unnormalised state.
+    fn mul(self, rhs: State) -> Self::Output {
+        let complex_lhs = Complex::new(self, 0.0); // Convert f64 to Complex<f64>
+        let new_state_vector: Vec<Complex<f64>> = rhs.state_vector
+            .into_par_iter() // Use parallel iterator
+            .map(|amplitude| complex_lhs * amplitude)
+            .collect();
+
+        // Create a new State directly
+        State {
+            state_vector: new_state_vector,
+            num_qubits: rhs.num_qubits,
+        }
+    }
+}
+
+// Implement multiplication State = Complex<f64> * State
+impl Mul<State> for Complex<f64> {
+    type Output = State;
+
+    /// Multiplies each amplitude in the state vector by a complex scalar from the left.
+    /// Note: This operation typically results in an unnormalised state.
+    fn mul(self, rhs: State) -> Self::Output {
+        let new_state_vector: Vec<Complex<f64>> = rhs.state_vector
+            .into_par_iter() // Use parallel iterator
+            .map(|amplitude| self * amplitude)
+            .collect();
+
+        // Create a new State directly
+        State {
+            state_vector: new_state_vector,
+            num_qubits: rhs.num_qubits,
+        }
+    }
 }
