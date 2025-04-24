@@ -1,4 +1,4 @@
-use crate::components::{measurement::{MeasurementBasis, MeasurementResult}, operator::{Operator, Hadamard, Pauli, CNOT, SWAP, Toffoli, Identity, PhaseS, PhaseT, PhaseSdag, PhaseTdag, PhaseShift}};
+use crate::components::{measurement::{MeasurementBasis, MeasurementResult}, operator::{Operator, Hadamard, Pauli, CNOT, SWAP, Toffoli, Identity, PhaseS, PhaseT, PhaseSdag, PhaseTdag, PhaseShift, RotateX, RotateY, RotateZ}};
 use crate::errors::Error;
 use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
@@ -931,6 +931,138 @@ impl State {
         Ok(new_state)
     }
 
+    /// Applies the RotateX gate with the specified angle to the given qubit.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the qubit to apply the RotateX gate to.
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the index is out of bounds for the state vector.
+    pub fn rx(&self, index: usize, angle: f64) -> Result<Self, Error> {
+        RotateX::new(angle).apply(self, &[index], None)
+    }
+
+    /// Applies the RotateX gate with the specified angle to the given qubits in order.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubits` - The indices of the qubits to apply the RotateX gate to.
+    /// 
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// 
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    pub fn rx_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_x_gate: RotateX = RotateX::new(angle);
+        for &qubit in qubits {
+            new_state = rotate_x_gate.apply(&new_state, &[qubit], None)?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the RotateY gate with the specified angle to the given qubit.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the qubit to apply the RotateY gate to.
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the index is out of bounds for the state vector.
+    pub fn ry(&self, index: usize, angle: f64) -> Result<Self, Error> {
+        RotateY::new(angle).apply(self, &[index], None)
+    }
+
+    /// Applies the RotateY gate with the specified angle to the given qubits in order.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubits` - The indices of the qubits to apply the RotateY gate to.
+    /// 
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// 
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    pub fn ry_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_y_gate: RotateY = RotateY::new(angle);
+        for &qubit in qubits {
+            new_state = rotate_y_gate.apply(&new_state, &[qubit], None)?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the RotateZ gate with the specified angle to the given qubit.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the qubit to apply the RotateZ gate to.
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the index is out of bounds for the state vector.
+    pub fn rz(&self, index: usize, angle: f64) -> Result<Self, Error> {
+        RotateZ::new(angle).apply(self, &[index], None)
+    }
+
+    /// Applies the RotateZ gate with the specified angle to the given qubits in order.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubits` - The indices of the qubits to apply the RotateZ gate to.
+    /// 
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// 
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    pub fn rz_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_z_gate: RotateZ = RotateZ::new(angle);
+        for &qubit in qubits {
+            new_state = rotate_z_gate.apply(&new_state, &[qubit], None)?;
+        }
+        Ok(new_state)
+    }
+
     // -- MULTI-QUBIT GATES --
 
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
@@ -1075,6 +1207,21 @@ pub trait ChainableState {
     /// Applies the Phase Shift gate with the specified angle to the given qubits in order.
     fn p_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
 
+    /// Applies the RotateX gate with the specified angle to the given qubit.
+    fn rx(self, index: usize, angle: f64) -> Result<State, Error>;
+    /// Applies the RotateX gate with the specified angle to the given qubits in order.
+    fn rx_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
+
+    /// Applies the RotateY gate with the specified angle to the given qubit.
+    fn ry(self, index: usize, angle: f64) -> Result<State, Error>;
+    /// Applies the RotateY gate with the specified angle to the given qubits in order.
+    fn ry_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
+
+    /// Applies the RotateZ gate with the specified angle to the given qubit.
+    fn rz(self, index: usize, angle: f64) -> Result<State, Error>;
+    /// Applies the RotateZ gate with the specified angle to the given qubits in order.
+    fn rz_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
+
     // -- MULTI-QUBIT GATES --
     
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
@@ -1132,6 +1279,12 @@ impl_chainable_state! {
     t_dag_multi(qubits: &[usize]) -> Result<State, Error>;
     p(index: usize, angle: f64) -> Result<State, Error>;
     p_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    rx(index: usize, angle: f64) -> Result<State, Error>;
+    rx_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    ry(index: usize, angle: f64) -> Result<State, Error>;
+    ry_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    rz(index: usize, angle: f64) -> Result<State, Error>;
+    rz_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
     cnot(control: usize, target: usize) -> Result<State, Error>;

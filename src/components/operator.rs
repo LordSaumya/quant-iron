@@ -692,7 +692,7 @@ impl PhaseShift {
 
 impl Operator for PhaseShift {
     /// Applies the phase shift operator to the given state's target qubit.
-    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
