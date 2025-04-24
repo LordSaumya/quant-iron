@@ -201,6 +201,7 @@ version = "0.1.0"
 dependencies = [
  "nalgebra",
  "num-complex",
+ "paste",
  "rand",
  "rayon",
  "thiserror",
