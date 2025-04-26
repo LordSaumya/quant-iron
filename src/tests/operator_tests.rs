@@ -5,7 +5,7 @@ use crate::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
             PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
         },
-        state::{self, State},
+        state::State,
     },
     errors::Error,
 };
