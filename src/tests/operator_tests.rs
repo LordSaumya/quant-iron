@@ -10,9 +10,13 @@ use crate::{
             PhaseT,
             PhaseSdag,
             PhaseTdag,
+            PhaseShift,
             RotateX,
             RotateY,
             RotateZ,
+            CNOT,
+            SWAP,
+            Toffoli,
         },
         state::State,
     },
@@ -351,7 +355,7 @@ fn test_operator_phase_shift_success() {
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
-    assert_eq!(PhaseS{}.base_qubits(), 1);
+    assert_eq!(PhaseShift::new(theta).base_qubits(), 1);
 }
 
 #[test]
@@ -475,7 +479,12 @@ fn test_operator_rotate_z_success() {
     assert_eq!(RotateZ::new(theta).base_qubits(), 1);
 }
 
+// -- MULTI-QUBIT OPERATORS --
 
+#[test]
+fn test_operator_cnot_success() {
+    // 
+}
 
 // -- TEST ALL ERRORS --
 
