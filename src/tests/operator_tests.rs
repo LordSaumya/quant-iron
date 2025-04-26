@@ -8,6 +8,11 @@ use crate::{
             Pauli,
             PhaseS,
             PhaseT,
+            PhaseSdag,
+            PhaseTdag,
+            RotateX,
+            RotateY,
+            RotateZ,
         },
         state::State,
     },
@@ -16,8 +21,9 @@ use crate::{
 use num_complex::Complex;
 use std::f64::consts::PI;
 
+// -- SINGLE-QUBIT OPERATORS --
 #[test]
-fn test_state_hadamard_success() {
+fn test_operator_hadamard_success() {
     // h(|0>) = |+>
     // h(|1>) = |->
     // h(|+>) = |0>
@@ -44,7 +50,7 @@ fn test_state_hadamard_success() {
 }
 
 #[test]
-fn test_state_pauli_x_success() {
+fn test_operator_pauli_x_success() {
     // x(|0>) = |1>
     // x(|1>) = |0>
     // x(|+>) = |+> (|+> is an eigenstate of X with eigenvalue = +1)
@@ -74,7 +80,7 @@ fn test_state_pauli_x_success() {
 }
 
 #[test]
-fn test_state_pauli_y_success() {
+fn test_operator_pauli_y_success() {
     //  y(|0>) = i|1>
     //  y(|1>) = -i|0>
     //  y(|+>) = -i|->
@@ -108,7 +114,7 @@ fn test_state_pauli_y_success() {
 }
 
 #[test]
-fn test_state_pauli_success() {
+fn test_operator_pauli_success() {
     // z(|0>) = |0> (|0> is an eigenstate of Z with eigenvalue = +1)
     // z(|1>) = -|1> (|1> is an eigenstate of Z with eigenvalue = -1)
     // z(|+>) = |->
@@ -138,7 +144,7 @@ fn test_state_pauli_success() {
 }
 
 #[test]
-fn test_state_identity_success() {
+fn test_operator_identity_success() {
     // i(|0>) = |0>
     // i(|1>) = |1>
     // i(|+>) = |+>
@@ -164,7 +170,7 @@ fn test_state_identity_success() {
 }
 
 #[test]
-fn test_state_phase_s_success() {
+fn test_operator_phase_s_success() {
     // s(|0>) = |0>
     // s(|1>) = i|1>
     // s(|+>) = 1/sqrt(2)(|0> + i|1>)
@@ -195,7 +201,7 @@ fn test_state_phase_s_success() {
 }
 
 #[test]
-fn test_state_phase_t_success() {
+fn test_operator_phase_t_success() {
     // t(|0>) = |0>
     // t(|1>) = e^(i*PI/4)|1>
     // t(|+>) = 1/sqrt(2)(|0> + e^(i*PI/4)|1>)
@@ -224,6 +230,252 @@ fn test_state_phase_t_success() {
     // Base qubits = 1
     assert_eq!(PhaseT{}.base_qubits(), 1);
 }
+
+#[test]
+fn test_operator_s_dag_success() {
+    // s_dag(|0>) = |0>
+    // s_dag(|1>) = -i|1>
+    // s_dag(|+>) = 1/sqrt(2)(|0> - i|1>)
+    // s_dag(|->) = 1/sqrt(2)(|0> + i|1>)
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let i: Complex<f64> = Complex::new(0.0, 1.0);
+    let neg_i: Complex<f64> = Complex::new(0.0, -1.0);
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+
+    let expected_one: State = neg_i * one_state.clone();
+    let expected_plus: State = invrt2 * (zero_state.clone() - i * one_state.clone());
+    let expected_minus: State = invrt2 * (zero_state.clone() + i * one_state.clone());
+
+    assert_eq!(zero_state.s_dag(0).unwrap(), zero_state.clone());
+    assert_eq!(one_state.s_dag(0).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.s_dag(0).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.s_dag(0).unwrap(), expected_minus.clone());
+
+    // s_dag(|00>) = |00>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.s_dag_multi(&[0, 1]).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // s_dag(s(|+>)) = |+> (S_dag is inverse of S)
+    let new_state: State = plus_state.s(0).s_dag(0).unwrap();
+    assert_eq!(new_state, plus_state);
+
+    // Base qubits = 1
+    assert_eq!(PhaseSdag{}.base_qubits(), 1);
+}
+
+#[test]
+fn test_operator_t_dag_success() {
+    // t_dag(|0>) = |0>
+    // t_dag(|1>) = e^(-i*PI/4)|1>
+    // t_dag(|+>) = 1/sqrt(2)(|0> + e^(-i*PI/4)|1>)
+    // t_dag(|->) = 1/sqrt(2)(|0> - e^(-i*PI/4)|1>)
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let enegipi4: Complex<f64> = Complex::new(0.0, -PI / 4.0).exp();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+
+    let expected_one: State = enegipi4 * one_state.clone();
+    let expected_plus: State = invrt2 * (zero_state.clone() + enegipi4 * one_state.clone());
+    let expected_minus: State = invrt2 * (zero_state.clone() - enegipi4 * one_state.clone());
+
+    assert_eq!(zero_state.t_dag(0).unwrap(), zero_state.clone());
+    assert_eq!(one_state.t_dag(0).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.t_dag(0).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.t_dag(0).unwrap(), expected_minus.clone());
+
+    // t_dag(|00>) = |00>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.t_dag_multi(&[0, 1]).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // t_dag(t(|+>)) = |+> (T_dag is inverse of T)
+    let new_state: State = plus_state.t(0).t_dag(0).unwrap();
+    assert_eq!(new_state, plus_state);
+
+    // Base qubits = 1
+    assert_eq!(PhaseTdag{}.base_qubits(), 1);
+}
+
+#[test]
+fn test_operator_phase_shift_success() {
+    // p(|0>) = |0>
+    // p(|1>) = e^(i*theta)|1>
+    // p(|+>) = 1/sqrt(2)(|0> + e^(i*theta)|1>)
+    // p(|->) = 1/sqrt(2)(|0> - e^(i*theta)|1>) 
+
+    let theta: f64 = PI / 2.5; // Example angle
+
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let eitheta: Complex<f64> = Complex::new(0.0, theta).exp();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+
+    let expected_one: State = eitheta * one_state.clone();
+    let expected_plus: State = invrt2 * (zero_state.clone() + eitheta * one_state.clone());
+    let expected_minus: State = invrt2 * (zero_state.clone() - eitheta * one_state.clone());
+
+    assert_eq!(zero_state.p(0, theta).unwrap(), zero_state.clone());
+    assert_eq!(one_state.p(0, theta).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.p(0, theta).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.p(0, theta).unwrap(), expected_minus.clone());
+
+    // p(|+>, Pi/2) = s(|+>), p(|+>, -Pi/2) = s_dag(|+>)
+    let new_state: State = plus_state.p(0, -PI / 2.0).unwrap();
+    assert_eq!(new_state, plus_state.s_dag(0).unwrap());
+    let new_state: State = plus_state.p(0, PI / 2.0).unwrap();
+    assert_eq!(new_state, plus_state.s(0).unwrap());
+
+    // p(|+>, pi/4) = t(|+>), p(|+>, -pi/4) = t_dag(|+>)
+    let new_state: State = plus_state.p(0, -PI / 4.0).unwrap();
+    assert_eq!(new_state, plus_state.t_dag(0).unwrap());
+    let new_state: State = plus_state.p(0, PI / 4.0).unwrap();
+    assert_eq!(new_state, plus_state.t(0).unwrap());
+
+    // p(|00>) = |00>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.p_multi(&[0, 1], theta).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 1
+    assert_eq!(PhaseS{}.base_qubits(), 1);
+}
+
+#[test]
+fn test_operator_rotate_x_success() {
+    // rx(|0>) = cos(theta/2)|0> - i*sin(theta/2)|1>
+    // rx(|1>) = -isin(theta/2)|0> + cos(theta/2)|1>
+    // rx(|+>) = e^(-i*theta/2)|+>
+    // rx(|->) = e^(i*theta/2)|->
+    let theta: f64 = PI / 2.5; // Example angle
+
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let cos_half_theta: f64 = (theta/2.0).cos();
+    let sin_half_theta: f64 = (theta/2.0).sin();
+    let eimhalf_theta: Complex<f64> = Complex::new(0.0, -theta / 2.0).exp();
+    let eimhalf_theta_conj: Complex<f64> = Complex::new(0.0, theta / 2.0).exp();
+    let i: Complex<f64> = Complex::new(0.0, 1.0);
+
+    let expected_zero: State = cos_half_theta * zero_state.clone() + i * -sin_half_theta * one_state.clone();
+    let expected_one: State = -i * sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
+    let expected_plus: State = eimhalf_theta * plus_state.clone();
+    let expected_minus: State = eimhalf_theta_conj * minus_state.clone();
+
+    assert_eq!(zero_state.rx(0, theta).unwrap(), expected_zero.clone());
+    assert_eq!(one_state.rx(0, theta).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.rx(0, theta).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.rx(0, theta).unwrap(), expected_minus.clone());
+
+    // rx(|00>) = cos^2(theta/2)|00> - i*cos(theta/2)*sin(theta/2)|01> - i*cos(theta/2)*sin(theta/2)|10> - sin^2(theta/2)|11>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.rx_multi(&[0, 1], theta).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap() * cos_half_theta * cos_half_theta
+        + State::new_basis_n(2, 1).unwrap() * -i * cos_half_theta * sin_half_theta
+        + State::new_basis_n(2, 2).unwrap() * -i * cos_half_theta * sin_half_theta
+        + State::new_basis_n(2, 3).unwrap() * -sin_half_theta * sin_half_theta;
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 1
+    assert_eq!(RotateX::new(theta).base_qubits(), 1);
+}
+
+#[test]
+fn test_operator_rotate_y_success() {
+    // ry(|0>) = cos(theta/2)|0> + sin(theta/2)|1>
+    // ry(|1>) = -sin(theta/2)|0> + cos(theta/2)|1>
+    // ry(|+>) = 1/rt2((cos(theta/2) + sin(theta/2))|0> + (cos(theta/2) - sin(theta/2))|1>)
+    // ry(|->) = 1/rt2((cos(theta/2) - sin(theta/2))|0> + (cos(theta/2) + sin(theta/2))|1>)
+
+    let theta: f64 = PI / 2.5; // Example angle
+
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let cos_half_theta: f64 = (theta/2.0).cos();
+    let sin_half_theta: f64 = (theta/2.0).sin();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+
+    let expected_zero: State = cos_half_theta * zero_state.clone() + sin_half_theta * one_state.clone();
+    let expected_one: State = -sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
+    let expected_plus: State = invrt2 * ((cos_half_theta - sin_half_theta) * zero_state.clone() + (cos_half_theta + sin_half_theta) * one_state.clone());
+    let expected_minus: State = invrt2 * ((cos_half_theta + sin_half_theta) * zero_state.clone() - (cos_half_theta - sin_half_theta) * one_state.clone());
+
+    assert_eq!(zero_state.ry(0, theta).unwrap(), expected_zero.clone());
+    assert_eq!(one_state.ry(0, theta).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.ry(0, theta).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.ry(0, theta).unwrap(), expected_minus.clone());
+
+    // ry(|00>) = cos^2(theta/2)|00> + sin(theta/2)*cos(theta/2)|01> + sin(theta/2)*cos(theta/2)|10> + sin^2(theta/2)|11>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.ry_multi(&[0, 1], theta).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap() * cos_half_theta * cos_half_theta
+        + State::new_basis_n(2, 1).unwrap() * sin_half_theta * cos_half_theta
+        + State::new_basis_n(2, 2).unwrap() * sin_half_theta * cos_half_theta
+        + State::new_basis_n(2, 3).unwrap() * sin_half_theta * sin_half_theta;
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 1
+    assert_eq!(RotateY::new(theta).base_qubits(), 1);
+}
+
+#[test]
+fn test_operator_rotate_z_success() {
+    // rz(|0>) = e^(-i*theta/2)|0>
+    // rz(|1>) = e^(i*theta/2)|1>
+    // rz(|+>) = 1/rt2 * (e^(-i*theta/2) |0> + e^(i*theta/2) |1>)
+    // rz(|->) = 1/rt2 * (e^(-i*theta/2) |0> - e^(i*theta/2) |1>)
+
+    let theta: f64 = PI / 2.5; // Example angle
+    
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let eimhalf_theta: Complex<f64> = Complex::new(0.0, -theta / 2.0).exp();
+    let eimhalf_theta_conj: Complex<f64> = Complex::new(0.0, theta / 2.0).exp();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+
+    let expected_zero: State = eimhalf_theta * zero_state.clone();
+    let expected_one: State = eimhalf_theta_conj * one_state.clone();
+    let expected_plus: State = invrt2 * (eimhalf_theta * zero_state.clone() + eimhalf_theta_conj * one_state.clone());
+    let expected_minus: State = invrt2 * (eimhalf_theta * zero_state.clone() - eimhalf_theta_conj * one_state.clone());
+
+    assert_eq!(zero_state.rz(0, theta).unwrap(), expected_zero.clone());
+    assert_eq!(one_state.rz(0, theta).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.rz(0, theta).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.rz(0, theta).unwrap(), expected_minus.clone());
+
+    // rz(|00>) = e^(-i*theta)|00>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.rz_multi(&[0, 1], theta).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap() * eimhalf_theta * eimhalf_theta;
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 1
+    assert_eq!(RotateZ::new(theta).base_qubits(), 1);
+}
+
+
 
 // -- TEST ALL ERRORS --
 
