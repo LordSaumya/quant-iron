@@ -2,23 +2,10 @@ use crate::{
     components::{
         ChainableState,
         operator::{
-            Hadamard,
-            Identity,
-            Operator,
-            Pauli,
-            PhaseS,
-            PhaseT,
-            PhaseSdag,
-            PhaseTdag,
-            PhaseShift,
-            RotateX,
-            RotateY,
-            RotateZ,
-            CNOT,
-            SWAP,
-            Toffoli,
+            CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
+            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
         },
-        state::State,
+        state::{self, State},
     },
     errors::Error,
 };
@@ -201,7 +188,7 @@ fn test_operator_phase_s_success() {
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
-    assert_eq!(PhaseS{}.base_qubits(), 1);
+    assert_eq!(PhaseS {}.base_qubits(), 1);
 }
 
 #[test]
@@ -232,7 +219,7 @@ fn test_operator_phase_t_success() {
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
-    assert_eq!(PhaseT{}.base_qubits(), 1);
+    assert_eq!(PhaseT {}.base_qubits(), 1);
 }
 
 #[test]
@@ -270,7 +257,7 @@ fn test_operator_s_dag_success() {
     assert_eq!(new_state, plus_state);
 
     // Base qubits = 1
-    assert_eq!(PhaseSdag{}.base_qubits(), 1);
+    assert_eq!(PhaseSdag {}.base_qubits(), 1);
 }
 
 #[test]
@@ -307,7 +294,7 @@ fn test_operator_t_dag_success() {
     assert_eq!(new_state, plus_state);
 
     // Base qubits = 1
-    assert_eq!(PhaseTdag{}.base_qubits(), 1);
+    assert_eq!(PhaseTdag {}.base_qubits(), 1);
 }
 
 #[test]
@@ -315,7 +302,7 @@ fn test_operator_phase_shift_success() {
     // p(|0>) = |0>
     // p(|1>) = e^(i*theta)|1>
     // p(|+>) = 1/sqrt(2)(|0> + e^(i*theta)|1>)
-    // p(|->) = 1/sqrt(2)(|0> - e^(i*theta)|1>) 
+    // p(|->) = 1/sqrt(2)(|0> - e^(i*theta)|1>)
 
     let theta: f64 = PI / 2.5; // Example angle
 
@@ -371,14 +358,16 @@ fn test_operator_rotate_x_success() {
     let plus_state: State = State::new_plus(1).unwrap();
     let minus_state: State = State::new_minus(1).unwrap();
 
-    let cos_half_theta: f64 = (theta/2.0).cos();
-    let sin_half_theta: f64 = (theta/2.0).sin();
+    let cos_half_theta: f64 = (theta / 2.0).cos();
+    let sin_half_theta: f64 = (theta / 2.0).sin();
     let eimhalf_theta: Complex<f64> = Complex::new(0.0, -theta / 2.0).exp();
     let eimhalf_theta_conj: Complex<f64> = Complex::new(0.0, theta / 2.0).exp();
     let i: Complex<f64> = Complex::new(0.0, 1.0);
 
-    let expected_zero: State = cos_half_theta * zero_state.clone() + i * -sin_half_theta * one_state.clone();
-    let expected_one: State = -i * sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
+    let expected_zero: State =
+        cos_half_theta * zero_state.clone() + i * -sin_half_theta * one_state.clone();
+    let expected_one: State =
+        -i * sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
     let expected_plus: State = eimhalf_theta * plus_state.clone();
     let expected_minus: State = eimhalf_theta_conj * minus_state.clone();
 
@@ -414,14 +403,20 @@ fn test_operator_rotate_y_success() {
     let plus_state: State = State::new_plus(1).unwrap();
     let minus_state: State = State::new_minus(1).unwrap();
 
-    let cos_half_theta: f64 = (theta/2.0).cos();
-    let sin_half_theta: f64 = (theta/2.0).sin();
+    let cos_half_theta: f64 = (theta / 2.0).cos();
+    let sin_half_theta: f64 = (theta / 2.0).sin();
     let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
 
-    let expected_zero: State = cos_half_theta * zero_state.clone() + sin_half_theta * one_state.clone();
-    let expected_one: State = -sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
-    let expected_plus: State = invrt2 * ((cos_half_theta - sin_half_theta) * zero_state.clone() + (cos_half_theta + sin_half_theta) * one_state.clone());
-    let expected_minus: State = invrt2 * ((cos_half_theta + sin_half_theta) * zero_state.clone() - (cos_half_theta - sin_half_theta) * one_state.clone());
+    let expected_zero: State =
+        cos_half_theta * zero_state.clone() + sin_half_theta * one_state.clone();
+    let expected_one: State =
+        -sin_half_theta * zero_state.clone() + cos_half_theta * one_state.clone();
+    let expected_plus: State = invrt2
+        * ((cos_half_theta - sin_half_theta) * zero_state.clone()
+            + (cos_half_theta + sin_half_theta) * one_state.clone());
+    let expected_minus: State = invrt2
+        * ((cos_half_theta + sin_half_theta) * zero_state.clone()
+            - (cos_half_theta - sin_half_theta) * one_state.clone());
 
     assert_eq!(zero_state.ry(0, theta).unwrap(), expected_zero.clone());
     assert_eq!(one_state.ry(0, theta).unwrap(), expected_one.clone());
@@ -449,7 +444,7 @@ fn test_operator_rotate_z_success() {
     // rz(|->) = 1/rt2 * (e^(-i*theta/2) |0> - e^(i*theta/2) |1>)
 
     let theta: f64 = PI / 2.5; // Example angle
-    
+
     let zero_state: State = State::new_zero(1).unwrap();
     let one_state: State = State::new_basis_n(1, 1).unwrap();
     let plus_state: State = State::new_plus(1).unwrap();
@@ -461,8 +456,10 @@ fn test_operator_rotate_z_success() {
 
     let expected_zero: State = eimhalf_theta * zero_state.clone();
     let expected_one: State = eimhalf_theta_conj * one_state.clone();
-    let expected_plus: State = invrt2 * (eimhalf_theta * zero_state.clone() + eimhalf_theta_conj * one_state.clone());
-    let expected_minus: State = invrt2 * (eimhalf_theta * zero_state.clone() - eimhalf_theta_conj * one_state.clone());
+    let expected_plus: State =
+        invrt2 * (eimhalf_theta * zero_state.clone() + eimhalf_theta_conj * one_state.clone());
+    let expected_minus: State =
+        invrt2 * (eimhalf_theta * zero_state.clone() - eimhalf_theta_conj * one_state.clone());
 
     assert_eq!(zero_state.rz(0, theta).unwrap(), expected_zero.clone());
     assert_eq!(one_state.rz(0, theta).unwrap(), expected_one.clone());
@@ -483,7 +480,157 @@ fn test_operator_rotate_z_success() {
 
 #[test]
 fn test_operator_cnot_success() {
-    // 
+    // cnot(control = 0, target = 1)
+    // |00> -> |00>
+    let state: State = State::new_zero(2).unwrap();
+    let new_state: State = state.cnot(0, 1).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |01> -> |01>
+    let state: State = State::new_basis_n(2, 2).unwrap();
+    let new_state: State = state.cnot(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |10> -> |11>
+    let state: State = State::new_basis_n(2, 1).unwrap();
+    let new_state: State = state.cnot(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 3).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |11> -> |10>
+    let state: State = State::new_basis_n(2, 3).unwrap();
+    let new_state: State = state.cnot(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 1).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |+0> -> 1/rt2 * (|00> + |11>)
+    let state: State =
+        1.0 / 2.0_f64.sqrt() * (State::new_zero(2).unwrap() + State::new_basis_n(2, 1).unwrap());
+    let new_state: State = state.cnot(0, 1).unwrap();
+    let expected_state: State = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0)
+        * (State::new_basis_n(2, 0).unwrap() + State::new_basis_n(2, 3).unwrap());
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 2
+    assert_eq!(CNOT.base_qubits(), 2);
+}
+
+#[test]
+// Test SWAP gate
+fn test_operator_swap_success() {
+    // swap(q1 = 0, q2 = 1)
+    // |00> -> |00>
+    let state: State = State::new_zero(2).unwrap();
+    let new_state: State = state.swap(0, 1).unwrap();
+    let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |01> -> |10>
+    let state: State = State::new_basis_n(2, 2).unwrap();
+    let new_state: State = state.swap(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 1).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |10> -> |01>
+    let state: State = State::new_basis_n(2, 1).unwrap();
+    let new_state: State = state.swap(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |11> -> |11>
+    let state: State = State::new_basis_n(2, 3).unwrap();
+    let new_state: State = state.swap(0, 1).unwrap();
+    let expected_state: State = State::new_basis_n(2, 3).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |+-> -> |-+>
+    let state: State = 1.0 / 2.0
+        * (State::new_zero(2).unwrap() - State::new_basis_n(2, 1).unwrap()
+            + State::new_basis_n(2, 2).unwrap()
+            - State::new_basis_n(2, 3).unwrap());
+    let new_state: State = state.swap(0, 1).unwrap();
+    let expected_state: State = 1.0 / 2.0
+        * (State::new_zero(2).unwrap() + State::new_basis_n(2, 1).unwrap()
+            - State::new_basis_n(2, 2).unwrap()
+            - State::new_basis_n(2, 3).unwrap());
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 2
+    assert_eq!(SWAP.base_qubits(), 2);
+}
+
+#[test]
+fn test_operator_toffoli_success() {
+    // Toffoli gate (CCNOT) with control qubits 0 and 1, target qubit 2
+    // |000> -> |000>
+    let state: State = State::new_zero(3).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_zero(3).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |001> -> |001>
+    let state: State = State::new_basis_n(3, 1).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 1).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |010> -> |010>
+    let state: State = State::new_basis_n(3, 2).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |011> -> |111>
+    let state: State = State::new_basis_n(3, 3).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 7).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |100> -> |100>
+    let state: State = State::new_basis_n(3, 4).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 4).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |101> -> |101>
+    let state: State = State::new_basis_n(3, 5).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 5).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |110> -> |110>
+    let state: State = State::new_basis_n(3, 6).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 6).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // |111> -> |011>
+    let state: State = State::new_basis_n(3, 7).unwrap();
+    let new_state: State = state.toffoli(0, 1, 2).unwrap();
+    let expected_state: State = State::new_basis_n(3, 3).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 3
+    assert_eq!(Toffoli.base_qubits(), 3);
+}
+
+#[test]
+fn test_operate_operate_success() {
+    // Test operate function with a single qubit gate and existing operator
+    let h: Hadamard = Hadamard {};
+    let state: State = State::new_zero(1).unwrap();
+    let new_state: State = state.operate(h, &[0], &[]).unwrap();
+    let expected_state: State = State::new_plus(1).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // Test operate function with a multi-qubit gate and existing operator
+    let cnot: CNOT = CNOT {};
+    let state: State = State::new_basis_n(2, 1).unwrap();
+    let new_state: State = state.operate(cnot, &[1], &[0]).unwrap();
+    let expected_state: State = State::new_basis_n(2, 3).unwrap();
+    assert_eq!(new_state, expected_state);
 }
 
 // -- TEST ALL ERRORS --
