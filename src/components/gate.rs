@@ -1,0 +1,554 @@
+use crate::{
+    components::{
+        measurement::MeasurementBasis,
+        operator::{
+            Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
+            PhaseTdag, RotateX, RotateY, RotateZ,
+        },
+        state::State,
+    },
+    errors::Error,
+};
+
+/// Represents a quantum gate as part of a quantum circuit.
+pub enum Gate {
+    /// Represents an operator gate.
+    ///
+    /// # Fields
+    ///
+    /// * `operator` - A boxed dynamic operator trait object.
+    ///
+    /// * `target_indices` - The indices of the qubits on which the operator acts.
+    ///
+    /// * `control_indices` - Optional control qubit indices for controlled gates.
+    Operator(Box<dyn Operator>, Vec<usize>, Option<Vec<usize>>),
+
+    /// Represents a measurement gate.
+    ///
+    /// # Fields
+    ///
+    /// * `MeasurementBasis` - The basis of measurement (e.g., computational basis).
+    /// * `indices` - The indices of the measured qubits.
+    Measurement(MeasurementBasis, Vec<usize>),
+}
+
+impl Gate {
+    /// Creates a new measurement gate for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits to be measured.
+    /// * `basis` - The basis of measurement (e.g., computational basis).
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a measurement gate.
+    pub fn new_measurement(qubit_indices: Vec<usize>, basis: MeasurementBasis) -> Self {
+        Gate::Measurement(basis, qubit_indices)
+    }
+
+    /// Creates a new operator gate for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `operator` - A boxed dynamic operator trait object.
+    ///
+    /// * `target_indices` - The indices of the qubits on which the operator acts.
+    ///
+    /// * `control_indices` - Optional control qubit indices for controlled gates.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing an operator gate.
+    pub fn new_operator(
+        operator: Box<dyn Operator>,
+        target_indices: Vec<usize>,
+        control_indices: Option<Vec<usize>>,
+    ) -> Self {
+        Gate::Operator(operator, target_indices, control_indices)
+    }
+
+    /// Applies the gate to the given state and returns the new state.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` - The quantum state to which the gate will be applied.
+    ///
+    /// # Returns
+    ///
+    /// * `State` - The new quantum state after applying the gate.
+    pub fn apply(&self, state: &State) -> Result<State, Error> {
+        match self {
+            Gate::Operator(operator, target_indices, control_indices) => {
+                operator.apply(state, target_indices, control_indices.as_deref())
+            }
+            Gate::Measurement(basis, indices) => state
+                .measure(*basis, indices.as_slice())
+                .map(|measurementresult| measurementresult.get_new_state().clone()),
+        }
+    }
+
+    /// Returns the indices of the qubits on which the gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<usize>` - A vector of indices of the qubits on which the gate acts.
+    pub fn get_target_qubits(&self) -> &Vec<usize> {
+        match self {
+            Gate::Operator(_, target_indices, _) => target_indices,
+            Gate::Measurement(_, indices) => indices,
+        }
+    }
+
+    /// Returns the control indices of the gate if it has any.
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Vec<usize>>` - An optional vector of control indices.
+    pub fn get_control_qubits(&self) -> Option<&Vec<usize>> {
+        match self {
+            Gate::Operator(_, _, control_indices) => control_indices.as_ref(),
+            Gate::Measurement(_, _) => None,
+        }
+    }
+
+    // -- SINGLE-QUBIT GATES --
+
+    /// Creates a new Hadamard gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Hadamard gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Hadamard gate.
+    pub fn h_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Hadamard), vec![qubit_index], None)
+    }
+
+    /// Creates new Hadamard gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Hadamard gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gates` - A vector of Gate structs representing Hadamard gates for each qubit index.
+    pub fn h_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::h_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Pauli-X gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Pauli-X gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Pauli-X gate.
+    pub fn x_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Pauli::X), vec![qubit_index], None)
+    }
+
+    /// Creates new Pauli-X gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Pauli-X gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Pauli-X gates for each qubit index.
+    pub fn x_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::x_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Pauli-Y gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Pauli-Y gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Pauli-Y gate.
+    pub fn y_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Pauli::Y), vec![qubit_index], None)
+    }
+
+    /// Creates new Pauli-Y gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Pauli-Y gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Pauli-Y gates for each qubit index.
+    pub fn y_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::y_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Pauli-Z gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Pauli-Z gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Pauli-Z gate.
+    pub fn z_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Pauli::Z), vec![qubit_index], None)
+    }
+
+    /// Creates new Pauli-Z gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Pauli-Z gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Pauli-Z gates for each qubit index.
+    pub fn z_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::z_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Identity gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Identity gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing an Identity gate.
+    pub fn i_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Identity), vec![qubit_index], None)
+    }
+
+    /// Creates new Identity gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Identity gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Identity gates for each qubit index.
+    pub fn i_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::i_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Phase-S gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Phase-S gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Phase-S gate.
+    pub fn s_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(PhaseS), vec![qubit_index], None)
+    }
+
+    /// Creates new Phase-S gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Phase-S gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Phase-S gates for each qubit index.
+    pub fn s_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::s_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Phase-S dagger gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Phase-S dagger gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Phase-S dagger gate.
+    pub fn s_dag_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(PhaseSdag), vec![qubit_index], None)
+    }
+
+    /// Creates new Phase-S dagger gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Phase-S dagger gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Phase-S dagger gates for each qubit index.
+    pub fn s_dag_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::s_dag_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Phase-T gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Phase-T gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Phase-T gate.
+    pub fn t_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(PhaseT), vec![qubit_index], None)
+    }
+
+    /// Creates new Phase-T gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Phase-T gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Phase-T gates for each qubit index.
+    pub fn t_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::t_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Phase-T dagger gate for the specified qubit index.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Phase-T dagger gate acts.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Phase-T dagger gate.
+    pub fn t_dag_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(PhaseTdag), vec![qubit_index], None)
+    }
+
+    /// Creates new Phase-T dagger gates for the specified qubit indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Phase-T dagger gates act.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Phase-T dagger gates for each qubit index.
+    pub fn t_dag_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::t_dag_gate(qubit_index))
+            .collect()
+    }
+
+    /// Creates a new Phase Shift (P) gate for the specified qubit index and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Phase Shift gate acts.
+    /// * `angle` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Phase Shift gate.
+    pub fn p_gate(qubit_index: usize, angle: f64) -> Self {
+        Gate::Operator(Box::new(PhaseShift::new(angle)), vec![qubit_index], None)
+    }
+
+    /// Creates new Phase Shift (P) gates for the specified qubit indices and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Phase Shift gates act.
+    /// * `angle` - The phase shift angle in radians for all gates.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Phase Shift gates for each qubit index.
+    pub fn p_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::p_gate(qubit_index, angle))
+            .collect()
+    }
+
+    /// Creates a new RotateX (RX) gate for the specified qubit index and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the RotateX gate acts.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a RotateX gate.
+    pub fn rx_gate(qubit_index: usize, angle: f64) -> Self {
+        Gate::Operator(Box::new(RotateX::new(angle)), vec![qubit_index], None)
+    }
+
+    /// Creates new RotateX (RX) gates for the specified qubit indices and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the RotateX gates act.
+    /// * `angle` - The rotation angle in radians for all gates.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing RotateX gates for each qubit index.
+    pub fn rx_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::rx_gate(qubit_index, angle))
+            .collect()
+    }
+
+    /// Creates a new RotateY (RY) gate for the specified qubit index and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the RotateY gate acts.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a RotateY gate.
+    pub fn ry_gate(qubit_index: usize, angle: f64) -> Self {
+        Gate::Operator(Box::new(RotateY::new(angle)), vec![qubit_index], None)
+    }
+
+    /// Creates new RotateY (RY) gates for the specified qubit indices and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the RotateY gates act.
+    /// * `angle` - The rotation angle in radians for all gates.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing RotateY gates for each qubit index.
+    pub fn ry_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::ry_gate(qubit_index, angle))
+            .collect()
+    }
+
+    /// Creates a new RotateZ (RZ) gate for the specified qubit index and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the RotateZ gate acts.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a RotateZ gate.
+    pub fn rz_gate(qubit_index: usize, angle: f64) -> Self {
+        Gate::Operator(Box::new(RotateZ::new(angle)), vec![qubit_index], None)
+    }
+
+    /// Creates new RotateZ (RZ) gates for the specified qubit indices and angle.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the RotateZ gates act.
+    /// * `angle` - The rotation angle in radians for all gates.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing RotateZ gates for each qubit index.
+    pub fn rz_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::rz_gate(qubit_index, angle))
+            .collect()
+    }
+
+    // -- MULTI-QUBIT GATES --
+
+    /// Creates a CNOT gate for the specified target and control qubit indices.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target_index` - The index of the target qubit.
+    /// 
+    /// * `control_index` - The index of the control qubit.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gate` - A new instance of the Gate struct representing a CNOT gate.
+    pub fn cnot_gate(target_index: usize, control_index: usize) -> Self {
+        Gate::Operator(
+            Box::new(Pauli::X),
+            vec![target_index],
+            Some(vec![control_index]),
+        )
+    }
+
+    /// Creates a new SWAP gate for the specified qubit index.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubit_index` - The index of the qubit on which the SWAP gate acts.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gate` - A new instance of the Gate struct representing a SWAP gate.
+    pub fn swap_gate(qubit_index: usize) -> Self {
+        Gate::Operator(Box::new(Pauli::X), vec![qubit_index], None)
+    }
+
+    /// Creates a new Toffoli gate for the specified target and control qubit indices.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target_index` - The index of the target qubit.
+    /// 
+    /// * `control_indices` - The indices of the control qubits.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gate` - A new instance of the Gate struct representing a Toffoli gate.
+    pub fn toffoli_gate(target_index: usize, control_indices: Vec<usize>) -> Self {
+        Gate::Operator(
+            Box::new(Pauli::X),
+            vec![target_index],
+            Some(control_indices),
+        )
+    }
+}
