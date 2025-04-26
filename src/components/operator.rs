@@ -141,8 +141,6 @@ impl Operator for Pauli {
         let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
 
         for i in 0..dim {
-            let target_bit: usize = 1 << target_qubit;
-
             match self {
                 Pauli::X => {
                     // Swap the amplitudes of the target qubit
