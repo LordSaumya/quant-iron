@@ -92,7 +92,7 @@ impl Gate {
     ///
     /// # Returns
     ///
-    /// * `Vec<usize>` - A vector of indices of the qubits on which the gate acts.
+    /// * `&Vec<usize>` - A vector of indices of the qubits on which the gate acts.
     pub fn get_target_qubits(&self) -> &Vec<usize> {
         match self {
             Gate::Operator(_, target_indices, _) => target_indices,
@@ -104,7 +104,7 @@ impl Gate {
     ///
     /// # Returns
     ///
-    /// * `Option<Vec<usize>>` - An optional vector of control indices.
+    /// * `Option<&Vec<usize>>` - An optional vector of control indices.
     pub fn get_control_qubits(&self) -> Option<&Vec<usize>> {
         match self {
             Gate::Operator(_, _, control_indices) => control_indices.as_ref(),
