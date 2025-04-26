@@ -229,12 +229,11 @@ impl Operator for CNOT {
         let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim as usize];
 
         for i in 0..dim {
-            let target_bit: usize = 1 << target_qubit;
             let control_bit: usize = (i >> control_qubit) & 1;
 
             if control_bit == 1 {
                 // Flip the target qubit if the control qubit is 1
-                let j: usize = i ^ (1 << target_bit); // Index with the target bit flipped
+                let j: usize = i ^ (1 << target_qubit); // Index with the target bit flipped
                 new_state[j] = state.state_vector[i]; // Swap the amplitudes
             } else {
                 // No change if control qubit is 0
