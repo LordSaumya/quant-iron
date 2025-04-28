@@ -54,7 +54,7 @@ cargo add quant-iron
 
 ```rust
 
-fn main() {
+fn qubits() {
     // Initialise a 2-qubit |++> state
     let measurement = State::new_plus(2)?
         .h(0)               // Hadamard on qubit 0
@@ -66,6 +66,21 @@ fn main() {
     println!("Measurement results: {:?}", measurement.outcomes); // Print the outcomes
     println!("New state: {:?}", measurement.new_state); // Print the new state after measurement
 }
+
+fn circuits() {
+  // Build a circuit with 3 qubits
+  let circuit = CircuitBuilder::new(3)
+    .h_gate(0)                                                  // Add a Hadamard gate on qubit 0
+    .cnot_gate(0, 1)                                            // Add a CNOT gate with control=0 and target=1
+    .x_gates(vec![1, 2])                                        // Add Pauli-X gates on qubits 1 and 2
+    .measure_gate(MeasurementBasis::Computational, vec![0, 1])  // Measure qubits 0 and 1
+    .build();                                                   // Build the circuit
+
+  let result = circuit.execute(State::new_plus(3)?);        // Execute the circuit on the |++> state
+  println!("Circuit result: {:?}", result);                 // Print the result of the circuit execution
+  println!("New state: {:?}", result.new_state);           // Print the new state after execution
+}
+
 ```
 
 ---
@@ -78,7 +93,7 @@ This project is licensed under the [GNU General Public License v3.0](https://www
 
 ## Future Plans
 
-- **Circuit Builder API**: High-level abstractions for constructing and managing quantum circuits.
+- **Measurement Bases**: Support for arbitrary measurement bases beyond the computational basis.
 - **Hardware Acceleration**: GPU/CUDA or OpenCL support for large-scale state-vector simulations.
 - **Density Matrix Support**: Extend to mixed states and density matrices for more complex quantum systems.
 - **Circuit Visualisation**: Graphical representation of quantum circuits for better understanding and debugging.
