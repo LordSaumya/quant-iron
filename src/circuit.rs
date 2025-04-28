@@ -3,12 +3,12 @@ use rayon::vec;
 use crate::{
     components::{
         gate::Gate,
+        measurement::MeasurementBasis,
         operator::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
             PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
         },
         state::State,
-        measurement::MeasurementBasis,
     },
     errors::Error,
 };
@@ -262,9 +262,9 @@ impl CircuitBuilder {
     }
 
     /// Adds multiple Hadamard gates to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - A vector of indices of the qubits to which the Hadamard gates will be applied.
     pub fn h_gates(&mut self, qubits: Vec<usize>) {
         let gates: Vec<Gate> = Gate::h_multi_gate(qubits);
@@ -272,9 +272,9 @@ impl CircuitBuilder {
     }
 
     /// Adds a Pauli-X gate to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubit` - The index of the qubit to which the Pauli-X gate will be applied.
     pub fn x_gate(&mut self, qubit: usize) {
         let gate: Gate = Gate::x_gate(qubit);
@@ -282,9 +282,9 @@ impl CircuitBuilder {
     }
 
     /// Adds multiple Pauli-X gates to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - A vector of indices of the qubits to which the Pauli-X gates will be applied.
     pub fn x_gates(&mut self, qubits: Vec<usize>) {
         let gates: Vec<Gate> = Gate::x_multi_gate(qubits);
@@ -561,13 +561,13 @@ impl CircuitBuilder {
     }
 
     /// Adds a custom operator gate to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `operator` - The operator to be added to the circuit builder.
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - An optional vector of indices of the control qubits.
-    /// 
+    ///
     /// # Returns
     pub fn add_operator_gate(
         &mut self,
@@ -580,17 +580,13 @@ impl CircuitBuilder {
     }
 
     /// Adds a measurement gate to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `basis` - The measurement basis (e.g., computational).
-    /// 
+    ///
     /// * `qubits` - A vector of indices of the qubits to be measured.
-    pub fn measure_gate(
-        &mut self,
-        basis: MeasurementBasis,
-        qubits: Vec<usize>,
-    ) {
+    pub fn measure_gate(&mut self, basis: MeasurementBasis, qubits: Vec<usize>) {
         let gate: Gate = Gate::Measurement(basis, qubits);
         self.add_gate(gate);
     }

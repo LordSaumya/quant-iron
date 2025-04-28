@@ -1,10 +1,16 @@
-use crate::components::{measurement::{MeasurementBasis, MeasurementResult}, operator::{Operator, Hadamard, Pauli, CNOT, SWAP, Toffoli, Identity, PhaseS, PhaseT, PhaseSdag, PhaseTdag, PhaseShift, RotateX, RotateY, RotateZ}};
+use crate::components::{
+    measurement::{MeasurementBasis, MeasurementResult},
+    operator::{
+        CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
+        PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
+    },
+};
 use crate::errors::Error;
 use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, Clone)]
 pub struct State {
@@ -202,9 +208,9 @@ impl State {
     }
 
     /// Returns the number of qubits in the state vector.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `num_qubits` - The number of qubits in the state vector.
     pub fn num_qubits(&self) -> usize {
         self.num_qubits
@@ -213,15 +219,15 @@ impl State {
     /// Returns the amplitude of the basis state at index `n` in the state vector.
     ///     
     /// # Arguments
-    /// 
+    ///
     /// * `n` - The index of the basis state to get the amplitude for.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `amplitude` - The amplitude of the basis state at index `n`.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if `n` is out of bounds for the state vector.
     pub fn amplitude(&self, n: usize) -> Result<Complex<f64>, Error> {
         if n >= self.state_vector.len() {
@@ -259,7 +265,7 @@ impl State {
         } else {
             Vec::new()
         };
-        
+
         let actual_measured_qubits: &[usize] = if measured_qubits.is_empty() {
             &all_qubits
         } else {
@@ -312,7 +318,8 @@ impl State {
                                 }
                             }
                             // Combine the measured bits (in outcome_base_index) with the unmeasured bits (in unmeasured_part_index)
-                            let basis_state_index: usize = outcome_base_index | unmeasured_part_index;
+                            let basis_state_index: usize =
+                                outcome_base_index | unmeasured_part_index;
 
                             // Add the probability contribution of this matching basis state
                             amplitude_sum_sqr += self.state_vector[basis_state_index].norm_sqr();
@@ -405,19 +412,19 @@ impl State {
     }
 
     /// Measures the state vector `n` times in the specified basis and returns the measurement results.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `basis` - The basis to measure in.
     /// * `indices` - The indices of the qubits to measure. If `indices` is empty, all qubits are measured.
     /// * `n` - The number of measurements to perform.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `results` - A result containing a vector of measurement results if successful, or an error if the measurement fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the measurement fails.
     /// * Returns an error if the number of qubits is invalid.
     /// * Returns an error if the indices are out of bounds for the state vector.
@@ -461,25 +468,25 @@ impl State {
     // ***** OPERATION FUNCTIONS *****
 
     /// Applies a unitary operation to the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `unitary` - The unitary operation to apply, represented as an `Operator` trait object.
-    /// 
+    ///
     /// * target_qubits - The indices of the qubits to apply the unitary operation to.
-    /// 
+    ///
     /// * control_qubits - The indices of the control qubits for the unitary operation, if any.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the unitary operation is invalid.
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn operate(
         &self,
@@ -490,11 +497,9 @@ impl State {
         // Check for valid indices
         let num_target: usize = target_qubits.len();
         let num_control: usize = control_qubits.len();
-        
+
         if unitary.base_qubits() != (num_target + num_control) {
-            return Err(Error::InvalidNumberOfQubits(
-                unitary.base_qubits() as usize,
-            ));
+            return Err(Error::InvalidNumberOfQubits(unitary.base_qubits() as usize));
         }
 
         if num_target > self.num_qubits {
@@ -520,40 +525,40 @@ impl State {
     // -- SINGLE-QUBIT GATES --
 
     /// Applies the Hadamard gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Hadamard gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn h(&self, index: usize) -> Result<Self, Error> {
-        Hadamard{}.apply(self, &[index], None)
+        Hadamard {}.apply(self, &[index], None)
     }
 
     /// Applies the Hadamard gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Hadamard gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// * # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn h_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let h: Hadamard = Hadamard{};
+        let h: Hadamard = Hadamard {};
         for &qubit in qubits {
             new_state = h.apply(&new_state, &[qubit], None)?;
         }
@@ -561,36 +566,36 @@ impl State {
     }
 
     /// Applies the Pauli-X (NOT) gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Pauli-X gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn x(&self, index: usize) -> Result<Self, Error> {
         Pauli::X.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Pauli-X gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn x_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -602,36 +607,36 @@ impl State {
     }
 
     /// Applies the Pauli-Y gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Pauli-Y gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn y(&self, index: usize) -> Result<Self, Error> {
         Pauli::Y.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-Y gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Pauli-Y gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn y_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -643,36 +648,36 @@ impl State {
     }
 
     /// Applies the Pauli-Z gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Pauli-Z gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn z(&self, index: usize) -> Result<Self, Error> {
         Pauli::Z.apply(self, &[index], None)
     }
 
     /// Applies the Pauli-Z gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Pauli-Z gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn z_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -684,40 +689,40 @@ impl State {
     }
 
     /// Applies the Identity gate to the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubit` - The index of the qubit to apply the Identity gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn i(&self, qubit: usize) -> Result<Self, Error> {
-        Identity{}.apply(self, &[qubit], None)
+        Identity {}.apply(self, &[qubit], None)
     }
 
     /// Applies the Identity gate to the state vector for multiple qubits in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Identity gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn i_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let i: Identity = Identity{};
+        let i: Identity = Identity {};
         for &qubit in qubits {
             new_state = i.apply(&new_state, &[qubit], None)?;
         }
@@ -725,40 +730,40 @@ impl State {
     }
 
     /// Applies the Phase S gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Phase S gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn s(&self, index: usize) -> Result<Self, Error> {
-        PhaseS{}.apply(self, &[index], None)
+        PhaseS {}.apply(self, &[index], None)
     }
 
     /// Applies the Phase S gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Phase S gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn s_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let s_gate: PhaseS = PhaseS{};
+        let s_gate: PhaseS = PhaseS {};
         for &qubit in qubits {
             new_state = s_gate.apply(&new_state, &[qubit], None)?;
         }
@@ -766,40 +771,40 @@ impl State {
     }
 
     /// Applies the Phase T gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Phase T gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn t(&self, index: usize) -> Result<Self, Error> {
-        PhaseT{}.apply(self, &[index], None)
+        PhaseT {}.apply(self, &[index], None)
     }
 
     /// Applies the Phase T gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Phase T gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn t_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let t_gate: PhaseT = PhaseT{};
+        let t_gate: PhaseT = PhaseT {};
         for &qubit in qubits {
             new_state = t_gate.apply(&new_state, &[qubit], None)?;
         }
@@ -807,40 +812,40 @@ impl State {
     }
 
     /// Applies the Phase S dagger gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Phase S dagger gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn s_dag(&self, index: usize) -> Result<Self, Error> {
-        PhaseSdag{}.apply(self, &[index], None)
+        PhaseSdag {}.apply(self, &[index], None)
     }
 
     /// Applies the Phase S dagger gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Phase S dagger gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn s_dag_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let sdag_gate: PhaseSdag = PhaseSdag{};
+        let sdag_gate: PhaseSdag = PhaseSdag {};
         for &qubit in qubits {
             new_state = sdag_gate.apply(&new_state, &[qubit], None)?;
         }
@@ -848,40 +853,40 @@ impl State {
     }
 
     /// Applies the Phase T dagger gate to the specified qubit in the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Phase T dagger gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn t_dag(&self, index: usize) -> Result<Self, Error> {
-        PhaseTdag{}.apply(self, &[index], None)
+        PhaseTdag {}.apply(self, &[index], None)
     }
 
     /// Applies the Phase T dagger gate to the specified qubits in the state vector in the given order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Phase T dagger gate to.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn t_dag_multi(&self, qubits: &[usize]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let tdag_gate: PhaseTdag = PhaseTdag{};
+        let tdag_gate: PhaseTdag = PhaseTdag {};
         for &qubit in qubits {
             new_state = tdag_gate.apply(&new_state, &[qubit], None)?;
         }
@@ -889,39 +894,39 @@ impl State {
     }
 
     /// Applies the Phase Shift gate with the specified angle to the given qubit.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the Phase Shift gate to.
     /// * `angle` - The phase shift angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn p(&self, index: usize, angle: f64) -> Result<Self, Error> {
         PhaseShift::new(angle).apply(self, &[index], None)
     }
 
     /// Applies the Phase Shift gate with the specified angle to the given qubits in order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the Phase Shift gate to.
-    /// 
+    ///
     /// * `angle` - The phase shift angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn p_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -933,39 +938,39 @@ impl State {
     }
 
     /// Applies the RotateX gate with the specified angle to the given qubit.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the RotateX gate to.
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn rx(&self, index: usize, angle: f64) -> Result<Self, Error> {
         RotateX::new(angle).apply(self, &[index], None)
     }
 
     /// Applies the RotateX gate with the specified angle to the given qubits in order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the RotateX gate to.
-    /// 
+    ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn rx_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -977,39 +982,39 @@ impl State {
     }
 
     /// Applies the RotateY gate with the specified angle to the given qubit.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the RotateY gate to.
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn ry(&self, index: usize, angle: f64) -> Result<Self, Error> {
         RotateY::new(angle).apply(self, &[index], None)
     }
 
     /// Applies the RotateY gate with the specified angle to the given qubits in order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the RotateY gate to.
-    /// 
+    ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn ry_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -1021,39 +1026,39 @@ impl State {
     }
 
     /// Applies the RotateZ gate with the specified angle to the given qubit.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the qubit to apply the RotateZ gate to.
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn rz(&self, index: usize, angle: f64) -> Result<Self, Error> {
         RotateZ::new(angle).apply(self, &[index], None)
     }
 
     /// Applies the RotateZ gate with the specified angle to the given qubits in order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the RotateZ gate to.
-    /// 
+    ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn rz_multi(&self, qubits: &[usize], angle: f64) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
@@ -1067,58 +1072,58 @@ impl State {
     // -- MULTI-QUBIT GATES --
 
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `control` - The index of the control qubit.
     /// * `target` - The index of the target qubit.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn cnot(&self, control: usize, target: usize) -> Result<Self, Error> {
-        CNOT{}.apply(self, &[target], Some(&[control]))
+        CNOT {}.apply(self, &[target], Some(&[control]))
     }
 
     /// Applies the SWAP gate to the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubit1` - The index of the first qubit to swap.
     /// * `qubit2` - The index of the second qubit to swap.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn swap(&self, qubit1: usize, qubit2: usize) -> Result<Self, Error> {
-        SWAP{}.apply(self, &[qubit1, qubit2], None)
+        SWAP {}.apply(self, &[qubit1, qubit2], None)
     }
 
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `control1` - The index of the first control qubit.
     /// * `control2` - The index of the second control qubit.
     /// * `target` - The index of the target qubit.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn toffoli(&self, control1: usize, control2: usize, target: usize) -> Result<Self, Error> {
-        Toffoli{}.apply(self, &[target], Some(&[control1, control2]))
+        Toffoli {}.apply(self, &[target], Some(&[control1, control2]))
     }
 }
 
@@ -1128,26 +1133,25 @@ impl PartialEq for State {
         if self.num_qubits != other.num_qubits {
             return false;
         }
-        
+
         // Check if the state vectors have the same length (should be redundant with num_qubits check)
         if self.state_vector.len() != other.state_vector.len() {
             return false;
         }
-        
+
         // Check if each element in the state vectors is approximately equal within epsilon
         for (a, b) in self.state_vector.iter().zip(other.state_vector.iter()) {
             let real_diff = (a.re - b.re).abs();
             let imag_diff = (a.im - b.im).abs();
-            
+
             if real_diff > f64::EPSILON || imag_diff > f64::EPSILON {
                 return false;
             }
         }
-        
+
         true
     }
 }
-
 
 /// A trait to enable chainable operations on Result<State, Error>
 pub trait ChainableState {
@@ -1155,25 +1159,25 @@ pub trait ChainableState {
 
     /// Applies the Hadamard gate to the specified qubit in the state vector.
     fn h(self, index: usize) -> Result<State, Error>;
-    
+
     /// Applies the Hadamard gate to the specified qubits in the state vector in the given order.
     fn h_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-X (NOT) gate to the specified qubit in the state vector.
     fn x(self, index: usize) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
     fn x_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-Y gate to the specified qubit in the state vector.
     fn y(self, index: usize) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-Y gate to the specified qubits in the state vector in the given order.
     fn y_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-Z gate to the specified qubit in the state vector.
     fn z(self, index: usize) -> Result<State, Error>;
-    
+
     /// Applies the Pauli-Z gate to the specified qubits in the state vector in the given order.
     fn z_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
@@ -1187,22 +1191,22 @@ pub trait ChainableState {
     fn s(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase S gate to the specified qubits in the state vector in the given order.
     fn s_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Phase T gate to the specified qubit in the state vector.
     fn t(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase T gate to the specified qubits in the state vector in the given order.
     fn t_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Phase S dagger gate to the specified qubit in the state vector.
     fn s_dag(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase S dagger gate to the specified qubits in the state vector in the given order.
     fn s_dag_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Phase T dagger gate to the specified qubit in the state vector.
     fn t_dag(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase T dagger gate to the specified qubits in the state vector in the given order.
     fn t_dag_multi(self, qubits: &[usize]) -> Result<State, Error>;
-    
+
     /// Applies the Phase Shift gate with the specified angle to the given qubit.
     fn p(self, index: usize, angle: f64) -> Result<State, Error>;
     /// Applies the Phase Shift gate with the specified angle to the given qubits in order.
@@ -1224,26 +1228,40 @@ pub trait ChainableState {
     fn rz_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
-    
+
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
     fn cnot(self, control: usize, target: usize) -> Result<State, Error>;
-    
+
     /// Applies the SWAP gate to the state vector.
     fn swap(self, qubit1: usize, qubit2: usize) -> Result<State, Error>;
-    
+
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
     fn toffoli(self, control1: usize, control2: usize, target: usize) -> Result<State, Error>;
-    
+
     /// Applies a unitary operation to the state vector.
-    fn operate(self, unitary: impl Operator, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+    fn operate(
+        self,
+        unitary: impl Operator,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<State, Error>;
 
     // -- MEASUREMENT --
-    
+
     /// Measures the state vector in the specified basis and returns the measurement result.
-    fn measure(self, basis: MeasurementBasis, measured_qubits: &[usize]) -> Result<MeasurementResult, Error>;
-    
+    fn measure(
+        self,
+        basis: MeasurementBasis,
+        measured_qubits: &[usize],
+    ) -> Result<MeasurementResult, Error>;
+
     /// Measures the state vector `n` times in the specified basis and returns the measurement results.
-    fn measure_n(self, basis: MeasurementBasis, measured_qubits: &[usize], n: usize) -> Result<Vec<MeasurementResult>, Error>;
+    fn measure_n(
+        self,
+        basis: MeasurementBasis,
+        measured_qubits: &[usize],
+        n: usize,
+    ) -> Result<Vec<MeasurementResult>, Error>;
 }
 
 macro_rules! impl_chainable_state {
@@ -1303,7 +1321,8 @@ impl Mul<Complex<f64>> for State {
     /// Multiplies each amplitude in the state vector by a complex scalar.
     /// Note: This operation typically results in an unnormalised state.
     fn mul(self, rhs: Complex<f64>) -> Self::Output {
-        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+        let new_state_vector: Vec<Complex<f64>> = self
+            .state_vector
             .into_par_iter() // Use parallel iterator for potential performance gain
             .map(|amplitude| amplitude * rhs)
             .collect();
@@ -1324,7 +1343,8 @@ impl Mul<f64> for State {
     /// Note: This operation typically results in an unnormalised state.
     fn mul(self, rhs: f64) -> Self::Output {
         let complex_rhs = Complex::new(rhs, 0.0); // Convert f64 to Complex<f64>
-        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+        let new_state_vector: Vec<Complex<f64>> = self
+            .state_vector
             .into_par_iter() // Use parallel iterator
             .map(|amplitude| amplitude * complex_rhs)
             .collect();
@@ -1345,7 +1365,8 @@ impl Mul<State> for f64 {
     /// Note: This operation typically results in an unnormalised state.
     fn mul(self, rhs: State) -> Self::Output {
         let complex_lhs = Complex::new(self, 0.0); // Convert f64 to Complex<f64>
-        let new_state_vector: Vec<Complex<f64>> = rhs.state_vector
+        let new_state_vector: Vec<Complex<f64>> = rhs
+            .state_vector
             .into_par_iter() // Use parallel iterator
             .map(|amplitude| complex_lhs * amplitude)
             .collect();
@@ -1365,7 +1386,8 @@ impl Mul<State> for Complex<f64> {
     /// Multiplies each amplitude in the state vector by a complex scalar from the left.
     /// Note: This operation typically results in an unnormalised state.
     fn mul(self, rhs: State) -> Self::Output {
-        let new_state_vector: Vec<Complex<f64>> = rhs.state_vector
+        let new_state_vector: Vec<Complex<f64>> = rhs
+            .state_vector
             .into_par_iter() // Use parallel iterator
             .map(|amplitude| self * amplitude)
             .collect();
@@ -1387,10 +1409,14 @@ impl Add<State> for State {
     /// Note: This operation typically results in an unnormalised state.
     fn add(self, rhs: State) -> Self::Output {
         if self.num_qubits != rhs.num_qubits {
-            panic!("Cannot add states with different numbers of qubits: {} != {}", self.num_qubits, rhs.num_qubits);
+            panic!(
+                "Cannot add states with different numbers of qubits: {} != {}",
+                self.num_qubits, rhs.num_qubits
+            );
         }
 
-        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+        let new_state_vector: Vec<Complex<f64>> = self
+            .state_vector
             .into_par_iter()
             .zip(rhs.state_vector.into_par_iter())
             .map(|(a, b)| a + b)
@@ -1413,10 +1439,14 @@ impl Sub<State> for State {
     /// Note: This operation typically results in an unnormalised state.
     fn sub(self, rhs: State) -> Self::Output {
         if self.num_qubits != rhs.num_qubits {
-            panic!("Cannot subtract states with different numbers of qubits: {} != {}", self.num_qubits, rhs.num_qubits);
+            panic!(
+                "Cannot subtract states with different numbers of qubits: {} != {}",
+                self.num_qubits, rhs.num_qubits
+            );
         }
 
-        let new_state_vector: Vec<Complex<f64>> = self.state_vector
+        let new_state_vector: Vec<Complex<f64>> = self
+            .state_vector
             .into_par_iter()
             .zip(rhs.state_vector.into_par_iter())
             .map(|(a, b)| a - b)

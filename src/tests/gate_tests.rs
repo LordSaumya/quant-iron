@@ -1,6 +1,9 @@
 use crate::{
     components::{
-        gate::Gate, measurement::MeasurementBasis, operator::{Hadamard, CNOT}, state::State
+        gate::Gate,
+        measurement::MeasurementBasis,
+        operator::{CNOT, Hadamard},
+        state::State,
     },
     errors::Error,
 };
@@ -21,10 +24,10 @@ fn test_gate_new_measurement() {
 fn test_gate_get_target_qubits() {
     // Create a new operator gate
     let gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0, 1], None);
-    
+
     // Get the target indices of the gate
     let target_indices: &Vec<usize> = gate.get_target_qubits();
-    
+
     // Check if the target indices are correct
     assert_eq!(target_indices, &vec![0, 1]);
 
@@ -83,5 +86,7 @@ fn test_gate_apply() {
     // Check if the result is correct
     assert!(result.is_ok());
     let new_state: State = result.unwrap();
-    assert!(new_state == State::new_zero(1).unwrap() || new_state == State::new_basis_n(1, 1).unwrap());
+    assert!(
+        new_state == State::new_zero(1).unwrap() || new_state == State::new_basis_n(1, 1).unwrap()
+    );
 }

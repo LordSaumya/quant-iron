@@ -1,59 +1,68 @@
-use crate::{errors::Error, components::state::State};
+use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
 
 /// A trait defining the interface for all operators.
 pub trait Operator {
     /// Applies the operator to the given state's target qubits, using the control qubits if required.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. If no target qubits are specified, the operator will be applied to all qubits in the state.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored if the operator does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error>;
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error>;
 
     /// Returns the number of qubits that the operator acts on.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The number of qubits that the operator acts on.
     fn base_qubits(&self) -> usize;
 }
 
-
 /// Defines a Hadamard operator.
-/// 
+///
 /// A single-qubit operator that transforms the state of a qubit into a superposition of its basis states.
 #[derive(Debug, Clone, Copy)]
 pub struct Hadamard;
 
 impl Operator for Hadamard {
     /// Applies the Hadamard operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Hadamard does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Hadamard operator.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::InvalidNumberOfQubits` - If the target qubits is not 1.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target qubit index is invalid for the number of qubits in the state.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -106,25 +115,30 @@ pub enum Pauli {
 
 impl Operator for Pauli {
     /// Applies the Pauli operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Pauli does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Pauli operator.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::InvalidNumberOfQubits` - If the target qubits is not 1.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target qubit index is invalid for the number of qubits in the state.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -184,34 +198,42 @@ impl Operator for Pauli {
 }
 
 /// Defines a CNOT operator.
-/// 
+///
 /// A two-qubit operator that flips the target qubit if the control qubit is in the |1> state.
 #[derive(Debug, Clone, Copy)]
 pub struct CNOT;
 
 impl Operator for CNOT {
     /// Applies the CNOT operator to the given state's target qubit, using the control qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the CNOT operator.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::InvalidNumberOfQubits` - If the target or control qubits is not 1.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target or control qubit index is invalid for the number of qubits in the state.
-    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 || control_qubits.is_none() || control_qubits.unwrap().len() != 1 {
+        if target_qubits.len() != 1
+            || control_qubits.is_none()
+            || control_qubits.unwrap().len() != 1
+        {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
         }
 
@@ -251,34 +273,39 @@ impl Operator for CNOT {
 }
 
 /// Defines a SWAP operator.
-/// 
+///
 /// A two-qubit operator that swaps the states of the two qubits.
 #[derive(Debug, Clone, Copy)]
 pub struct SWAP;
 
 impl Operator for SWAP {
     /// Applies the SWAP operator to the given state's target qubits.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be two qubits.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as SWAP does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the SWAP operator.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::InvalidNumberOfQubits` - If the target qubits are not 2 different qubits.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target qubit indices are invalid for the number of qubits in the state.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target qubit indices are not different.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 2 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -325,34 +352,42 @@ impl Operator for SWAP {
 }
 
 /// Defines a Toffoli operator.
-/// 
+///
 /// A three-qubit operator that flips the target qubit if both control qubits are in the |1> state. Also known as CCNOT (Controlled-Controlled-NOT).
 #[derive(Debug, Clone, Copy)]
 pub struct Toffoli;
 
 impl Operator for Toffoli {
     /// Applies the Toffoli operator to the given state's target qubit, using the control qubits.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubit to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This should be two qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Toffoli operator.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::InvalidNumberOfQubits` - If the target or control qubits are not 1 and 2 respectively, or if the control qubits are not different.
-    /// 
+    ///
     /// * `Error::InvalidQubitIndex` - If the target or control qubit indices are invalid for the number of qubits in the state.
-    fn apply(&self, state: &State, target_qubits: &[usize], control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 || control_qubits.is_none() || control_qubits.unwrap().len() != 2 {
+        if target_qubits.len() != 1
+            || control_qubits.is_none()
+            || control_qubits.unwrap().len() != 2
+        {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
         }
 
@@ -360,11 +395,17 @@ impl Operator for Toffoli {
         let control_qubit_1: usize = control_qubits.unwrap()[0];
         let control_qubit_2: usize = control_qubits.unwrap()[1];
 
-        if target_qubit >= state.num_qubits() || control_qubit_1 >= state.num_qubits() || control_qubit_2 >= state.num_qubits() {
+        if target_qubit >= state.num_qubits()
+            || control_qubit_1 >= state.num_qubits()
+            || control_qubit_2 >= state.num_qubits()
+        {
             return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
         }
         if control_qubit_1 == control_qubit_2 {
-            return Err(Error::InvalidQubitIndex(control_qubit_1, state.num_qubits()));
+            return Err(Error::InvalidQubitIndex(
+                control_qubit_1,
+                state.num_qubits(),
+            ));
         }
 
         let dim: usize = 1 << state.num_qubits();
@@ -396,26 +437,31 @@ impl Operator for Toffoli {
 }
 
 /// Defines an identity operator
-/// 
+///
 /// A single-qubit operator that does not change the state of the qubit.
 #[derive(Debug, Clone, Copy)]
 pub struct Identity;
 
 impl Operator for Identity {
     /// Applies the identity operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Identity does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the identity operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -437,26 +483,31 @@ impl Operator for Identity {
 }
 
 /// Defines a Phase S operator.
-/// 
+///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the S gate or Phase gate.
 #[derive(Debug, Clone, Copy)]
 pub struct PhaseS;
 
 impl Operator for PhaseS {
     /// Applies the Phase S operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase S does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Phase S operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -496,25 +547,30 @@ impl Operator for PhaseS {
 }
 
 /// Defines a Phase T operator.
-/// 
+///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T gate or π/8 gate.s
 pub struct PhaseT;
 
 impl Operator for PhaseT {
     /// Applies the Phase T operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase T does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Phase T operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -555,26 +611,31 @@ impl Operator for PhaseT {
 }
 
 /// Defines a Phase Sdag operator.
-/// 
+///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the S† gate or Phase† gate. Inverse of S gate.
 #[derive(Debug, Clone, Copy)]
 pub struct PhaseSdag;
 
 impl Operator for PhaseSdag {
     /// Applies the Phase Sdag operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase Sdag does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Phase Sdag operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -614,25 +675,30 @@ impl Operator for PhaseSdag {
 }
 
 /// Defines a Phase Tdag operator.
-/// 
+///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T† gate or π/8† gate. Inverse of T gate.
 pub struct PhaseTdag;
 
 impl Operator for PhaseTdag {
     /// Applies the Phase Tdag operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as Phase Tdag does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Phase Tdag operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -673,7 +739,7 @@ impl Operator for PhaseTdag {
 }
 
 /// Defines the phase shift operator
-/// 
+///
 /// A single-qubit operator that applies a phase shift of the provided angle to the |1> state. Also known as the phase shift gate.
 pub struct PhaseShift {
     angle: f64,
@@ -681,9 +747,9 @@ pub struct PhaseShift {
 
 impl PhaseShift {
     /// Creates a new PhaseShift operator with the given angle.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `angle` - The angle of the phase shift in radians.
     pub fn new(angle: f64) -> Self {
         PhaseShift { angle }
@@ -692,7 +758,12 @@ impl PhaseShift {
 
 impl Operator for PhaseShift {
     /// Applies the phase shift operator to the given state's target qubit.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -713,7 +784,8 @@ impl Operator for PhaseShift {
 
             if target_bit == 1 {
                 // Apply phase shift to |1> state
-                new_state[i] = state.state_vector[i] * Complex::new(self.angle.cos(), self.angle.sin()); // Phase shift of angle
+                new_state[i] =
+                    state.state_vector[i] * Complex::new(self.angle.cos(), self.angle.sin()); // Phase shift of angle
             } else {
                 // No change if |0> state
                 new_state[i] = state.state_vector[i];
@@ -732,7 +804,7 @@ impl Operator for PhaseShift {
 }
 
 /// Defines the rotate-X operator
-/// 
+///
 /// A single-qubit operator that applies a rotation around the X axis of the Bloch sphere by the given angle. Also known as the RX gate.
 pub struct RotateX {
     angle: f64,
@@ -740,9 +812,9 @@ pub struct RotateX {
 
 impl RotateX {
     /// Creates a new RotateX operator with the given angle.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `angle` - The angle of rotation in radians.
     pub fn new(angle: f64) -> Self {
         RotateX { angle }
@@ -751,19 +823,24 @@ impl RotateX {
 
 impl Operator for RotateX {
     /// Applies the RotateX operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateX does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the RotateX operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -784,7 +861,8 @@ impl Operator for RotateX {
         let neg_i_sin_half = Complex::new(0.0, -sin_half);
 
         for i in 0..dim {
-            if (i >> target_qubit) & 1 == 0 { // Target qubit is |0>
+            if (i >> target_qubit) & 1 == 0 {
+                // Target qubit is |0>
                 let j = i | (1 << target_qubit); // Index where target qubit is |1>
                 let amp_i = state.amplitude(i)?;
                 let amp_j = state.amplitude(j)?;
@@ -807,7 +885,7 @@ impl Operator for RotateX {
 }
 
 /// Defines the rotate-Y operator
-/// 
+///
 /// A single-qubit operator that applies a rotation around the Y axis of the Bloch sphere by the given angle. Also known as the RY gate.
 pub struct RotateY {
     angle: f64,
@@ -815,9 +893,9 @@ pub struct RotateY {
 
 impl RotateY {
     /// Creates a new RotateY operator with the given angle.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `angle` - The angle of rotation in radians.
     pub fn new(angle: f64) -> Self {
         RotateY { angle }
@@ -826,19 +904,24 @@ impl RotateY {
 
 impl Operator for RotateY {
     /// Applies the RotateY operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateY does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the RotateY operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -858,7 +941,8 @@ impl Operator for RotateY {
         let sin_half = half_angle.sin();
 
         for i in 0..dim {
-            if (i >> target_qubit) & 1 == 0 { // Target qubit is |0>
+            if (i >> target_qubit) & 1 == 0 {
+                // Target qubit is |0>
                 let j = i | (1 << target_qubit); // Index where target qubit is |1>
                 let amp_i = state.amplitude(i)?;
                 let amp_j = state.amplitude(j)?;
@@ -881,7 +965,7 @@ impl Operator for RotateY {
 }
 
 /// Defines the rotate-Z operator
-/// 
+///
 /// A single-qubit operator that applies a rotation around the Z axis of the Bloch sphere by the given angle. Also known as the RZ gate.
 pub struct RotateZ {
     angle: f64,
@@ -889,9 +973,9 @@ pub struct RotateZ {
 
 impl RotateZ {
     /// Creates a new RotateZ operator with the given angle.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `angle` - The angle of rotation in radians.
     pub fn new(angle: f64) -> Self {
         RotateZ { angle }
@@ -900,19 +984,24 @@ impl RotateZ {
 
 impl Operator for RotateZ {
     /// Applies the RotateZ operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits to apply the operator to. This is an optional argument, and is ignored as RotateZ does not require control qubits.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the RotateZ operator.
-    fn apply(&self, state: &State, target_qubits: &[usize], _control_qubits: Option<&[usize]>) -> Result<State, Error> {
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        _control_qubits: Option<&[usize]>,
+    ) -> Result<State, Error> {
         // Validation
         if target_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
@@ -929,7 +1018,7 @@ impl Operator for RotateZ {
         let mut new_state: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
         let half_angle = self.angle / 2.0;
         let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin()); // exp(-i*theta/2)
-        let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());  // exp(i*theta/2)
+        let phase_1 = Complex::new(half_angle.cos(), half_angle.sin()); // exp(i*theta/2)
 
         for i in 0..dim {
             let target_bit_is_set = (i >> target_qubit) & 1 == 1;
