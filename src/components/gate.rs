@@ -3,7 +3,7 @@ use crate::{
         measurement::MeasurementBasis,
         operator::{
             Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ,
+            PhaseTdag, RotateX, RotateY, RotateZ, CNOT, SWAP, Toffoli,
         },
         state::State,
     },
@@ -514,7 +514,7 @@ impl Gate {
     /// * `Gate` - A new instance of the Gate struct representing a CNOT gate.
     pub fn cnot_gate(target_index: usize, control_index: usize) -> Self {
         Gate::Operator(
-            Box::new(Pauli::X),
+            Box::new(CNOT),
             vec![target_index],
             Some(vec![control_index]),
         )
@@ -524,13 +524,18 @@ impl Gate {
     /// 
     /// # Arguments
     /// 
-    /// * `qubit_index` - The index of the qubit on which the SWAP gate acts.
+    /// * `qubit1` - The index of the first qubit.
+    /// * `qubit2` - The index of the second qubit.
     /// 
     /// # Returns
     /// 
     /// * `Gate` - A new instance of the Gate struct representing a SWAP gate.
-    pub fn swap_gate(qubit_index: usize) -> Self {
-        Gate::Operator(Box::new(Pauli::X), vec![qubit_index], None)
+    pub fn swap_gate(qubit1_index: usize, qubit2_index: usize) -> Self {
+        Gate::Operator(
+            Box::new(SWAP),
+            vec![qubit1_index, qubit2_index],
+            None,
+        )
     }
 
     /// Creates a new Toffoli gate for the specified target and control qubit indices.
@@ -546,7 +551,7 @@ impl Gate {
     /// * `Gate` - A new instance of the Gate struct representing a Toffoli gate.
     pub fn toffoli_gate(target_index: usize, control_indices: Vec<usize>) -> Self {
         Gate::Operator(
-            Box::new(Pauli::X),
+            Box::new(Toffoli),
             vec![target_index],
             Some(control_indices),
         )
