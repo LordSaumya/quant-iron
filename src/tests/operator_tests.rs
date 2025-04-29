@@ -36,6 +36,18 @@ fn test_operator_hadamard_success() {
 
     assert_eq!(new_state, expected_state);
 
+    // ch(control = 0, target = 1)|+1> = |01>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.ch_multi(&[1], &[0]).unwrap();
+    let expected_state: State = State::new_basis_n(2, 1).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // ch(control = 0, target = 1)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.ch_multi(&[0], &[1]).unwrap();
+    let expected_state: State = state.clone();
+    assert_eq!(new_state, expected_state);
+
     // Base qubits = 1
     assert_eq!(Hadamard {}.base_qubits(), 1);
 }
@@ -65,6 +77,24 @@ fn test_operator_pauli_x_success() {
     // x(x(|0>)) = |0> (Pauli-X matrix is self-inverse)
     let new_state: State = zero_state.x(0).x(0).unwrap();
     assert_eq!(new_state, zero_state);
+
+    // cx(control = 0, target = 1)|11> = |01>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.cx_multi(&[1], &[0]).unwrap();
+    let expected_state: State = State::new_basis_n(2, 1).unwrap(); // |01>
+    assert_eq!(new_state, expected_state);
+
+    // cx(control = 0, 1, target = 2)|011> = |111>
+    let state: State = State::new_basis_n(3, 3).unwrap(); // |011>
+    let new_state: State = state.cx_multi(&[2], &[0, 1]).unwrap();
+    let expected_state: State = State::new_basis_n(3, 7).unwrap(); // |111>
+    assert_eq!(new_state, expected_state);
+
+    // cx(control = 0, target = 1)|10> = |10>
+    let state: State = State::new_basis_n(2, 2).unwrap(); // |10>
+    let new_state: State = state.cx_multi(&[1], &[0]).unwrap(); // |1> * |0> = |10>
+    let expected_state: State = state.clone(); // |10>
+    assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
     assert_eq!(Pauli::X.base_qubits(), 1);
@@ -100,6 +130,18 @@ fn test_operator_pauli_y_success() {
     let new_state: State = zero_state.y(0).y(0).unwrap();
     assert_eq!(new_state, zero_state);
 
+    // cy(control = 0, target = 1)|11> = -i|0> * |1> = -i|01>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.cy_multi(&[1], &[0]).unwrap(); // Y(|1>) * |1>
+    let expected_state: State = (State::new_zero(1).unwrap() * neg_i).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // -i|0> * |1> = - i|01>
+    assert_eq!(new_state, expected_state);
+
+    // cy(control = 0, target = 1)|10> = |1> * |0> = |10>
+    let state: State = State::new_basis_n(2, 2).unwrap(); // |10>
+    let new_state: State = state.cy_multi(&[1], &[0]).unwrap();
+    let expected_state: State = state.clone(); // |10>
+    assert_eq!(new_state, expected_state);
+    
     // Base qubits = 1
     assert_eq!(Pauli::Y.base_qubits(), 1);
 }
@@ -129,6 +171,18 @@ fn test_operator_pauli_success() {
     // z(z(|+>)) = |+> (Pauli-Z matrix is self-inverse)
     let new_state: State = plus_state.z(0).z(0).unwrap();
     assert_eq!(new_state, plus_state);
+
+    // cz(control = 0, target = 1)|11> = -|1> * |1> = -|11>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.cz_multi(&[1], &[0]).unwrap(); // Z(|1>) * |1>
+    let expected_state: State = (State::new_basis_n(1, 1).unwrap() * -1.0).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // -|1> * |1> = -|11>
+    assert_eq!(new_state, expected_state);
+
+    // cz(control = 0, target = 1)|10> = |10>
+    let state: State = State::new_basis_n(2, 2).unwrap(); // |10>
+    let new_state: State = state.cz_multi(&[1], &[0]).unwrap(); // Z(|0>) * |1>
+    let expected_state: State = state.clone(); // |10>
+    assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
     assert_eq!(Pauli::Z.base_qubits(), 1);
@@ -187,6 +241,19 @@ fn test_operator_phase_s_success() {
     let expected_state: State = State::new_zero(2).unwrap();
     assert_eq!(new_state, expected_state);
 
+    // cs(control = 0, target = 1)|+1> = (|0>/sqrt2 + i|1>/sqrt2)|1>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.cs_multi(&[1], &[0]).unwrap();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    let expected_state: State = (invrt2 * (State::new_zero(1).unwrap() + i * State::new_basis_n(1, 1).unwrap())).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // (|0>/sqrt2 + i|1>/sqrt2)|1>
+    assert_eq!(new_state, expected_state);
+
+    // cs(control = 0, target = 1)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.cs_multi(&[0], &[1]).unwrap();
+    let expected_state: State = state.clone(); // |+0>
+    assert_eq!(new_state, expected_state);
+
     // Base qubits = 1
     assert_eq!(PhaseS {}.base_qubits(), 1);
 }
@@ -216,6 +283,19 @@ fn test_operator_phase_t_success() {
     let two_qubit_state: State = State::new_zero(2).unwrap();
     let new_state: State = two_qubit_state.t_multi(&[0, 1]).unwrap();
     let expected_state: State = State::new_zero(2).unwrap();
+    assert_eq!(new_state, expected_state);
+
+    // ct(control = 0, target = 1)|+1> = (|0>/sqrt2 + e^(ipi/4)|1>/sqrt2)|1>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.ct_multi(&[1], &[0]).unwrap();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    let expected_state: State = (invrt2 * (State::new_zero(1).unwrap() + eipi4 * State::new_basis_n(1, 1).unwrap())).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // (|0>/sqrt2 + i|1>/sqrt2)|1>
+    assert_eq!(new_state, expected_state);
+
+    // ct(control = 0, target = 1)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.ct_multi(&[0], &[1]).unwrap();
+    let expected_state: State = state.clone(); // |+0>
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
@@ -256,6 +336,19 @@ fn test_operator_s_dag_success() {
     let new_state: State = plus_state.s(0).s_dag(0).unwrap();
     assert_eq!(new_state, plus_state);
 
+    // csdag(control = 0, target = 1)|+1> = (|0>/sqrt2 - i|1>/sqrt2)|1>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.cs_dag_multi(&[1], &[0]).unwrap();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    let expected_state: State = (invrt2 * (State::new_zero(1).unwrap() - i * State::new_basis_n(1, 1).unwrap())).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // (|0>/sqrt2 - i|1>/sqrt2)|1>
+    assert_eq!(new_state, expected_state);
+
+    // csdag(control = 0, target = 1)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.cs_dag_multi(&[0], &[1]).unwrap();
+    let expected_state: State = state.clone(); // |+0>
+    assert_eq!(new_state, expected_state);
+
     // Base qubits = 1
     assert_eq!(PhaseSdag {}.base_qubits(), 1);
 }
@@ -292,6 +385,13 @@ fn test_operator_t_dag_success() {
     // t_dag(t(|+>)) = |+> (T_dag is inverse of T)
     let new_state: State = plus_state.t(0).t_dag(0).unwrap();
     assert_eq!(new_state, plus_state);
+
+    // ctdag(control = 0, target = 1)|+1> = (|0>/sqrt2 + e^(-i*PI/4)|1>/sqrt2)|1>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.ct_dag_multi(&[1], &[0]).unwrap();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    let expected_state: State = (invrt2 * (State::new_zero(1).unwrap() + enegipi4 * State::new_basis_n(1, 1).unwrap())).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // (|0>/sqrt2 + e^(-i*PI/4)|1>/sqrt2)|1>
+    assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
     assert_eq!(PhaseTdag {}.base_qubits(), 1);
@@ -341,6 +441,19 @@ fn test_operator_phase_shift_success() {
     let expected_state: State = State::new_zero(2).unwrap();
     assert_eq!(new_state, expected_state);
 
+    // cp(control = 0, target = 1, theta = pi/2)|+1> = (|0>/sqrt2 + i|1>/sqrt2)|1>
+    let state: State = State::new_plus(1).unwrap().tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap();
+    let new_state: State = state.cp_multi(&[1], &[0], PI / 2.0).unwrap();
+    let invrt2: Complex<f64> = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    let expected_state: State = (invrt2 * (State::new_zero(1).unwrap() + Complex::new(0.0, PI / 2.0).exp() * State::new_basis_n(1, 1).unwrap())).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // (|0>/sqrt2 + i|1>/sqrt2)|1>
+    assert_eq!(new_state, expected_state);
+
+    // cp(control = 0, target = 1, theta = -pi/2)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.cp_multi(&[0], &[1], -PI / 2.0).unwrap();
+    let expected_state: State = state.clone(); // |+0>
+    assert_eq!(new_state, expected_state);
+
     // Base qubits = 1
     assert_eq!(PhaseShift::new(theta).base_qubits(), 1);
 }
@@ -383,6 +496,18 @@ fn test_operator_rotate_x_success() {
         + State::new_basis_n(2, 1).unwrap() * -i * cos_half_theta * sin_half_theta
         + State::new_basis_n(2, 2).unwrap() * -i * cos_half_theta * sin_half_theta
         + State::new_basis_n(2, 3).unwrap() * -sin_half_theta * sin_half_theta;
+    assert_eq!(new_state, expected_state);
+
+    // crx(control = 0, target = 1, theta = pi)|11> = -i|0> * |1> = -i|0> * |1> = -i|01>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.crx_multi(&[1], &[0], PI).unwrap(); // RX(|1>) * |1>
+    let expected_state: State = (State::new_zero(1).unwrap() * -i).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // -i|0> * |1> = -i|01>
+    assert_eq!(new_state, expected_state);
+
+    // crx(control = 0, target = 1, theta = -pi)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.crx_multi(&[0], &[1], -PI).unwrap(); // RX(|0>) * |+0>
+    let expected_state: State = state.clone(); // |+0>
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
@@ -432,6 +557,18 @@ fn test_operator_rotate_y_success() {
         + State::new_basis_n(2, 3).unwrap() * sin_half_theta * sin_half_theta;
     assert_eq!(new_state, expected_state);
 
+    // cry(control = 0, target = 1, theta = pi)|11> = -|0> * |1> = -|01>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.cry_multi(&[1], &[0], PI).unwrap(); // RY(|1>) * |1>
+    let expected_state: State = (State::new_zero(1).unwrap() * -1.0).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // -|0> * |1> = -|01>
+    assert_eq!(new_state, expected_state);
+
+    // cry(control = 0, target = 1, theta = -pi)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.cry_multi(&[0], &[1], -PI).unwrap();
+    let expected_state: State = state.clone(); // |+0>
+    assert_eq!(new_state, expected_state);
+
     // Base qubits = 1
     assert_eq!(RotateY::new(theta).base_qubits(), 1);
 }
@@ -470,6 +607,19 @@ fn test_operator_rotate_z_success() {
     let two_qubit_state: State = State::new_zero(2).unwrap();
     let new_state: State = two_qubit_state.rz_multi(&[0, 1], theta).unwrap();
     let expected_state: State = State::new_zero(2).unwrap() * eimhalf_theta * eimhalf_theta;
+    assert_eq!(new_state, expected_state);
+
+    // crz(control = 0, target = 1, theta = pi)|11> = i|1> * |1> = i|11>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.crz_multi(&[1], &[0], PI).unwrap(); // RZ(|1>) * |1>
+    let i: Complex<f64> = Complex::new(0.0, 1.0);
+    let expected_state: State = (State::new_basis_n(1, 1).unwrap() * i).tensor_product(&State::new_basis_n(1, 1).unwrap()).unwrap(); // i|1> * |1> = i|11>
+    assert_eq!(new_state, expected_state);
+
+    // crz(control = 0, target = 1, theta = -pi)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.crz_multi(&[0], &[1], -PI).unwrap(); // RZ(|0>) * |+0>
+    let expected_state: State = state.clone(); // |+0>
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 1
@@ -555,6 +705,20 @@ fn test_operator_swap_success() {
         * (State::new_zero(2).unwrap() + State::new_basis_n(2, 1).unwrap()
             - State::new_basis_n(2, 2).unwrap()
             - State::new_basis_n(2, 3).unwrap());
+    assert_eq!(new_state, expected_state);
+
+    // cswap(control = 0, target1 = 1, target2 = 2)
+    // |011> -> |101>
+    let state: State = State::new_basis_n(3, 3).unwrap(); // |011>
+    let new_state: State = state.cswap(1, 2, &[0]).unwrap(); // SWAP(|1>, |0>)
+    let expected_state: State = State::new_basis_n(3, 5).unwrap(); // |101>
+    assert_eq!(new_state, expected_state);
+
+    // cswap(control = 0, target1 = 1, target2 = 2)
+    // |100> -> |100>
+    let state: State = State::new_basis_n(3, 4).unwrap(); // |100>
+    let new_state: State = state.cswap(1, 2, &[0]).unwrap(); // SWAP(|0>, |1>)
+    let expected_state: State = State::new_basis_n(3, 4).unwrap(); // |100>
     assert_eq!(new_state, expected_state);
 
     // Base qubits = 2

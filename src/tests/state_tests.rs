@@ -127,3 +127,29 @@ fn test_state_probability_errors() {
     assert!(probability.is_err());
     assert_eq!(probability.unwrap_err(), Error::InvalidQubitIndex(2, 1));
 }
+
+#[test]
+fn test_state_tensor_product_success() {
+    // |+>|-> = |+-> = 1/2 (|00> – |01> + |10> – |11>)
+    let state1 = State::new_plus(1).unwrap();
+    let state2 = State::new_minus(1).unwrap();
+
+    // 1/2 (|00> – |01> + |10> – |11>)
+    let expected: State = 0.5 * (
+         State::new_basis_n(2, 0).unwrap()  // +|00>
+       - State::new_basis_n(2, 1).unwrap()  // –|01>
+       + State::new_basis_n(2, 2).unwrap()  // +|10>
+       - State::new_basis_n(2, 3).unwrap()  // –|11>
+    );
+
+    let actual: State = state1.tensor_product(&state2).unwrap();
+    assert_eq!(actual, expected);
+
+    // |0>|1> = |01>
+    let state1 = State::new_zero(1).unwrap();
+    let state2 = State::new_basis_n(1, 1).unwrap();
+
+    let expected: State = State::new_basis_n(2, 1).unwrap(); // |01>
+    let actual: State = state1.tensor_product(&state2).unwrap();
+    assert_eq!(actual, expected);
+}

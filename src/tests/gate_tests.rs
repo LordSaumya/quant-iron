@@ -11,7 +11,7 @@ use crate::{
 #[test]
 fn test_gate_new_operator() {
     // Create a new operator gate
-    let _gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0, 1], None);
+    let _gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0, 1], vec![]);
 }
 
 #[test]
@@ -23,7 +23,7 @@ fn test_gate_new_measurement() {
 #[test]
 fn test_gate_get_target_qubits() {
     // Create a new operator gate
-    let gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0, 1], None);
+    let gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0, 1], vec![]);
 
     // Get the target indices of the gate
     let target_indices: &Vec<usize> = gate.get_target_qubits();
@@ -44,7 +44,7 @@ fn test_gate_get_target_qubits() {
 #[test]
 fn test_gate_get_control_qubits() {
     // Create a new operator gate with control qubits
-    let gate: Gate = Gate::Operator(Box::new(CNOT), vec![0, 1], Some(vec![2]));
+    let gate: Gate = Gate::Operator(Box::new(CNOT), vec![0, 1], vec![2]);
 
     // Get the control indices of the gate
     let control_indices: Option<&Vec<usize>> = gate.get_control_qubits();
@@ -65,7 +65,7 @@ fn test_gate_get_control_qubits() {
 #[test]
 fn test_gate_apply() {
     // Create a new operator gate
-    let gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0], None);
+    let gate: Gate = Gate::Operator(Box::new(Hadamard), vec![0], vec![]);
     let state: State = State::new_zero(1).unwrap();
 
     // Apply gate
