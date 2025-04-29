@@ -519,7 +519,7 @@ impl State {
         }
 
         // Apply the unitary operation to the state vector and return the new state
-        unitary.apply(&self, target_qubits, Some(control_qubits))
+        unitary.apply(&self, target_qubits, control_qubits)
     }
 
     // -- SINGLE-QUBIT GATES --
@@ -538,7 +538,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn h(&self, index: usize) -> Result<Self, Error> {
-        Hadamard {}.apply(self, &[index], None)
+        Hadamard {}.apply(self, &[index], &[])
     }
 
     /// Applies the Hadamard gate to the specified qubits in the state vector in the given order.
@@ -560,7 +560,39 @@ impl State {
         let mut new_state: State = self.clone();
         let h: Hadamard = Hadamard {};
         for &qubit in qubits {
-            new_state = h.apply(&new_state, &[qubit], None)?;
+            new_state = h.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Hadamard gate to the specified qubits in the state vector in the given order.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Hadamard gate to.
+    /// 
+    /// * `control_qubits` - The indices of the control qubits for the controlled Hadamard gate.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// * # Errors
+    /// 
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// 
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// 
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn ch_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let h: Hadamard = Hadamard {};
+        for &qubit in target_qubits {
+            new_state = h.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -579,7 +611,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn x(&self, index: usize) -> Result<Self, Error> {
-        Pauli::X.apply(self, &[index], None)
+        Pauli::X.apply(self, &[index], &[])
     }
 
     /// Applies the Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
@@ -601,7 +633,36 @@ impl State {
         let mut new_state: State = self.clone();
         let x: Pauli = Pauli::X;
         for &qubit in qubits {
-            new_state = x.apply(&new_state, &[qubit], None)?;
+            new_state = x.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Pauli-X gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Pauli-X gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cx_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let x: Pauli = Pauli::X;
+        for &qubit in target_qubits {
+            new_state = x.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -620,7 +681,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn y(&self, index: usize) -> Result<Self, Error> {
-        Pauli::Y.apply(self, &[index], None)
+        Pauli::Y.apply(self, &[index], &[])
     }
 
     /// Applies the Pauli-Y gate to the specified qubits in the state vector in the given order.
@@ -642,7 +703,36 @@ impl State {
         let mut new_state: State = self.clone();
         let y: Pauli = Pauli::Y;
         for &qubit in qubits {
-            new_state = y.apply(&new_state, &[qubit], None)?;
+            new_state = y.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Pauli-Y gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Pauli-Y gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Pauli-Y gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cy_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let y: Pauli = Pauli::Y;
+        for &qubit in target_qubits {
+            new_state = y.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -661,7 +751,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn z(&self, index: usize) -> Result<Self, Error> {
-        Pauli::Z.apply(self, &[index], None)
+        Pauli::Z.apply(self, &[index], &[])
     }
 
     /// Applies the Pauli-Z gate to the specified qubits in the state vector in the given order.
@@ -683,7 +773,36 @@ impl State {
         let mut new_state: State = self.clone();
         let z: Pauli = Pauli::Z;
         for &qubit in qubits {
-            new_state = z.apply(&new_state, &[qubit], None)?;
+            new_state = z.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Pauli-Z gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Pauli-Z gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Pauli-Z gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cz_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let z: Pauli = Pauli::Z;
+        for &qubit in target_qubits {
+            new_state = z.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -702,7 +821,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn i(&self, qubit: usize) -> Result<Self, Error> {
-        Identity {}.apply(self, &[qubit], None)
+        Identity {}.apply(self, &[qubit], &[])
     }
 
     /// Applies the Identity gate to the state vector for multiple qubits in the given order.
@@ -724,7 +843,36 @@ impl State {
         let mut new_state: State = self.clone();
         let i: Identity = Identity {};
         for &qubit in qubits {
-            new_state = i.apply(&new_state, &[qubit], None)?;
+            new_state = i.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Identity gate to the state vector for multiple qubits in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Identity gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Identity gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn ci_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let i: Identity = Identity {};
+        for &qubit in target_qubits {
+            new_state = i.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -743,7 +891,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn s(&self, index: usize) -> Result<Self, Error> {
-        PhaseS {}.apply(self, &[index], None)
+        PhaseS {}.apply(self, &[index], &[])
     }
 
     /// Applies the Phase S gate to the specified qubits in the state vector in the given order.
@@ -765,7 +913,36 @@ impl State {
         let mut new_state: State = self.clone();
         let s_gate: PhaseS = PhaseS {};
         for &qubit in qubits {
-            new_state = s_gate.apply(&new_state, &[qubit], None)?;
+            new_state = s_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Phase S gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Phase S gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Phase S gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cs_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let s_gate: PhaseS = PhaseS {};
+        for &qubit in target_qubits {
+            new_state = s_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -784,7 +961,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn t(&self, index: usize) -> Result<Self, Error> {
-        PhaseT {}.apply(self, &[index], None)
+        PhaseT {}.apply(self, &[index], &[])
     }
 
     /// Applies the Phase T gate to the specified qubits in the state vector in the given order.
@@ -806,7 +983,36 @@ impl State {
         let mut new_state: State = self.clone();
         let t_gate: PhaseT = PhaseT {};
         for &qubit in qubits {
-            new_state = t_gate.apply(&new_state, &[qubit], None)?;
+            new_state = t_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Phase T gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Phase T gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Phase T gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn ct_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let t_gate: PhaseT = PhaseT {};
+        for &qubit in target_qubits {
+            new_state = t_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -825,7 +1031,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn s_dag(&self, index: usize) -> Result<Self, Error> {
-        PhaseSdag {}.apply(self, &[index], None)
+        PhaseSdag {}.apply(self, &[index], &[])
     }
 
     /// Applies the Phase S dagger gate to the specified qubits in the state vector in the given order.
@@ -847,7 +1053,36 @@ impl State {
         let mut new_state: State = self.clone();
         let sdag_gate: PhaseSdag = PhaseSdag {};
         for &qubit in qubits {
-            new_state = sdag_gate.apply(&new_state, &[qubit], None)?;
+            new_state = sdag_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Phase S dagger gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Phase S dagger gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Phase S dagger gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cs_dag_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let sdag_gate: PhaseSdag = PhaseSdag {};
+        for &qubit in target_qubits {
+            new_state = sdag_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -866,7 +1101,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn t_dag(&self, index: usize) -> Result<Self, Error> {
-        PhaseTdag {}.apply(self, &[index], None)
+        PhaseTdag {}.apply(self, &[index], &[])
     }
 
     /// Applies the Phase T dagger gate to the specified qubits in the state vector in the given order.
@@ -888,7 +1123,36 @@ impl State {
         let mut new_state: State = self.clone();
         let tdag_gate: PhaseTdag = PhaseTdag {};
         for &qubit in qubits {
-            new_state = tdag_gate.apply(&new_state, &[qubit], None)?;
+            new_state = tdag_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Phase T dagger gate to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Phase T dagger gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Phase T dagger gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn ct_dag_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let tdag_gate: PhaseTdag = PhaseTdag {};
+        for &qubit in target_qubits {
+            new_state = tdag_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -908,7 +1172,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn p(&self, index: usize, angle: f64) -> Result<Self, Error> {
-        PhaseShift::new(angle).apply(self, &[index], None)
+        PhaseShift::new(angle).apply(self, &[index], &[])
     }
 
     /// Applies the Phase Shift gate with the specified angle to the given qubits in order.
@@ -932,7 +1196,38 @@ impl State {
         let mut new_state: State = self.clone();
         let phase_shift_gate: PhaseShift = PhaseShift::new(angle);
         for &qubit in qubits {
-            new_state = phase_shift_gate.apply(&new_state, &[qubit], None)?;
+            new_state = phase_shift_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Phase Shift gate with the specified angle to the given qubits in order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Phase Shift gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled Phase Shift gate.
+    /// * `angle` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cp_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let phase_shift_gate: PhaseShift = PhaseShift::new(angle);
+        for &qubit in target_qubits {
+            new_state = phase_shift_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -952,7 +1247,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn rx(&self, index: usize, angle: f64) -> Result<Self, Error> {
-        RotateX::new(angle).apply(self, &[index], None)
+        RotateX::new(angle).apply(self, &[index], &[])
     }
 
     /// Applies the RotateX gate with the specified angle to the given qubits in order.
@@ -976,7 +1271,38 @@ impl State {
         let mut new_state: State = self.clone();
         let rotate_x_gate: RotateX = RotateX::new(angle);
         for &qubit in qubits {
-            new_state = rotate_x_gate.apply(&new_state, &[qubit], None)?;
+            new_state = rotate_x_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled RotateX gate with the specified angle to the given qubits in order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled RotateX gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled RotateX gate.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn crx_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_x_gate: RotateX = RotateX::new(angle);
+        for &qubit in target_qubits {
+            new_state = rotate_x_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -996,7 +1322,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn ry(&self, index: usize, angle: f64) -> Result<Self, Error> {
-        RotateY::new(angle).apply(self, &[index], None)
+        RotateY::new(angle).apply(self, &[index], &[])
     }
 
     /// Applies the RotateY gate with the specified angle to the given qubits in order.
@@ -1020,7 +1346,38 @@ impl State {
         let mut new_state: State = self.clone();
         let rotate_y_gate: RotateY = RotateY::new(angle);
         for &qubit in qubits {
-            new_state = rotate_y_gate.apply(&new_state, &[qubit], None)?;
+            new_state = rotate_y_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled RotateY gate with the specified angle to the given qubits in order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled RotateY gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled RotateY gate.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cry_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_y_gate: RotateY = RotateY::new(angle);
+        for &qubit in target_qubits {
+            new_state = rotate_y_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -1040,7 +1397,7 @@ impl State {
     ///
     /// * Returns an error if the index is out of bounds for the state vector.
     pub fn rz(&self, index: usize, angle: f64) -> Result<Self, Error> {
-        RotateZ::new(angle).apply(self, &[index], None)
+        RotateZ::new(angle).apply(self, &[index], &[])
     }
 
     /// Applies the RotateZ gate with the specified angle to the given qubits in order.
@@ -1064,7 +1421,38 @@ impl State {
         let mut new_state: State = self.clone();
         let rotate_z_gate: RotateZ = RotateZ::new(angle);
         for &qubit in qubits {
-            new_state = rotate_z_gate.apply(&new_state, &[qubit], None)?;
+            new_state = rotate_z_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled RotateZ gate with the specified angle to the given qubits in order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled RotateZ gate to.
+    /// * `control_qubits` - The indices of the control qubits for the controlled RotateZ gate.
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn crz_multi(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let rotate_z_gate: RotateZ = RotateZ::new(angle);
+        for &qubit in target_qubits {
+            new_state = rotate_z_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
         Ok(new_state)
     }
@@ -1086,7 +1474,7 @@ impl State {
     ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn cnot(&self, control: usize, target: usize) -> Result<Self, Error> {
-        CNOT {}.apply(self, &[target], Some(&[control]))
+        CNOT {}.apply(self, &[target], &[control])
     }
 
     /// Applies the SWAP gate to the state vector.
@@ -1104,7 +1492,32 @@ impl State {
     ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn swap(&self, qubit1: usize, qubit2: usize) -> Result<Self, Error> {
-        SWAP {}.apply(self, &[qubit1, qubit2], None)
+        SWAP {}.apply(self, &[qubit1, qubit2], &[])
+    }
+
+    /// Applies the controlled SWAP gate to the state vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `target1` - The index of the first target qubit to swap.
+    /// * `target2` - The index of the second target qubit to swap.
+    /// * `controls` - The indices of the control qubits.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if any index is out of bounds for the state vector.
+    /// * Returns an error if target or control qubits overlap.
+    pub fn cswap(
+        &self,
+        target1: usize,
+        target2: usize,
+        controls: &[usize],
+    ) -> Result<Self, Error> {
+        SWAP {}.apply(self, &[target1, target2], controls)
     }
 
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
@@ -1123,7 +1536,7 @@ impl State {
     ///
     /// * Returns an error if any index is out of bounds for the state vector.
     pub fn toffoli(&self, control1: usize, control2: usize, target: usize) -> Result<Self, Error> {
-        Toffoli {}.apply(self, &[target], Some(&[control1, control2]))
+        Toffoli {}.apply(self, &[target], &[control1, control2])
     }
 }
 
@@ -1163,11 +1576,17 @@ pub trait ChainableState {
     /// Applies the Hadamard gate to the specified qubits in the state vector in the given order.
     fn h_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
+    /// Applies the controlled Hadamard gate to the specified qubits in the state vector in the given order.
+    fn ch_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+
     /// Applies the Pauli-X (NOT) gate to the specified qubit in the state vector.
     fn x(self, index: usize) -> Result<State, Error>;
 
     /// Applies the Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
     fn x_multi(self, qubits: &[usize]) -> Result<State, Error>;
+
+    /// Applies the controlled Pauli-X (NOT) gate to the specified qubits in the state vector in the given order.
+    fn cx_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
 
     /// Applies the Pauli-Y gate to the specified qubit in the state vector.
     fn y(self, index: usize) -> Result<State, Error>;
@@ -1175,11 +1594,17 @@ pub trait ChainableState {
     /// Applies the Pauli-Y gate to the specified qubits in the state vector in the given order.
     fn y_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
+    /// Applies the controlled Pauli-Y gate to the specified qubits in the state vector in the given order.
+    fn cy_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+
     /// Applies the Pauli-Z gate to the specified qubit in the state vector.
     fn z(self, index: usize) -> Result<State, Error>;
 
     /// Applies the Pauli-Z gate to the specified qubits in the state vector in the given order.
     fn z_multi(self, qubits: &[usize]) -> Result<State, Error>;
+
+    /// Applies the controlled Pauli-Z gate to the specified qubits in the state vector in the given order.
+    fn cz_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
 
     /// Applies the Identity gate to the state vector.
     fn i(self, qubit: usize) -> Result<State, Error>;
@@ -1187,45 +1612,72 @@ pub trait ChainableState {
     /// Applies the Identity gate to the state vector for multiple qubits in the given order.
     fn i_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
+    /// Applies the controlled Identity gate to the state vector for multiple qubits in the given order.
+    fn ci_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+
     /// Applies the Phase S gate to the specified qubit in the state vector.
     fn s(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase S gate to the specified qubits in the state vector in the given order.
     fn s_multi(self, qubits: &[usize]) -> Result<State, Error>;
+
+    /// Applies the controlled Phase S gate to the specified qubits in the state vector in the given order.
+    fn cs_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
 
     /// Applies the Phase T gate to the specified qubit in the state vector.
     fn t(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase T gate to the specified qubits in the state vector in the given order.
     fn t_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
+    /// Applies the controlled Phase T gate to the specified qubits in the state vector in the given order.
+    fn ct_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+
     /// Applies the Phase S dagger gate to the specified qubit in the state vector.
     fn s_dag(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase S dagger gate to the specified qubits in the state vector in the given order.
     fn s_dag_multi(self, qubits: &[usize]) -> Result<State, Error>;
+
+    /// Applies the controlled Phase S dagger gate to the specified qubits in the state vector in the given order.
+    fn cs_dag_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
 
     /// Applies the Phase T dagger gate to the specified qubit in the state vector.
     fn t_dag(self, index: usize) -> Result<State, Error>;
     /// Applies the Phase T dagger gate to the specified qubits in the state vector in the given order.
     fn t_dag_multi(self, qubits: &[usize]) -> Result<State, Error>;
 
+    /// Applies the controlled Phase T dagger gate to the specified qubits in the state vector in the given order.
+    fn ct_dag_multi(self, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
+
     /// Applies the Phase Shift gate with the specified angle to the given qubit.
     fn p(self, index: usize, angle: f64) -> Result<State, Error>;
     /// Applies the Phase Shift gate with the specified angle to the given qubits in order.
     fn p_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
+
+    /// Applies the controlled Phase Shift gate with the specified angle to the given qubits in order.
+    fn cp_multi(self, target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
 
     /// Applies the RotateX gate with the specified angle to the given qubit.
     fn rx(self, index: usize, angle: f64) -> Result<State, Error>;
     /// Applies the RotateX gate with the specified angle to the given qubits in order.
     fn rx_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
 
+    /// Applies the controlled RotateX gate with the specified angle to the given qubits in order.
+    fn crx_multi(self, target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
+
     /// Applies the RotateY gate with the specified angle to the given qubit.
     fn ry(self, index: usize, angle: f64) -> Result<State, Error>;
     /// Applies the RotateY gate with the specified angle to the given qubits in order.
     fn ry_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
 
+    /// Applies the controlled RotateY gate with the specified angle to the given qubits in order.
+    fn cry_multi(self, target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
+
     /// Applies the RotateZ gate with the specified angle to the given qubit.
     fn rz(self, index: usize, angle: f64) -> Result<State, Error>;
     /// Applies the RotateZ gate with the specified angle to the given qubits in order.
     fn rz_multi(self, qubits: &[usize], angle: f64) -> Result<State, Error>;
+
+    /// Applies the controlled RotateZ gate with the specified angle to the given qubits in order.
+    fn crz_multi(self, target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
 
@@ -1234,6 +1686,9 @@ pub trait ChainableState {
 
     /// Applies the SWAP gate to the state vector.
     fn swap(self, qubit1: usize, qubit2: usize) -> Result<State, Error>;
+
+    /// Applies the controlled SWAP gate to the state vector.
+    fn cswap(self, target1: usize, target2: usize, controls: &[usize]) -> Result<State, Error>;
 
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
     fn toffoli(self, control1: usize, control2: usize, target: usize) -> Result<State, Error>;
@@ -1280,34 +1735,48 @@ impl_chainable_state! {
     // -- SINGLE QUBIT GATES --
     h(index: usize) -> Result<State, Error>;
     h_multi(qubits: &[usize]) -> Result<State, Error>;
+    ch_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     x(index: usize) -> Result<State, Error>;
     x_multi(qubits: &[usize]) -> Result<State, Error>;
+    cx_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     y(index: usize) -> Result<State, Error>;
     y_multi(qubits: &[usize]) -> Result<State, Error>;
+    cy_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     z(index: usize) -> Result<State, Error>;
     z_multi(qubits: &[usize]) -> Result<State, Error>;
+    cz_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     i(qubit: usize) -> Result<State, Error>;
     i_multi(qubits: &[usize]) -> Result<State, Error>;
+    ci_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     s(index: usize) -> Result<State, Error>;
     s_multi(qubits: &[usize]) -> Result<State, Error>;
+    cs_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     t(index: usize) -> Result<State, Error>;
     t_multi(qubits: &[usize]) -> Result<State, Error>;
+    ct_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     s_dag(index: usize) -> Result<State, Error>;
     s_dag_multi(qubits: &[usize]) -> Result<State, Error>;
+    cs_dag_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     t_dag(index: usize) -> Result<State, Error>;
     t_dag_multi(qubits: &[usize]) -> Result<State, Error>;
+    ct_dag_multi(target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     p(index: usize, angle: f64) -> Result<State, Error>;
     p_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    cp_multi(target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
     rx(index: usize, angle: f64) -> Result<State, Error>;
     rx_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    crx_multi(target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
     ry(index: usize, angle: f64) -> Result<State, Error>;
     ry_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    cry_multi(target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
     rz(index: usize, angle: f64) -> Result<State, Error>;
     rz_multi(qubits: &[usize], angle: f64) -> Result<State, Error>;
+    crz_multi(target_qubits: &[usize], control_qubits: &[usize], angle: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
     cnot(control: usize, target: usize) -> Result<State, Error>;
     swap(qubit1: usize, qubit2: usize) -> Result<State, Error>;
+    cswap(target1: usize, target2: usize, controls: &[usize]) -> Result<State, Error>;
     toffoli(control1: usize, control2: usize, target: usize) -> Result<State, Error>;
     operate(unitary: impl Operator, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     measure(basis: MeasurementBasis, measured_qubits: &[usize]) -> Result<MeasurementResult, Error>;
