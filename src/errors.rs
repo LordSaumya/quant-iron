@@ -39,6 +39,10 @@ pub enum Error {
     #[error("State vector is not normalised")]
     StateVectorNotNormalised,
 
+    /// Input matrix for arbitrary unitary operator was not unitary
+    #[error("Non-unitary matrix")]
+    NonUnitaryMatrix,
+
     /// Unexpected error occurred
     #[error("An unknown error occurred")]
     UnknownError,

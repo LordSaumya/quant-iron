@@ -3,7 +3,7 @@ use crate::{
         ChainableState,
         operator::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
+            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2
         },
         state::State,
     },
@@ -626,6 +626,63 @@ fn test_operator_rotate_z_success() {
     assert_eq!(RotateZ::new(theta).base_qubits(), 1);
 }
 
+#[test]
+fn test_operator_unitary2_success() {
+    // U = X = [[0, 1], [1, 0]]
+    // U(|0>) = |1>
+    // U(|1>) = |0>
+    // U(|+>) = |+>
+    // U(|->) = -|->
+
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let u: [[Complex<f64>; 2]; 2] = [
+        [Complex::new(0.0, 0.0), Complex::new(1.0, 0.0)],
+        [Complex::new(1.0, 0.0), Complex::new(0.0, 0.0)],
+    ];
+    let expected_zero: State = one_state.clone();
+    let expected_one: State = zero_state.clone();
+    let expected_plus: State = plus_state.clone();
+    let expected_minus: State = minus_state.clone() * -1.0;
+
+    assert_eq!(zero_state.unitary(0, u).unwrap(), expected_zero.clone());
+    assert_eq!(one_state.unitary(0, u).unwrap(), expected_one.clone());
+    assert_eq!(plus_state.unitary(0, u).unwrap(), expected_plus.clone());
+    assert_eq!(minus_state.unitary(0, u).unwrap(), expected_minus.clone());
+
+    // u(|00>) = |11>
+    let two_qubit_state: State = State::new_zero(2).unwrap();
+    let new_state: State = two_qubit_state.unitary_multi(&[0, 1], u).unwrap();
+    let expected_state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    assert_eq!(new_state, expected_state);
+
+    // cu(control = 0, target = 1, U = X)|11> = |01>
+    let state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    let new_state: State = state.cunitary_multi(&[1], &[0], u).unwrap(); // X(|1>) * |1>
+    let expected_state: State = State::new_basis_n(2, 1).unwrap(); // |01>
+    assert_eq!(new_state, expected_state);
+
+    // cu(control = 0, target = 1, U = X)|+0> = |+0>
+    let state: State = State::new_basis_n(2, 0).unwrap().tensor_product(&State::new_plus(1).unwrap()).unwrap();
+    let new_state: State = state.cunitary_multi(&[0], &[1], u).unwrap(); // X(|0>) * |+0>
+    let expected_state: State = state.clone(); // |+0>
+    assert_eq!(new_state, expected_state);
+
+    // Base qubits = 1
+    assert_eq!(Unitary2::new(u).unwrap().base_qubits(), 1);
+
+    // Test errors
+    let invalid_u: [[Complex<f64>; 2]; 2] = [
+        [Complex::new(0.0, 0.0), Complex::new(1.0, 0.0)],
+        [Complex::new(1.0, 0.0), Complex::new(1.0, 0.0)],
+    ];
+    let invalid_unitary = Unitary2::new(invalid_u);
+    assert!(invalid_unitary.is_err(), "Invalid unitary matrix should return an error.");
+}
+
 // -- MULTI-QUBIT OPERATORS --
 
 #[test]
@@ -797,6 +854,7 @@ fn test_operate_operate_success() {
     assert_eq!(new_state, expected_state);
 }
 
+
 // -- TEST ALL ERRORS --
 
 // Macro to generate error test logic for single-qubit gates
@@ -846,6 +904,7 @@ fn test_single_qubit_gate_errors() {
     generate_single_qubit_gate_error_assertions!(state, s_dag);
     generate_single_qubit_gate_error_assertions!(state, t_dag);
     generate_single_qubit_gate_error_assertions!(state, i);
+
 
     // Instantiate for gates requiring an angle
     generate_single_qubit_gate_error_assertions!(state, p, angle);

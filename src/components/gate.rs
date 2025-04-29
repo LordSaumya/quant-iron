@@ -3,12 +3,14 @@ use crate::{
         measurement::MeasurementBasis,
         operator::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli,
+            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2
         },
         state::State,
     },
     errors::Error,
 };
+
+use num_complex::Complex;
 
 /// Represents a quantum gate as part of a quantum circuit.
 pub enum Gate {
@@ -821,6 +823,73 @@ impl Gate {
             .into_iter()
             .map(|target_index| Gate::Operator(
                 Box::new(RotateZ::new(angle)),
+                vec![target_index],
+                control_indices.clone(),
+            ))
+            .collect()
+    }
+
+    /// Creates a new Unitary2 gate for the specified qubit index and unitary matrix.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubit_index` - The index of the qubit on which the Unitary2 gate acts.
+    /// * `unitary` - The unitary matrix to be applied.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gate` - A new instance of the Gate struct representing a Unitary2 gate.
+    pub fn unitary2_gate(qubit_index: usize, unitary: [[Complex<f64>; 2]; 2]) -> Self {
+        Gate::Operator(
+            Box::new(Unitary2::new(unitary).unwrap()),
+            vec![qubit_index],
+            vec![],
+        )
+    }
+
+    /// Creates new Unitary2 gates for the specified qubit indices and unitary matrix.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubit_indices` - The indices of the qubits on which the Unitary2 gates act.
+    /// 
+    /// * `unitary` - The unitary matrix to be applied.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<Gate>` - A vector of Gate structs representing Unitary2 gates for each qubit index.
+    pub fn unitary2_multi_gate(
+        qubit_indices: Vec<usize>,
+        unitary: [[Complex<f64>; 2]; 2],
+    ) -> Vec<Self> {
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::unitary2_gate(qubit_index, unitary))
+            .collect()
+    }
+
+    /// Creates new controlled Unitary2 gates for the specified qubit indices and unitary matrix.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target_indices` - The indices of the target qubits.
+    /// 
+    /// * `control_indices` - The indices of the control qubits.
+    /// 
+    /// * `unitary` - The unitary matrix to be applied.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gates` - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
+    pub fn unitary2_controlled_gates(
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        unitary: [[Complex<f64>; 2]; 2],
+    ) -> Vec<Self> {
+        target_indices
+            .into_iter()
+            .map(|target_index| Gate::Operator(
+                Box::new(Unitary2::new(unitary).unwrap()),
                 vec![target_index],
                 control_indices.clone(),
             ))

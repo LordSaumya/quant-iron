@@ -1286,3 +1286,112 @@ impl Operator for RotateZ {
         1 // RotateZ acts on 1 qubit only
     }
 }
+
+
+/// An arbitrary 2×2 unitary operator.
+/// 
+/// This operator can be applied to a single qubit in a quantum state. It is represented by a 2×2 unitary matrix.
+pub struct Unitary2 {
+    /// The 2×2 unitary matrix representing the operator.
+    matrix: [[Complex<f64>; 2]; 2],
+}
+
+impl Unitary2 {
+    /// Creates a new Unitary2 operator with the given 2×2 unitary matrix.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `matrix` - A 2×2 unitary matrix represented as a 2D array of complex numbers.
+    /// 
+    /// # Returns:
+    /// 
+    /// * `Result<Self, Error>` - A result containing the new Unitary2 operator or an error if the matrix is not unitary.
+    /// 
+    /// # Errors:
+    /// 
+    /// * `Error::NonUnitaryMatrix` - If the provided matrix is not unitary.
+    pub fn new(matrix: [[Complex<f64>; 2]; 2]) -> Result<Self, Error> {
+        // Faster 2×2 unitary check:
+        let tol: f64 = f64::EPSILON * 2.0;
+        let a: Complex<f64> = matrix[0][0];
+        let b: Complex<f64> = matrix[0][1];
+        let c: Complex<f64> = matrix[1][0];
+        let d: Complex<f64> = matrix[1][1];
+
+        // each column has norm 1
+        if ((a.norm_sqr() + b.norm_sqr()) - 1.0).abs() > tol
+            || ((c.norm_sqr() + d.norm_sqr()) - 1.0).abs() > tol
+        {
+            return Err(Error::NonUnitaryMatrix);
+        }
+        // columns are orthogonal
+        if (a * c.conj() + b * d.conj()).norm() > tol {
+            return Err(Error::NonUnitaryMatrix);
+        }
+
+        Ok(Unitary2 { matrix })
+    }
+}
+
+impl Operator for Unitary2 {
+
+    /// Applies the Unitary2 operator to the given state's target qubit.
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `state` - The state to apply the operator to.
+    /// 
+    /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
+    /// 
+    /// * `control_qubits` - The control qubits for the operator. If not empty, the operator will be applied conditionally based on the control qubits. Otherwise, it will be applied unconditionally.
+    /// 
+    /// # Returns:
+    /// 
+    /// * The new state after applying the Unitary2 operator.
+    fn apply(
+        &self,
+        state: &State,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<State, Error> {
+        // Validate exactly one target qubit
+        if target_qubits.len() != 1 {
+            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+        }
+
+        let t: usize = target_qubits[0];
+        let nq: usize = state.num_qubits();
+        if t >= nq {
+            return Err(Error::InvalidQubitIndex(t, nq));
+        }
+        for &c in control_qubits {
+            if c >= nq {
+                return Err(Error::InvalidQubitIndex(c, nq));
+            }
+            if c == t {
+                return Err(Error::OverlappingControlAndTargetQubits(c, t));
+            }
+        }
+
+        // Apply 2×2 block on each basis‐pair
+        let dim = 1 << nq;
+        let mut new_sv = state.state_vector.clone();
+        for i in 0..dim {
+            if (i >> t) & 1 == 0 {
+                let j = i | (1 << t);
+                if check_controls(i, control_qubits) && check_controls(j, control_qubits) {
+                    let ai = state.amplitude(i)?;
+                    let aj = state.amplitude(j)?;
+                    new_sv[i] = self.matrix[0][0] * ai + self.matrix[0][1] * aj;
+                    new_sv[j] = self.matrix[1][0] * ai + self.matrix[1][1] * aj;
+                }
+            }
+        }
+
+        Ok(State { state_vector: new_sv, num_qubits: nq })
+    }
+
+    fn base_qubits(&self) -> usize {
+        1
+    }
+}
