@@ -6,7 +6,6 @@ use crate::components::{
     },
 };
 use crate::errors::Error;
-use nalgebra::{DMatrix, DVector};
 use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
@@ -45,7 +44,8 @@ impl State {
         }
         // Check if the square norm (probability) of the state vector is 1
         let norm: f64 = state_vector.iter().map(|x| x.norm_sqr()).sum();
-        if (norm - 1.0).abs() > f64::EPSILON {
+        let tol: f64 = f64::EPSILON * state_vector.len() as f64;
+        if (norm - 1.0).abs() > tol {
             return Err(Error::StateVectorNotNormalised);
         }
 
@@ -463,6 +463,61 @@ impl State {
             .map(|_| self.measure(basis, actual_measured_qubits))
             .collect::<Result<Vec<MeasurementResult>, Error>>()?;
         Ok(results)
+    }
+
+    /// Performs a tensor product of two state vectors and returns the resulting state.
+    /// Uses parallel computation if the resulting dimension is large enough.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The other state vector to perform the tensor product with.
+    ///
+    /// # Returns
+    ///
+    /// * `result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if either state vector is empty.
+    /// * Returns an error if either state vector has an invalid number of qubits.
+    pub fn tensor_product(
+        &self,
+        other: &Self,
+    ) -> Result<Self, Error> {
+        if self.num_qubits == 0 || other.num_qubits == 0 {
+            return Err(Error::InvalidNumberOfQubits(0));
+        }
+
+        let new_num_qubits: usize = self.num_qubits + other.num_qubits;
+        let new_dim: usize = 1 << new_num_qubits;
+        let other_dim: usize = 1 << other.num_qubits; // Cache dimension of other state
+
+        // Threshold for using parallel computation
+        const PARALLEL_THRESHOLD: usize = 1 << 6; // Parallelise when dimension is larger than 64
+
+        let new_state_vector: Vec<Complex<f64>> = if new_dim > PARALLEL_THRESHOLD {
+            // Parallel calculation for large states
+            (0..new_dim)
+                .into_par_iter()
+                .map(|new_index| {
+                    let i: usize = new_index >> other.num_qubits; // Index for self.state_vector
+                    let j: usize = new_index & (other_dim - 1);   // Index for other.state_vector
+                    self.state_vector[i] * other.state_vector[j]
+                })
+                .collect()
+        } else {
+            // Sequential calculation for smaller states
+            let mut temp_state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); new_dim];
+            for i in 0..self.state_vector.len() {
+                for j in 0..other.state_vector.len() {
+                    temp_state_vector[(i * other_dim) + j] =
+                        self.state_vector[i] * other.state_vector[j];
+                }
+            }
+            temp_state_vector
+        };
+
+        Ok(Self::new(new_state_vector)?) // For normalisation check
     }
 
     // ***** OPERATION FUNCTIONS *****
