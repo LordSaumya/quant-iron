@@ -242,18 +242,18 @@ impl CircuitBuilder {
     }
 
     /// Builds a subroutine from the gates in the circuit builder.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// * `Result<Subroutine, Error>` - A new instance of the subroutine struct or an error if the subroutine cannot be built.
-    pub fn build_subroutine(self) -> Result<Subroutine, Error> {
+    ///
+    /// * `Subroutine` - A new instance of the Subroutine struct.
+    pub fn build_subroutine(self) -> Subroutine {
         Subroutine::with_gates(self.gates, self.num_qubits)
     }
 
     /// Adds a subroutine to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `subroutine` - The subroutine to be added to the circuit builder.
     pub fn add_subroutine(&mut self, subroutine: Subroutine) {
         self.gates.extend(subroutine.gates);
@@ -689,11 +689,11 @@ impl CircuitBuilder {
     }
 
     /// Adds multiple arbitrary unitary operator gates to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
-    /// 
+    ///
     /// * `unitary` - Matrix representing the unitary operator.
     pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) {
         let gates: Vec<Gate> = Gate::unitary2_multi_gate(qubits, unitary);
@@ -701,13 +701,13 @@ impl CircuitBuilder {
     }
 
     /// Adds controlled arbitrary unitary operator gates to the circuit builder.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `target_qubits` - A vector of indices of the target qubits.
-    /// 
+    ///
     /// * `control_qubits` - A vector of indices of the control qubits.
-    /// 
+    ///
     /// * `unitary` - Matrix representing the unitary operator.
     pub fn cunitary_gates(
         &mut self,
@@ -715,7 +715,8 @@ impl CircuitBuilder {
         control_qubits: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
     ) {
-        let gates: Vec<Gate> = Gate::unitary2_controlled_gates(target_qubits, control_qubits, unitary);
+        let gates: Vec<Gate> =
+            Gate::unitary2_controlled_gates(target_qubits, control_qubits, unitary);
         self.add_gates(gates);
     }
 
@@ -814,11 +815,11 @@ impl CircuitBuilder {
 }
 
 /// A subroutine for a quantum circuit.
-/// 
+///
 /// # Fields
-/// 
+///
 /// * `gates` - A vector of gates in the subroutine.
-/// 
+///
 /// * `num_qubits` - The number of qubits in the subroutine.
 pub struct Subroutine {
     /// The gates in the subroutine.
@@ -829,9 +830,9 @@ pub struct Subroutine {
 
 impl Subroutine {
     /// Creates a new subroutine with the specified number of qubits.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `num_qubits` - The number of qubits in the subroutine.
     pub fn new(num_qubits: usize) -> Self {
         Subroutine {
@@ -846,87 +847,123 @@ impl Subroutine {
     ///
     /// * `gates` - A vector of gates in the subroutine.
     /// * `num_qubits` - The number of qubits in the subroutine.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Subroutine, Error>` - A new instance of the Subroutine struct or an error if the subroutine cannot be created.
-    pub fn with_gates(gates: Vec<Gate>, num_qubits: usize) -> Result<Subroutine, Error> {
-        Ok(Subroutine {
-            gates,
-            num_qubits,
-        })
+    pub fn with_gates(gates: Vec<Gate>, num_qubits: usize) -> Subroutine {
+        Subroutine { gates, num_qubits }
     }
 
     /// Gets the gates in the subroutine.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `&Vec<Gate>` - A reference to the vector of gates in the subroutine.
     pub fn get_gates(&self) -> &Vec<Gate> {
         &self.gates
     }
 
     /// Adds a gate to the subroutine.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `gate` - The gate to be added to the subroutine.
-    /// 
-    /// # Returns
-    /// 
-    /// * `Result<(), Error>` - An empty result if the gate is added successfully, or an error if the gate cannot be added.
-    pub fn add_gate(&mut self, gate: Gate) -> Result<(), Error> {
-        // Check if the gate's target qubits are within the subroutine's qubit range
-        for &qubit in gate.get_target_qubits() {
-            if qubit >= self.num_qubits {
-                return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
-            }
-        }
-
-        // Check if the gate's control qubits are within the subroutine's qubit range
-        if let Some(control_qubits) = gate.get_control_qubits() {
-            for &qubit in control_qubits {
-                if qubit >= self.num_qubits {
-                    return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
-                }
-            }
-        }
-
-        Ok(self.gates.push(gate))
+    pub fn add_gate(&mut self, gate: Gate) {
+        self.gates.push(gate);
     }
 
     /// Adds multiple gates to the subroutine.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `gates` - A vector of gates to be added to the subroutine.
-    /// 
-    /// # Returns
-    /// 
-    /// * `Result<(), Error>` - An empty result if the gates are added successfully, or an error if the gates cannot be added.
-    pub fn add_gates(&mut self, gates: Vec<Gate>) -> Result<(), Error> {
+    pub fn add_gates(&mut self, gates: Vec<Gate>) {
         for gate in gates {
-            self.add_gate(gate)?;
+            self.add_gate(gate);
         }
-        Ok(())
     }
 
     /// Gets the number of qubits in the subroutine.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `usize` - The number of qubits in the subroutine.
     pub fn get_num_qubits(&self) -> usize {
         self.num_qubits
     }
+
+    // -- COMMON SUBROUTINES --
+
+    /// Creates a quantum fourier transform subroutine for the specified qubits.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubits` - A vector of indices of the qubits to be transformed.
+    ///
+    /// * `num_qubits` - The number of qubits in the subroutine.
+    pub fn qft(qubits: Vec<usize>, num_qubits: usize) -> Subroutine {
+        let mut builder: CircuitBuilder = CircuitBuilder::new(num_qubits);
+        let n: usize = qubits.len();
+        for i in 0..n {
+            // Apply Hadamard gate
+            builder.h_gate(qubits[i]);
+            // Apply controlled phase rotations
+            for j in (i + 1)..n {
+                // The angle for the controlled phase gate R_k is pi / 2^(j-i)
+                let angle = std::f64::consts::PI / (2_f64.powi((j - i) as i32));
+                // Control qubit is j, target qubit is i
+                builder.cp_gates(vec![qubits[i]], vec![qubits[j]], angle);
+            }
+        }
+        // Swap qubits at the end
+        for i in 0..(n / 2) {
+            builder.swap_gate(qubits[i], qubits[n - 1 - i]);
+        }
+        builder.build_subroutine()
+    }
+
+    /// Creates a quantum inverse fourier transform subroutine for the specified qubits.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubits` - A vector of indices of the qubits to be transformed.
+    /// 
+    /// * `num_qubits` - The number of qubits in the subroutine.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Subroutine` - A new instance of the Subroutine struct.
+    pub fn iqft(qubits: Vec<usize>, num_qubits: usize) -> Subroutine {
+        let mut builder: CircuitBuilder = CircuitBuilder::new(num_qubits);
+        let n: usize = qubits.len();
+
+        // Apply swaps first
+        for i in 0..(n / 2) {
+            builder.swap_gate(qubits[i], qubits[n - 1 - i]);
+        }
+
+        // Apply inverse controlled rotations and Hadamards
+        for i in (0..n).rev() {
+            // Apply controlled phase rotations (inverse)
+            for j in ((i + 1)..n).rev() {
+                // The angle for the inverse controlled phase gate R_k dagger is -pi / 2^(j-i)
+                let angle: f64 = -std::f64::consts::PI / (2_f64.powi((j - i) as i32));
+                // Control qubit is j, target qubit is i
+                builder.cp_gates(vec![qubits[i]], vec![qubits[j]], angle);
+            }
+            // Apply Hadamard gate
+            builder.h_gate(qubits[i]);
+        }
+        builder.build_subroutine()
+    }
 }
 
 // Allow conversion from Subroutine to Circuit
-impl From<Subroutine> for Circuit {
-    fn from(subroutine: Subroutine) -> Self {
-        Circuit {
-            gates: subroutine.gates,
-            num_qubits: subroutine.num_qubits,
+impl TryFrom<Subroutine> for Circuit {
+    fn try_from(value: Subroutine) -> Result<Self, Self::Error> {
+        let mut circuit = Circuit::new(value.num_qubits);
+        for gate in value.gates {
+            circuit.add_gate(gate)?;
         }
+        Ok(circuit)
     }
+
+    type Error = Error;
 }
