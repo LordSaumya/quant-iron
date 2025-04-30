@@ -241,6 +241,24 @@ impl CircuitBuilder {
         Circuit::with_gates(self.gates, self.num_qubits)
     }
 
+    /// Builds a subroutine from the gates in the circuit builder.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<Subroutine, Error>` - A new instance of the subroutine struct or an error if the subroutine cannot be built.
+    pub fn build_subroutine(self) -> Result<Subroutine, Error> {
+        Subroutine::with_gates(self.gates, self.num_qubits)
+    }
+
+    /// Adds a subroutine to the circuit builder.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `subroutine` - The subroutine to be added to the circuit builder.
+    pub fn add_subroutine(&mut self, subroutine: Subroutine) {
+        self.gates.extend(subroutine.gates);
+    }
+
     // -- SINGLE QUBIT GATES --
 
     /// Adds a Hadamard gate to the circuit builder.
@@ -792,5 +810,123 @@ impl CircuitBuilder {
     pub fn measure_gate(&mut self, basis: MeasurementBasis, qubits: Vec<usize>) {
         let gate: Gate = Gate::Measurement(basis, qubits);
         self.add_gate(gate);
+    }
+}
+
+/// A subroutine for a quantum circuit.
+/// 
+/// # Fields
+/// 
+/// * `gates` - A vector of gates in the subroutine.
+/// 
+/// * `num_qubits` - The number of qubits in the subroutine.
+pub struct Subroutine {
+    /// The gates in the subroutine.
+    pub gates: Vec<Gate>,
+    /// The number of qubits in the subroutine.
+    pub num_qubits: usize,
+}
+
+impl Subroutine {
+    /// Creates a new subroutine with the specified number of qubits.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `num_qubits` - The number of qubits in the subroutine.
+    pub fn new(num_qubits: usize) -> Self {
+        Subroutine {
+            gates: Vec::new(),
+            num_qubits,
+        }
+    }
+
+    /// Creates a new subroutine with the specified gates and number of qubits.
+    ///
+    /// # Arguments
+    ///
+    /// * `gates` - A vector of gates in the subroutine.
+    /// * `num_qubits` - The number of qubits in the subroutine.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Subroutine, Error>` - A new instance of the Subroutine struct or an error if the subroutine cannot be created.
+    pub fn with_gates(gates: Vec<Gate>, num_qubits: usize) -> Result<Subroutine, Error> {
+        Ok(Subroutine {
+            gates,
+            num_qubits,
+        })
+    }
+
+    /// Gets the gates in the subroutine.
+    /// 
+    /// # Returns
+    /// 
+    /// * `&Vec<Gate>` - A reference to the vector of gates in the subroutine.
+    pub fn get_gates(&self) -> &Vec<Gate> {
+        &self.gates
+    }
+
+    /// Adds a gate to the subroutine.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `gate` - The gate to be added to the subroutine.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), Error>` - An empty result if the gate is added successfully, or an error if the gate cannot be added.
+    pub fn add_gate(&mut self, gate: Gate) -> Result<(), Error> {
+        // Check if the gate's target qubits are within the subroutine's qubit range
+        for &qubit in gate.get_target_qubits() {
+            if qubit >= self.num_qubits {
+                return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
+            }
+        }
+
+        // Check if the gate's control qubits are within the subroutine's qubit range
+        if let Some(control_qubits) = gate.get_control_qubits() {
+            for &qubit in control_qubits {
+                if qubit >= self.num_qubits {
+                    return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
+                }
+            }
+        }
+
+        Ok(self.gates.push(gate))
+    }
+
+    /// Adds multiple gates to the subroutine.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `gates` - A vector of gates to be added to the subroutine.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), Error>` - An empty result if the gates are added successfully, or an error if the gates cannot be added.
+    pub fn add_gates(&mut self, gates: Vec<Gate>) -> Result<(), Error> {
+        for gate in gates {
+            self.add_gate(gate)?;
+        }
+        Ok(())
+    }
+
+    /// Gets the number of qubits in the subroutine.
+    /// 
+    /// # Returns
+    /// 
+    /// * `usize` - The number of qubits in the subroutine.
+    pub fn get_num_qubits(&self) -> usize {
+        self.num_qubits
+    }
+}
+
+// Allow conversion from Subroutine to Circuit
+impl From<Subroutine> for Circuit {
+    fn from(subroutine: Subroutine) -> Self {
+        Circuit {
+            gates: subroutine.gates,
+            num_qubits: subroutine.num_qubits,
+        }
     }
 }
