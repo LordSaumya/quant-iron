@@ -254,6 +254,16 @@ impl Operator for Pauli {
     }
 }
 
+impl std::fmt::Display for Pauli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Pauli::X => write!(f, "X"),
+            Pauli::Y => write!(f, "Y"),
+            Pauli::Z => write!(f, "Z"),
+        }
+    }
+}
+
 /// Defines a CNOT operator.
 ///
 /// A two-qubit operator that flips the target qubit if the control qubit is in the |1> state.
