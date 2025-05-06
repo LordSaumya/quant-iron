@@ -188,6 +188,18 @@ impl PauliString {
 
         Ok(term_1 + term_2)
     }
+
+    /// Returns the Hermitian conjugate of the Pauli string.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Self` - A new `PauliString` instance representing the Hermitian conjugate of the original Pauli string.
+    pub fn hermitian_conjugate(&self) -> Self {
+        PauliString {
+            ops: self.ops.clone(),
+            coefficient: self.coefficient.conj(),
+        }
+    }
 }
 
 impl std::fmt::Display for PauliString {
