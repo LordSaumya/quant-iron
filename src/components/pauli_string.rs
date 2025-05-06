@@ -146,6 +146,18 @@ impl PauliString {
         Ok(term_1 + term_2)
     }
 
+    /// Applies the exponential of the Pauli string to a given state with a specified factor.
+    ///
+    /// # Arguments
+    /// * `state` - The state to which the exponential of the Pauli string is applied.
+    /// * `factor` - A complex factor to be multiplied with the coefficient of the Pauli string.
+    ///
+    /// # Returns
+    /// * `Result<State, Error>` - The resulting state after applying the exponential of the Pauli string with the factor, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the operations in the Pauli string refer to qubits outside the range of the state.
     pub fn apply_exp_factor(&self, state: &State, factor: Complex<f64>) -> Result<State, Error> {
         // If the Pauli string is empty, return the state multiplied by the exponential of the coefficient
         let alpha: Complex<f64> = self.coefficient * factor;
