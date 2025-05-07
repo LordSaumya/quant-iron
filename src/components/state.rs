@@ -11,7 +11,7 @@ use rand::Rng;
 use rayon::prelude::*;
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct State {
     /// The state vector of the system, represented as a complex vector.
     /// Each element of the vector represents a probability amplitude for a particular state.
@@ -2115,5 +2115,27 @@ impl Sub<State> for State {
             state_vector: new_state_vector,
             num_qubits: self.num_qubits,
         }
+    }
+}
+
+impl std::fmt::Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut state_str = String::new();
+        state_str.push_str(format!("State with {} qubits:\n[", self.num_qubits).as_str());
+        for amplitude in &self.state_vector {
+            let amplitude_string: String = if amplitude.im == 0.0 {
+                format!("{:.2}", amplitude.re)
+            } else if amplitude.re == 0.0 {
+                format!("{:.2}i", amplitude.im)
+            } else {
+                format!("{:.2} + {:.2}i", amplitude.re, amplitude.im)
+            };
+            // Add the amplitude to the string representations
+            state_str.push_str(format!("{}, ", amplitude_string).as_str());
+        }
+        state_str.pop(); // Remove the last comma
+        state_str.pop(); // Remove the last space
+        state_str.push_str("]");
+        write!(f, "{}", state_str)
     }
 }
