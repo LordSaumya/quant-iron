@@ -3,11 +3,12 @@ use crate::{
     errors::Error,
 };
 use num_complex::Complex;
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// Represents a Pauli string, which is a product of Pauli operators (X, Y, Z) acting on qubits.
 /// Used to represent a term in a Hamiltonian or a quantum operator.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PauliString {
     /// A mapping from qubit indices to Pauli operators.
     ops: HashMap<usize, Pauli>,
@@ -171,7 +172,7 @@ impl PauliString {
         }
 
         // Check if the operations refer to qubits outside the range of the state
-        for qubit_idx in self.ops.keys() { // Changed 'qubit' to 'qubit_idx' for clarity
+        for qubit_idx in self.ops.keys() {
             if *qubit_idx >= state.num_qubits() {
                 return Err(Error::InvalidQubitIndex(*qubit_idx, state.num_qubits()));
             }
@@ -246,5 +247,123 @@ impl std::fmt::Display for PauliString {
         }
 
         write!(f, "{}", result.trim())
+    }
+}
+
+/// A vector of Pauli strings that are summed together.
+/// Useful for representing Hamiltonians or observables.
+///
+/// # Fields
+///
+/// * `terms` - A vector of `PauliString` instances that are summed together.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SumOp {
+    /// A vector of Pauli strings that are summed together.
+    pub terms: Vec<PauliString>,
+}
+
+impl SumOp {
+    /// Creates a new `SumPauliString` instance with the given terms and number of qubits.
+    ///
+    /// # Arguments
+    ///
+    /// * `terms` - A vector of `PauliString` instances that are summed together.
+    ///
+    /// # Returns
+    ///
+    /// * A new `SumPauliString` instance with the specified terms and number of qubits.
+    pub fn new(terms: Vec<PauliString>) -> Self {
+        Self { terms }
+    }
+
+    /// Returns the number of terms in the sum.
+    ///
+    /// # Returns
+    ///
+    /// * `usize` - The number of terms in the sum.
+    pub fn num_terms(&self) -> usize {
+        self.terms.len()
+    }
+
+    /// Applies the sum of Pauli strings to a given state.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` - The state to which the sum of Pauli strings is applied.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<State, Error>` - The resulting state after applying the sum of Pauli strings, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the operations in the Pauli strings refer to qubits outside the range of the state.
+    pub fn apply(&self, state: &State) -> Result<State, Error> {
+        if self.terms.is_empty() {
+            // An empty sumop is equivalent to the zero operator
+            return Ok(state.clone() * 0.0);
+        }
+
+        Ok(self
+            .terms
+            .par_iter()
+            .map(|term| term.apply(state))
+            .collect::<Result<Vec<State>, Error>>()?
+            .into_iter()
+            .sum())
+    }
+
+    /// Calculates the expectation value <psi|H|psi> = Sum_i <psi|P_i|psi>.
+    ///
+    /// The expectation value is generally real for Hermitian operators and normalized states.
+    /// However, this function returns a Complex<f64> as intermediate PauliStrings
+    /// might have complex coefficients or the operator/state might not be strictly physical.
+    ///
+    /// # Arguments
+    /// * `state` - The state |psi> for which to calculate the expectation value.
+    ///             For a physically meaningful expectation value, this state should be normalized.
+    ///
+    /// # Returns
+    /// * `Result<Complex<f64>, Error>` - The expectation value, or an error if the operation fails.
+    ///
+    /// # Errors
+    /// * Returns an error if any underlying `PauliString::apply` fails (e.g., invalid qubit index).
+    /// * Returns an error if `state.inner_product` fails (e.g., mismatched number of qubits,
+    ///   though `PauliString::apply` should also catch qubit count issues).
+    pub fn expectation_value(&self, state: &State) -> Result<Complex<f64>, Error> {
+        if self.terms.is_empty() {
+            // The expectation value of a zero operator is zero.
+            return Ok(Complex::new(0.0, 0.0));
+        }
+
+        let expectation_values_per_term: Vec<Complex<f64>> = self
+            .terms
+            .par_iter()
+            .map(|term| {
+                // For each term P_i in the sum H = Sum_i P_i:
+                // 1. Calculate |phi_i> = P_i |psi>
+                let phi_i_state = term.apply(state)?;
+
+                // 2. Calculate <psi | phi_i> = <psi | P_i | psi>
+                state.inner_product(&phi_i_state)
+            })
+            .collect::<Result<Vec<Complex<f64>>, Error>>()?; // Collect into Result<Vec<_>, E>, propagating errors
+
+        // Sum the individual expectation values <psi|P_i|psi>
+        // Complex<f64> from num_complex implements std::iter::Sum.
+        Ok(expectation_values_per_term.into_iter().sum())
+    }
+}
+
+impl std::fmt::Display for SumOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut result: String = String::new();
+        for (i, term) in self.terms.iter().enumerate() {
+            if i > 0 {
+                result.push_str(" + ");
+            }
+            result.push_str(&format!("{}", term));
+        }
+        write!(f, "{}", result)
     }
 }
