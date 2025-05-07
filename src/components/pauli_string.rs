@@ -5,6 +5,7 @@ use crate::{
 use num_complex::Complex;
 use rayon::prelude::*;
 use std::collections::HashMap;
+use std::ops::{Add, Mul};
 
 /// Represents a Pauli string, which is a product of Pauli operators (X, Y, Z) acting on qubits.
 /// Used to represent a term in a Hamiltonian or a quantum operator.
@@ -212,6 +213,41 @@ impl PauliString {
     }
 }
 
+impl Add for PauliString {
+    type Output = SumOp;
+
+    fn add(self, other: Self) -> Self::Output {
+        // Create a new SumOp with the two Pauli strings
+        let terms: Vec<PauliString> = vec![self, other];
+        // Return a new SumOp instance with the terms
+        SumOp::new(terms)
+    }
+}
+
+impl Mul<Complex<f64>> for PauliString {
+    type Output = Self;
+
+    fn mul(self, rhs: Complex<f64>) -> Self::Output {
+        // Create a new Pauli string with the product of the coefficient and the given complex number
+        PauliString {
+            ops: self.ops.clone(),
+            coefficient: self.coefficient * rhs,
+        }
+    }
+}
+
+impl Mul<f64> for PauliString {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        // Create a new Pauli string with the product of the coefficient and the given real number
+        PauliString {
+            ops: self.ops.clone(),
+            coefficient: self.coefficient * Complex::new(rhs, 0.0),
+        }
+    }
+}
+
 impl std::fmt::Display for PauliString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let coeff_str: String = if self.coefficient.re == 0.0 && self.coefficient.im == 0.0 {
@@ -365,5 +401,59 @@ impl std::fmt::Display for SumOp {
             result.push_str(&format!("{}", term));
         }
         write!(f, "{}", result)
+    }
+}
+
+impl Mul<Complex<f64>> for SumOp {
+    type Output = Self;
+
+    fn mul(self, rhs: Complex<f64>) -> Self::Output {
+        // Create a new SumOp with the coefficient multiplied by the given complex number
+        let terms: Vec<PauliString> = self
+            .terms
+            .into_iter()
+            .map(|term| term * rhs)
+            .collect();
+        // Return a new SumOp instance with the modified terms
+        SumOp::new(terms)
+    }
+}
+
+impl Mul<f64> for SumOp {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        // Create a new SumOp with the coefficient multiplied by the given real number
+        let terms: Vec<PauliString> = self
+            .terms
+            .into_iter()
+            .map(|term| term * rhs)
+            .collect();
+        // Return a new SumOp instance with the modified terms
+        SumOp::new(terms)
+    }
+}
+
+impl Add for SumOp {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        // Create a new SumOp with the two sets of terms
+        let mut terms: Vec<PauliString> = self.terms;
+        terms.extend(other.terms);
+        // Return a new SumOp instance with the combined terms
+        SumOp::new(terms)
+    }
+}
+
+impl Add<PauliString> for SumOp {
+    type Output = Self;
+
+    fn add(self, other: PauliString) -> Self::Output {
+        // Create a new SumOp with the existing terms and the new Pauli string
+        let mut terms: Vec<PauliString> = self.terms;
+        terms.push(other);
+        // Return a new SumOp instance with the combined terms
+        SumOp::new(terms)
     }
 }
