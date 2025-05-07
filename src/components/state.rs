@@ -2123,6 +2123,36 @@ impl Add<State> for State {
     }
 }
 
+// Implement sum for State
+impl std::iter::Sum for State {
+    fn sum<I>(mut iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        // Take the first state as the initial accumulator.
+        let mut accumulator = match iter.next() {
+            Some(first_state) => first_state,
+            None => {
+                panic!("Cannot sum an empty iterator of State objects: num_qubits for the sum is undefined.");
+            }
+        };
+
+        // Fold the rest of the states into the accumulator.
+        // The `Add` impl for `State` handles element-wise addition and
+        // panics if `num_qubits` do not match.
+        for state in iter {
+            if accumulator.num_qubits != state.num_qubits {
+                panic!(
+                    "Cannot sum states with different numbers of qubits: {} != {}",
+                    accumulator.num_qubits, state.num_qubits
+                );
+            }
+            accumulator = accumulator + state; // Uses the implemented Add for State
+        }
+        accumulator
+    }
+}
+
 // Implement subtraction for State - State
 impl Sub<State> for State {
     type Output = Self;
