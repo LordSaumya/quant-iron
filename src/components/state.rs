@@ -517,6 +517,41 @@ impl State {
         Ok(Self::new(new_state_vector)?) // For normalisation check
     }
 
+    /// Performs an inner product of two state vectors and returns the resulting complex number.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - The other state vector to perform the inner product with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `result` - A result containing the inner product as a complex number if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if either state vector is empty.
+    /// * Returns an error if the state vectors have different dimensions.
+    pub fn inner_product(&self, other: &Self) -> Result<Complex<f64>, Error> {
+        if self.num_qubits == 0 || other.num_qubits == 0 {
+            return Err(Error::InvalidNumberOfQubits(0));
+        }
+
+        if self.state_vector.len() != other.state_vector.len() {
+            return Err(Error::InvalidNumberOfQubits(
+                self.state_vector.len() as usize,
+            ));
+        }
+
+        let inner_product: Complex<f64> = self
+            .state_vector
+            .iter()
+            .zip(other.state_vector.iter())
+            .map(|(a, b)| a.conj() * b)
+            .sum();
+
+        Ok(inner_product)
+    }
+
     // ***** OPERATION FUNCTIONS *****
 
     /// Applies a unitary operation to the state vector.
