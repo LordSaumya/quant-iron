@@ -96,9 +96,8 @@ impl PauliString {
         // Apply the Pauli string to the state
         let mut new_state: State = state.clone();
         for (qubit, op) in &self.ops {
-            op.apply(&mut new_state, &[*qubit], &[])?;
+            new_state = op.apply(&mut new_state, &[*qubit], &[])?;
         }
-
         Ok(new_state * self.coefficient)
     }
 
@@ -120,30 +119,34 @@ impl PauliString {
         let alpha: Complex<f64> = self.coefficient;
 
         if self.ops.is_empty() {
+            // P_ops is Identity. exp(alpha * I) |state> = exp(alpha) * |state>
             return Ok(state.clone() * alpha.exp());
         }
 
         // Check if the operations refer to qubits outside the range of the state
-        for qubit in self.ops.keys() {
-            if *qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(*qubit, state.num_qubits()));
+        for qubit_idx in self.ops.keys() {
+            if *qubit_idx >= state.num_qubits() {
+                return Err(Error::InvalidQubitIndex(*qubit_idx, state.num_qubits()));
             }
         }
 
-        // Apply the exponential of the Pauli string to the state
+        // 1. Calculate P_ops |state>
         let mut p_ops_psi_state: State = state.clone();
-        for (qubit, op) in &self.ops {
-            op.apply(&mut p_ops_psi_state, &[*qubit], &[])?;
+        for (qubit_idx, pauli_op) in &self.ops {
+            p_ops_psi_state = pauli_op.apply(&mut p_ops_psi_state, &[*qubit_idx], &[])?;
         }
-
-        // Scalar coefficients
+        // 2. Calculate scalar coefficients for exp(alpha * P_ops) = cosh(alpha)*I + sinh(alpha)*P_ops
         let cosh_alpha: Complex<f64> = alpha.cosh();
         let sinh_alpha: Complex<f64> = alpha.sinh();
 
-        let term_1: State = p_ops_psi_state.clone() * cosh_alpha;
-        let term_2: State = state.clone() * sinh_alpha;
+        // 3. Calculate cosh(alpha) * |state>
+        let term_identity_part: State = state.clone() * cosh_alpha;
 
-        Ok(term_1 + term_2)
+        // 4. Calculate sinh(alpha) * (P_ops |state>)
+        let term_operator_part: State = p_ops_psi_state * sinh_alpha;
+
+        // 5. Add the two terms: cosh(alpha) * |state> + sinh(alpha) * (P_ops |state>)
+        Ok(term_identity_part + term_operator_part)
     }
 
     /// Applies the exponential of the Pauli string to a given state with a specified factor.
@@ -159,40 +162,46 @@ impl PauliString {
     ///
     /// * Returns an error if the operations in the Pauli string refer to qubits outside the range of the state.
     pub fn apply_exp_factor(&self, state: &State, factor: Complex<f64>) -> Result<State, Error> {
-        // If the Pauli string is empty, return the state multiplied by the exponential of the coefficient
+        // Calculate the effective coefficient for the exponentiation
         let alpha: Complex<f64> = self.coefficient * factor;
 
         if self.ops.is_empty() {
+            // P_ops is Identity. exp(alpha * I) |state> = exp(alpha) * |state>
             return Ok(state.clone() * alpha.exp());
         }
 
         // Check if the operations refer to qubits outside the range of the state
-        for qubit in self.ops.keys() {
-            if *qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(*qubit, state.num_qubits()));
+        for qubit_idx in self.ops.keys() { // Changed 'qubit' to 'qubit_idx' for clarity
+            if *qubit_idx >= state.num_qubits() {
+                return Err(Error::InvalidQubitIndex(*qubit_idx, state.num_qubits()));
             }
         }
 
-        // Apply the exponential of the Pauli string to the state
+        // 1. Calculate P_ops |state> (operator part only, without self.coefficient)
         let mut p_ops_psi_state: State = state.clone();
-        for (qubit, op) in &self.ops {
-            op.apply(&mut p_ops_psi_state, &[*qubit], &[])?;
+        for (qubit_idx, pauli_op) in &self.ops {
+            p_ops_psi_state = pauli_op.apply(&mut p_ops_psi_state, &[*qubit_idx], &[])?;
         }
+        // p_ops_psi_state now holds P_ops |state>
 
-        // Scalar coefficients
+        // 2. Calculate scalar coefficients for exp(alpha * P_ops) = cosh(alpha)*I + sinh(alpha)*P_ops
         let cosh_alpha: Complex<f64> = alpha.cosh();
         let sinh_alpha: Complex<f64> = alpha.sinh();
 
-        let term_1: State = p_ops_psi_state.clone() * cosh_alpha;
-        let term_2: State = state.clone() * sinh_alpha;
+        // 3. Calculate cosh(alpha) * |state>
+        let term_identity_part: State = state.clone() * cosh_alpha;
 
-        Ok(term_1 + term_2)
+        // 4. Calculate sinh(alpha) * (P_ops |state>)
+        let term_operator_part: State = p_ops_psi_state * sinh_alpha;
+
+        // 5. Add the two terms: cosh(alpha) * |state> + sinh(alpha) * (P_ops |state>)
+        Ok(term_identity_part + term_operator_part)
     }
 
     /// Returns the Hermitian conjugate of the Pauli string.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Self` - A new `PauliString` instance representing the Hermitian conjugate of the original Pauli string.
     pub fn hermitian_conjugate(&self) -> Self {
         PauliString {
