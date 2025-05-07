@@ -136,7 +136,7 @@ impl Operator for Hadamard {
 }
 
 /// Defines the Pauli operators: X, Y, Z.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Pauli {
     /// Pauli-X operator (NOT gate)
     X,
