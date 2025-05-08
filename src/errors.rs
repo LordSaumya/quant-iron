@@ -43,6 +43,15 @@ pub enum Error {
     #[error("Non-unitary matrix")]
     NonUnitaryMatrix,
 
+    /// Unexpected number of inputs
+    /// 
+    /// # Arguments:
+    /// 
+    /// * `0` - The actual number of inputs
+    /// * `1` - The expected number of inputs
+    #[error("Unexpected number of inputs: expected {1}, got {0}")]
+    InvalidNumberOfInputs(usize, usize),
+
     /// Unexpected error occurred
     #[error("An unknown error occurred")]
     UnknownError,
