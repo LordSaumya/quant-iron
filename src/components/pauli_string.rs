@@ -88,13 +88,6 @@ impl PauliString {
             return Ok(state.clone() * self.coefficient);
         }
 
-        // Check if the operations refer to qubits outside the range of the state
-        for qubit in self.ops.keys() {
-            if *qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(*qubit, state.num_qubits()));
-            }
-        }
-
         // Apply the Pauli string to the state
         let mut new_state: State = state.clone();
         for (qubit, op) in &self.ops {
@@ -123,13 +116,6 @@ impl PauliString {
         if self.ops.is_empty() {
             // P_ops is Identity. exp(alpha * I) |state> = exp(alpha) * |state>
             return Ok(state.clone() * alpha.exp());
-        }
-
-        // Check if the operations refer to qubits outside the range of the state
-        for qubit_idx in self.ops.keys() {
-            if *qubit_idx >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(*qubit_idx, state.num_qubits()));
-            }
         }
 
         // 1. Calculate P_ops |state>
@@ -170,13 +156,6 @@ impl PauliString {
         if self.ops.is_empty() {
             // P_ops is Identity. exp(alpha * I) |state> = exp(alpha) * |state>
             return Ok(state.clone() * alpha.exp());
-        }
-
-        // Check if the operations refer to qubits outside the range of the state
-        for qubit_idx in self.ops.keys() {
-            if *qubit_idx >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(*qubit_idx, state.num_qubits()));
-            }
         }
 
         // 1. Calculate P_ops |state> (operator part only, without self.coefficient)
