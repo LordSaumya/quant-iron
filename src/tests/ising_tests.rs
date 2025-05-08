@@ -304,3 +304,14 @@ fn test_ising_2d_uniform_success() {
         .collect();
     assert_eq!(result_state, expected_state);
 }
+
+#[test]
+fn test_ising_2d_uniform_error() {
+    // 1x1 qubit system (invalid case)
+    let h: f64 = 1.0;
+    let j: f64 = 2.0;
+    let m: f64 = 0.1;
+
+    let result: Result<SumOp, Error> = ising_2d_uniform(1, 1, h, j, m);
+    assert_eq!(result.unwrap_err(), Error::InvalidNumberOfInputs(1, 2));
+}
