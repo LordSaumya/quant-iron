@@ -321,6 +321,15 @@ impl SumOp {
         self.terms.len()
     }
 
+    /// Adds a new term to the sum.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `term` - The `PauliString` term to be added to the sum.
+    pub fn add_term(&mut self, term: PauliString) {
+        self.terms.push(term);
+    }
+
     /// Applies the sum of Pauli strings to a given state.
     ///
     /// # Arguments
