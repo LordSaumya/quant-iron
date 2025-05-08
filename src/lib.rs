@@ -2,6 +2,7 @@ pub mod circuit;
 pub mod components;
 pub mod errors;
 pub mod subroutine;
+pub mod models;
 
 // Re-export important types for easier imports
 pub use crate::components::gate::Gate;
