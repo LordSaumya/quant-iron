@@ -222,13 +222,12 @@ fn test_sumop_num_terms() {
 
 #[test]
 fn test_sumop_add_term() {
-    let mut terms: Vec<PauliString> = vec![
+    let terms: Vec<PauliString> = vec![
         PauliString::new(Complex::new(1.0, 0.0)),
         PauliString::new(Complex::new(2.0, 0.0)),
     ];
 
     let new_term: PauliString = PauliString::new(Complex::new(3.0, 0.0));
-    terms.push(new_term.clone());
 
     let mut sum_op: SumOp = SumOp::new(terms.clone());
     sum_op.add_term(new_term.clone());
