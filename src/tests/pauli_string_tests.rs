@@ -1,7 +1,7 @@
 use crate::{
     components::{
         operator::Pauli,
-        pauli_string::{PauliString, SumOp},
+        pauli_string::{self, PauliString, SumOp},
         state::{ChainableState, State},
     },
     errors::Error,
@@ -236,7 +236,7 @@ fn test_sumop_add_term() {
 }
 
 #[test]
-fn test_sumop_apply_success() {
+fn test_sumop_apply_non_empty_success() {
     let mut pauli_string_1 = PauliString::new(Complex::new(2.0, 0.0));
     pauli_string_1.add_op(0, Pauli::X);
 
@@ -264,4 +264,34 @@ fn test_sumop_apply_error() {
     let result: Result<State, Error> = sum_op.apply(&state);
 
     assert!(result.is_err());
+}
+
+#[test]
+fn test_sumop_apply_empty_success() {
+    let sum_op = SumOp::new(vec![]);
+    let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
+    let result: State = sum_op.apply(&state).unwrap();
+    let expected_result: State = state.clone() * 0.0; // Should result in the zero state
+
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn test_sumop_expectation_value() {
+    let mut pauli_string_1 = PauliString::new(Complex::new(2.0, 0.0));
+    pauli_string_1.add_op(0, Pauli::X);
+
+    let mut pauli_string_2 = PauliString::new(Complex::new(3.0, 0.0));
+    pauli_string_2.add_op(1, Pauli::Y);
+
+    let mut pauli_string_3 = PauliString::new(Complex::new(4.0, 0.0));
+    pauli_string_3.add_op(1, Pauli::Z);
+
+    let sum_op: SumOp = SumOp::new(vec![pauli_string_1, pauli_string_2, pauli_string_3]);
+    let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
+    let result: Complex<f64> = sum_op.expectation_value(&state).unwrap();
+    let expected_result: Complex<f64> = Complex::new(-4.0, 0.0); // Expectation value of X on qubit 0 and Y on qubit 1
+
+
+    assert_eq!(result, expected_result);
 }
