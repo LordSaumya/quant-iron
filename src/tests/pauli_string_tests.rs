@@ -292,6 +292,5 @@ fn test_sumop_expectation_value() {
     let result: Complex<f64> = sum_op.expectation_value(&state).unwrap();
     let expected_result: Complex<f64> = Complex::new(-4.0, 0.0); // Expectation value of X on qubit 0 and Y on qubit 1
 
-
     assert_eq!(result, expected_result);
 }
