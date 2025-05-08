@@ -1,7 +1,7 @@
 use crate::{
     components::{
         operator::Pauli,
-        pauli_string::PauliString,
+        pauli_string::{PauliString, SumOp},
         state::{ChainableState, State},
     },
     errors::Error,
@@ -56,7 +56,6 @@ fn test_pauli_string_apply_success_non_empty() {
     let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
-
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
     let result: State = pauli_string.apply(&state).unwrap();
@@ -142,7 +141,9 @@ fn test_pauli_string_apply_exp_factor_success_non_empty() {
     pauli_string.add_op(1, Pauli::Y);
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
-    let result: State = pauli_string.apply_exp_factor(&state, Complex::new(0.5, 0.0)).unwrap();
+    let result: State = pauli_string
+        .apply_exp_factor(&state, Complex::new(0.5, 0.0))
+        .unwrap();
     let alpha: Complex<f64> = coefficient;
 
     // Calculate the expected result using the formula exp(alpha * P_ops) = cosh(alpha * factor)*I + sinh(alpha * factor)*P_ops
@@ -159,7 +160,9 @@ fn test_pauli_string_apply_exp_factor_success_empty() {
     let pauli_string: PauliString = PauliString::new(coefficient.clone());
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
-    let result: State = pauli_string.apply_exp_factor(&state, Complex::new(0.5, 0.0)).unwrap();
+    let result: State = pauli_string
+        .apply_exp_factor(&state, Complex::new(0.5, 0.0))
+        .unwrap();
     let expected_result: State = state * (coefficient * 0.5).exp(); // Just multiply the state by exp(coefficient * factor)
 
     assert_eq!(result, expected_result);
@@ -173,7 +176,8 @@ fn test_pauli_string_apply_exp_factor_error() {
     pauli_string.add_op(1, Pauli::Y);
 
     let state: State = State::new_basis_n(1, 1).unwrap(); // Example state |1>
-    let result: Result<State, Error> = pauli_string.apply_exp_factor(&state, Complex::new(0.5, 0.0));
+    let result: Result<State, Error> =
+        pauli_string.apply_exp_factor(&state, Complex::new(0.5, 0.0));
 
     assert!(result.is_err());
 }
@@ -192,4 +196,73 @@ fn test_pauli_string_hermitian_conjugate() {
     assert_eq!(hermitian_conjugate.ops().len(), 2);
     assert_eq!(hermitian_conjugate.ops().get(&0), Some(&Pauli::X));
     assert_eq!(hermitian_conjugate.ops().get(&1), Some(&Pauli::Y));
+}
+
+#[test]
+fn test_sumop_new() {
+    let terms = vec![
+        PauliString::new(Complex::new(1.0, 0.0)),
+        PauliString::new(Complex::new(2.0, 0.0)),
+    ];
+
+    let sum_op = SumOp::new(terms.clone());
+    assert_eq!(sum_op.terms.len(), 2);
+}
+
+#[test]
+fn test_sumop_num_terms() {
+    let terms: Vec<PauliString> = vec![
+        PauliString::new(Complex::new(1.0, 0.0)),
+        PauliString::new(Complex::new(2.0, 0.0)),
+    ];
+
+    let sum_op: SumOp = SumOp::new(terms.clone());
+    assert_eq!(sum_op.num_terms(), 2);
+}
+
+#[test]
+fn test_sumop_add_term() {
+    let mut terms: Vec<PauliString> = vec![
+        PauliString::new(Complex::new(1.0, 0.0)),
+        PauliString::new(Complex::new(2.0, 0.0)),
+    ];
+
+    let new_term: PauliString = PauliString::new(Complex::new(3.0, 0.0));
+    terms.push(new_term.clone());
+
+    let mut sum_op: SumOp = SumOp::new(terms.clone());
+    sum_op.add_term(new_term.clone());
+
+    assert_eq!(sum_op.num_terms(), 3);
+}
+
+#[test]
+fn test_sumop_apply_success() {
+    let mut pauli_string_1 = PauliString::new(Complex::new(2.0, 0.0));
+    pauli_string_1.add_op(0, Pauli::X);
+
+    let mut pauli_string_2 = PauliString::new(Complex::new(3.0, 0.0));
+    pauli_string_2.add_op(1, Pauli::Y);
+
+    let sum_op = SumOp::new(vec![pauli_string_1, pauli_string_2]);
+    let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
+    let result: State = sum_op.apply(&state).unwrap();
+    let expected_result: State = 2.0 * state.x(0).unwrap() + 3.0 * state.y(1).unwrap();
+
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn test_sumop_apply_error() {
+    let mut pauli_string_1 = PauliString::new(Complex::new(2.0, 0.0));
+    pauli_string_1.add_op(0, Pauli::X);
+
+    let mut pauli_string_2 = PauliString::new(Complex::new(3.0, 0.0));
+    pauli_string_2.add_op(1, Pauli::Y);
+
+    let sum_op = SumOp::new(vec![pauli_string_1, pauli_string_2]);
+    let state: State = State::new_basis_n(1, 1).unwrap(); // Example state |1>
+    let result: Result<State, Error> = sum_op.apply(&state);
+
+    assert!(result.is_err());
 }
