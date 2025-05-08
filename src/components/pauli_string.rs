@@ -53,6 +53,21 @@ impl PauliString {
         self.ops.insert(qubit, op);
     }
 
+    /// Adds a Pauli operator to the Pauli string at the specified qubit index and returns the new `PauliString` instance.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubit` - The index of the qubit to which the operator is applied.
+    /// * `op` - The Pauli operator to be added (X, Y, or Z).
+    /// 
+    /// # Returns
+    /// 
+    /// * `Self` - A new `PauliString` instance with the added operator.
+    pub fn with_op(&mut self, qubit: usize, op: Pauli) -> Self {
+        self.add_op(qubit, op);
+        self.clone()
+    }
+
     /// Returns the coefficient of the Pauli string.
     ///
     /// # Returns
@@ -224,6 +239,14 @@ impl Mul<f64> for PauliString {
             ops: self.ops.clone(),
             coefficient: self.coefficient * Complex::new(rhs, 0.0),
         }
+    }
+}
+
+impl Mul<PauliString> for f64 {
+    type Output = PauliString;
+
+    fn mul(self, rhs: PauliString) -> Self::Output {
+        rhs * self
     }
 }
 

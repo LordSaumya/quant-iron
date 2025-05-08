@@ -51,6 +51,18 @@ fn test_pauli_string_add_op() {
 }
 
 #[test]
+fn test_pauli_string_with_op() {
+    let pauli_string: PauliString = PauliString::new(Complex::new(1.0, 0.0))
+        .with_op(0, Pauli::X)
+        .with_op(1, Pauli::Y);
+
+    assert_eq!(pauli_string.coefficient(), Complex::new(1.0, 0.0));
+    assert_eq!(pauli_string.ops().len(), 2);
+    assert_eq!(pauli_string.ops().get(&0), Some(&Pauli::X));
+    assert_eq!(pauli_string.ops().get(&1), Some(&Pauli::Y));
+}
+
+#[test]
 fn test_pauli_string_apply_success_non_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
     let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
