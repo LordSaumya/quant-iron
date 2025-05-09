@@ -66,9 +66,7 @@ impl Subroutine {
     ///
     /// * `gates` - A vector of gates to be added to the subroutine.
     pub fn add_gates(&mut self, gates: Vec<Gate>) {
-        for gate in gates {
-            self.add_gate(gate);
-        }
+        self.gates.extend(gates);
     }
 
     /// Gets the number of qubits in the subroutine.
@@ -96,11 +94,14 @@ impl Subroutine {
             // Apply Hadamard gate
             builder.h_gate(qubits[i]);
             // Apply controlled phase rotations
-            for j in (i + 1)..n {
-                // The angle for the controlled phase gate R_k is pi / 2^(j-i)
-                let angle = std::f64::consts::PI / (2_f64.powi((j - i) as i32));
-                // Control qubit is j, target qubit is i
-                builder.cp_gates(vec![qubits[i]], vec![qubits[j]], angle);
+            // (j-i) iterates from 1 up to n-1-i.
+            // Let k_loop_val = j-i.
+            let mut power_of_2_denominator = 2.0; // Initial value for k_loop_val = 1 (i.e., 2^1)
+            for k_loop_val in 1..(n - i) { // k_loop_val goes from 1 to (n-i-1)
+                let original_j_qubit_index = i + k_loop_val; // This is the original 'j'
+                let angle = std::f64::consts::PI / power_of_2_denominator;
+                builder.cp_gates(vec![qubits[i]], vec![qubits[original_j_qubit_index]], angle);
+                power_of_2_denominator *= 2.0; // Update for the next k_loop_val
             }
         }
         // Swap qubits at the end
@@ -133,11 +134,24 @@ impl Subroutine {
         // Apply inverse controlled rotations and Hadamards
         for i in (0..n).rev() {
             // Apply controlled phase rotations (inverse)
-            for j in ((i + 1)..n).rev() {
-                // The angle for the inverse controlled phase gate R_k dagger is -pi / 2^(j-i)
-                let angle: f64 = -std::f64::consts::PI / (2_f64.powi((j - i) as i32));
-                // Control qubit is j, target qubit is i
-                builder.cp_gates(vec![qubits[i]], vec![qubits[j]], angle);
+            // (j-i) iterates from (n-1-i) down to 1.
+            // Let k_loop_val = j-i.
+            if n > i + 1 { // Check if there are any rotations to apply for this 'i'
+                let k_initial = (n - 1) - i; // Max value of (j-i)
+                let mut power_of_2_denominator = 2_f64.powi(k_initial as i32);
+
+                // Iterate for k_loop_val from k_initial down to 1
+                for iteration_count in 0..k_initial {
+                    let k_loop_val = k_initial - iteration_count; // Current k_loop_val (j-i)
+                    let original_j_qubit_index = i + k_loop_val; // This is the original 'j'
+
+                    let angle = -std::f64::consts::PI / power_of_2_denominator;
+                    builder.cp_gates(vec![qubits[i]], vec![qubits[original_j_qubit_index]], angle);
+
+                    if k_loop_val > 1 { // If not the last iteration (where k_loop_val would be 1)
+                        power_of_2_denominator /= 2.0; // Update for the next (smaller) k_loop_val
+                    }
+                }
             }
             // Apply Hadamard gate
             builder.h_gate(qubits[i]);
