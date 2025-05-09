@@ -33,12 +33,70 @@ pub trait Operator {
 
 /// Helper function to check if all control qubits are in the |1> state for a given basis state index.
 fn check_controls(index: usize, control_qubits: &[usize]) -> bool {
-    for &control_qubit in control_qubits {
-        if (index >> control_qubit) & 1 == 0 {
-            return false; // At least one control qubit is |0>
+    control_qubits.iter().all(|&qubit| (index >> qubit) & 1 == 1)
+}
+
+/// Helper function to validate target and control qubits
+///
+/// # Arguments:
+///
+/// * `state` - The quantum state that contains information about the number of qubits.
+/// * `target_qubits` - The target qubits to validate.
+/// * `control_qubits` - The control qubits to validate.
+/// * `expected_targets` - The expected number of target qubits.
+///
+/// # Returns:
+///
+/// * `Ok(())` if all validations pass.
+/// * `Err(Error)` if any validation fails.
+fn validate_qubits(
+    state: &State,
+    target_qubits: &[usize],
+    control_qubits: &[usize],
+    expected_targets: usize,
+) -> Result<(), Error> {
+    // Check if we have the expected number of target qubits
+    if target_qubits.len() != expected_targets {
+        return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
+    }
+
+    let num_qubits = state.num_qubits();
+
+    // Check if all target qubits are valid indices
+    for &target_qubit in target_qubits {
+        if target_qubit >= num_qubits {
+            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
         }
     }
-    true // All control qubits are |1>
+
+    // Check if all control qubits are valid indices and don't overlap with target qubits
+    for &control_qubit in control_qubits {
+        if control_qubit >= num_qubits {
+            return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
+        }
+        
+        for &target_qubit in target_qubits {
+            if control_qubit == target_qubit {
+                return Err(Error::OverlappingControlAndTargetQubits(
+                    control_qubit,
+                    target_qubit,
+                ));
+            }
+        }
+    }
+
+    // Special check for multiple target qubits to ensure no duplicates
+    if expected_targets > 1 {
+        for i in 0..target_qubits.len() {
+            for j in i+1..target_qubits.len() {
+                if target_qubits[i] == target_qubits[j] {
+                    return Err(Error::InvalidQubitIndex(target_qubits[i], num_qubits));
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Defines a Hadamard operator.
@@ -76,57 +134,57 @@ impl Operator for Hadamard {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
-
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit: usize = target_qubits[0];
-
-        if target_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
-        }
-
-        for &control_qubit in control_qubits {
-            if control_qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(control_qubit, state.num_qubits()));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
+        let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Hadamard operator
         let sqrt_2_inv: f64 = 1.0 / (2.0f64).sqrt();
-        let dim: usize = 1 << state.num_qubits();
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
-
-        for i in 0..dim {
-            // Process pairs (i, j) where target bit differs.
-            if (i >> target_qubit) & 1 == 0 {
-                // Process pairs starting from |..0..>
-                let j = i | (1 << target_qubit); // Index where target qubit is |1>
-
-                // Check controls for both i and j.
-                let i_controls_met: bool = check_controls(i, control_qubits);
-                let j_controls_met: bool = check_controls(j, control_qubits);
-
-                if i_controls_met && j_controls_met {
-                    // Apply Hadamard logic if controls met for both i and j
-                    let amp_i: Complex<f64> = state.amplitude(i)?; // Use original state amplitudes
-                    let amp_j: Complex<f64> = state.amplitude(j)?;
-
-                    new_state[i] = sqrt_2_inv * (amp_i + amp_j);
-                    new_state[j] = sqrt_2_inv * (amp_i - amp_j);
+        let dim: usize = 1 << num_qubits;
+        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        
+        // Fast path for uncontrolled Hadamard
+        if control_qubits.is_empty() {
+            for i in 0..dim / 2 {
+                // Create index with target bit = 0
+                let mask: usize = !(1 << target_qubit);
+                let i0: usize = i & mask | (0 << target_qubit);
+                
+                // Create matching index with target bit = 1
+                let i1: usize = i0 | (1 << target_qubit);
+                
+                // Get amplitudes once
+                let amp0: Complex<f64> = state.amplitude(i0)?;
+                let amp1: Complex<f64> = state.amplitude(i1)?;
+                
+                // Apply Hadamard transform
+                new_state[i0] = sqrt_2_inv * (amp0 + amp1);
+                new_state[i1] = sqrt_2_inv * (amp0 - amp1);
+            }
+        } else {
+            // Handle controlled Hadamard
+            for i in 0..dim {
+                if (i >> target_qubit) & 1 == 0 {
+                    let j: usize = i | (1 << target_qubit);
+                    
+                    // Only check controls if both indices might be affected
+                    if check_controls(i, control_qubits) && check_controls(j, control_qubits) {
+                        // Get amplitudes once
+                        let amp_i: Complex<f64> = state.amplitude(i)?;
+                        let amp_j: Complex<f64> = state.amplitude(j)?;
+                        
+                        // Apply Hadamard transform
+                        new_state[i] = sqrt_2_inv * (amp_i + amp_j);
+                        new_state[j] = sqrt_2_inv * (amp_i - amp_j);
+                    }
                 }
             }
         }
 
         Ok(State {
             state_vector: new_state,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
@@ -175,27 +233,13 @@ impl Operator for Pauli {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit: usize = target_qubits[0];
-        if target_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
-        }
-        for &control in control_qubits {
-            if control >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(control, state.num_qubits()));
-            }
-            if control == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control,
-                    target_qubit,
-                ));
-            }
-        }
+        let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Pauli operator
-        let dim: usize = 1 << state.num_qubits();
+        let dim: usize = 1 << num_qubits;
         let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
 
         let i_complex = Complex::new(0.0, 1.0);
@@ -299,27 +343,14 @@ impl Operator for CNOT {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 || control_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+
+        // Additional validation for CNOT: exactly one control qubit
         if control_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(control_qubits.len()));
         }
-        let target_qubit: usize = target_qubits[0];
+        
         let control_qubit: usize = control_qubits[0];
-
-        if target_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
-        }
-        if control_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(control_qubit, state.num_qubits()));
-        }
-        if target_qubit == control_qubit {
-            return Err(Error::OverlappingControlAndTargetQubits(
-                control_qubit,
-                target_qubit,
-            ));
-        }
 
         // Apply CNOT operator (same as Pauli-X with 1 control qubit)
         Pauli::X.apply(state, target_qubits, &[control_qubit])
@@ -365,43 +396,12 @@ impl Operator for SWAP {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubits
-        if target_qubits.len() != 2 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 2)?;
+        
         let target_qubit_1: usize = target_qubits[0];
         let target_qubit_2: usize = target_qubits[1];
         let num_qubits: usize = state.num_qubits();
-
-        if target_qubit_1 >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit_1, num_qubits));
-        }
-        if target_qubit_2 >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit_2, num_qubits));
-        }
-        if target_qubit_1 == target_qubit_2 {
-            // Indicate duplicate target qubits
-            return Err(Error::InvalidQubitIndex(target_qubit_1, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits {
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit_1 {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit_1,
-                ));
-            }
-            if control_qubit == target_qubit_2 {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit_2,
-                ));
-            }
-        }
 
         // Apply potentially controlled SWAP operator
         let dim: usize = 1 << num_qubits;
@@ -481,40 +481,16 @@ impl Operator for Toffoli {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+
+        // Additional validation for Toffoli: exactly two control qubits
         if control_qubits.len() != 2 {
             return Err(Error::InvalidNumberOfQubits(control_qubits.len()));
         }
-        let target_qubit: usize = target_qubits[0];
-        let control_qubit_1: usize = control_qubits[0];
-        let control_qubit_2: usize = control_qubits[1];
 
-        let num_qubits: usize = state.num_qubits();
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-        if control_qubit_1 >= num_qubits {
-            return Err(Error::InvalidQubitIndex(control_qubit_1, num_qubits));
-        }
-        if control_qubit_2 >= num_qubits {
-            return Err(Error::InvalidQubitIndex(control_qubit_2, num_qubits));
-        }
-        if control_qubit_1 == control_qubit_2 {
+        // Additional validation for Toffoli: control qubits must be different
+        if control_qubits[0] == control_qubits[1] {
             return Err(Error::InvalidNumberOfQubits(control_qubits.len()));
-        }
-        if control_qubit_1 == target_qubit {
-            return Err(Error::OverlappingControlAndTargetQubits(
-                control_qubit_1,
-                target_qubit,
-            ));
-        }
-        if control_qubit_2 == target_qubit {
-            return Err(Error::OverlappingControlAndTargetQubits(
-                control_qubit_2,
-                target_qubit,
-            ));
         }
 
         Pauli::X.apply(state, target_qubits, control_qubits)
@@ -552,27 +528,7 @@ impl Operator for Identity {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
-
-        let target_qubit: usize = target_qubits[0];
-
-        if target_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
-        }
-
-        for &control_qubit in control_qubits {
-            if control_qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(control_qubit, state.num_qubits()));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
 
         // Apply identity operator (no change)
         Ok(state.clone())
@@ -610,33 +566,13 @@ impl Operator for PhaseS {
         control_qubits: &[usize],
     ) -> Result<State, Error> {
         // Validation
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
-        if target_qubits[0] >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(
-                target_qubits[0],
-                state.num_qubits(),
-            ));
-        }
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit: usize = target_qubits[0];
-        if target_qubit >= state.num_qubits() {
-            return Err(Error::InvalidQubitIndex(target_qubit, state.num_qubits()));
-        }
-        for &control_qubit in control_qubits {
-            if control_qubit >= state.num_qubits() {
-                return Err(Error::InvalidQubitIndex(control_qubit, state.num_qubits()));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
+        let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Phase S operator
-        let dim: usize = 1 << state.num_qubits();
+        let dim: usize = 1 << num_qubits;
         // Start with a copy, only modify elements where the operation applies
         let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
         let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
@@ -687,30 +623,11 @@ impl Operator for PhaseT {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits {
-            // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled Phase T operator
         let dim: usize = 1 << num_qubits;
@@ -766,30 +683,11 @@ impl Operator for PhaseSdag {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits {
-            // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled Phase Sdag operator
         let dim: usize = 1 << num_qubits;
@@ -843,30 +741,11 @@ impl Operator for PhaseTdag {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits {
-            // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled Phase Tdag operator
         let dim: usize = 1 << num_qubits;
@@ -943,30 +822,11 @@ impl Operator for PhaseShift {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits {
-            // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled Phase Shift operator
         let dim: usize = 1 << num_qubits;
@@ -1034,29 +894,11 @@ impl Operator for RotateX {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits { // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled RotateX operator
         let dim: usize = 1 << num_qubits;
@@ -1136,29 +978,11 @@ impl Operator for RotateY {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits { // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled RotateY operator
         let dim: usize = 1 << num_qubits;
@@ -1237,29 +1061,11 @@ impl Operator for RotateZ {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validation: Target Qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
-
-        if target_qubit >= num_qubits {
-            return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
-        }
-
-        // Validation: Control Qubits
-        for &control_qubit in control_qubits { // Use control_qubits
-            if control_qubit >= num_qubits {
-                return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
-            }
-            if control_qubit == target_qubit {
-                return Err(Error::OverlappingControlAndTargetQubits(
-                    control_qubit,
-                    target_qubit,
-                ));
-            }
-        }
 
         // Apply potentially controlled RotateZ operator
         let dim: usize = 1 << num_qubits;
@@ -1364,24 +1170,11 @@ impl Operator for Unitary2 {
         target_qubits: &[usize],
         control_qubits: &[usize],
     ) -> Result<State, Error> {
-        // Validate exactly one target qubit
-        if target_qubits.len() != 1 {
-            return Err(Error::InvalidNumberOfQubits(target_qubits.len()));
-        }
-
+        // Validation
+        validate_qubits(state, target_qubits, control_qubits, 1)?;
+        
         let t: usize = target_qubits[0];
         let nq: usize = state.num_qubits();
-        if t >= nq {
-            return Err(Error::InvalidQubitIndex(t, nq));
-        }
-        for &c in control_qubits {
-            if c >= nq {
-                return Err(Error::InvalidQubitIndex(c, nq));
-            }
-            if c == t {
-                return Err(Error::OverlappingControlAndTargetQubits(c, t));
-            }
-        }
 
         // Apply 2×2 block on each basis‐pair
         let dim = 1 << nq;
