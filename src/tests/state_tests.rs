@@ -29,7 +29,7 @@ fn test_state_new_errors() {
     let state_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, 0.0), Complex::new(0.0, 0.0), Complex::new(0.0, 0.0)];
     let state: Result<State, Error> = State::new(state_vector.clone());
     assert!(state.is_err());
-    assert_eq!(state.unwrap_err(), Error::InvalidNumberOfQubits(2));
+    assert_eq!(state.unwrap_err(), Error::InvalidNumberOfQubits(1));
 }
 
 #[test]
