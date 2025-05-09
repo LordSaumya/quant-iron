@@ -1,7 +1,7 @@
 use crate::{
     components::{
         operator::Pauli,
-        pauli_string::{self, PauliString, SumOp},
+        pauli_string::{PauliString, SumOp},
         state::{ChainableState, State},
     },
     errors::Error,
