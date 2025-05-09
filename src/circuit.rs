@@ -20,6 +20,26 @@ pub struct Circuit {
 }
 
 impl Circuit {
+    // Helper function to validate gate qubits
+    fn _validate_gate_qubits(gate: &Gate, circuit_num_qubits: usize) -> Result<(), Error> {
+        // Check if the gate's target qubits are within the circuit's qubit range
+        for &qubit in gate.get_target_qubits() {
+            if qubit >= circuit_num_qubits {
+                return Err(Error::InvalidQubitIndex(qubit, circuit_num_qubits));
+            }
+        }
+
+        // Check if the gate's control qubits are within the circuit's qubit range
+        if let Some(control_qubits) = gate.get_control_qubits() {
+            for &qubit in control_qubits {
+                if qubit >= circuit_num_qubits {
+                    return Err(Error::InvalidQubitIndex(qubit, circuit_num_qubits));
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Creates a new circuit with the specified number of qubits.
     ///
     /// # Arguments
@@ -48,21 +68,7 @@ impl Circuit {
     /// * `Result<Circuit, Error>` - A new instance of the Circuit struct or an error if the circuit cannot be created.
     pub fn with_gates(gates: Vec<Gate>, num_qubits: usize) -> Result<Circuit, Error> {
         for gate in &gates {
-            // Check if the gates' target qubits are within the circuit's qubit range
-            for &qubit in gate.get_target_qubits() {
-                if qubit >= num_qubits {
-                    return Err(Error::InvalidQubitIndex(qubit, num_qubits));
-                }
-            }
-
-            // Check if the gate's control qubits are within the circuit's qubit range
-            if let Some(control_qubits) = gate.get_control_qubits() {
-                for &qubit in control_qubits {
-                    if qubit >= num_qubits {
-                        return Err(Error::InvalidQubitIndex(qubit, num_qubits));
-                    }
-                }
-            }
+            Self::_validate_gate_qubits(gate, num_qubits)?;
         }
 
         Ok(Circuit { gates, num_qubits })
@@ -78,23 +84,9 @@ impl Circuit {
     ///
     /// * `Result<(), Error>` - An empty result if the gate is added successfully, or an error if the gate cannot be added.
     pub fn add_gate(&mut self, gate: Gate) -> Result<(), Error> {
-        // Check if the gate's target qubits are within the circuit's qubit range
-        for &qubit in gate.get_target_qubits() {
-            if qubit >= self.num_qubits {
-                return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
-            }
-        }
-
-        // Check if the gate's control qubits are within the circuit's qubit range
-        if let Some(control_qubits) = gate.get_control_qubits() {
-            for &qubit in control_qubits {
-                if qubit >= self.num_qubits {
-                    return Err(Error::InvalidQubitIndex(qubit, self.num_qubits));
-                }
-            }
-        }
-
-        Ok(self.gates.push(gate))
+        Self::_validate_gate_qubits(&gate, self.num_qubits)?;
+        self.gates.push(gate);
+        Ok(())
     }
 
     /// Adds multiple gates to the circuit.
