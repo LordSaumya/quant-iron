@@ -910,6 +910,7 @@ impl Operator for PhaseTdag {
 /// Defines the phase shift operator
 ///
 /// A single-qubit operator that applies a phase shift of the provided angle to the |1> state. Also known as the phase shift gate.
+#[derive(Debug, Clone, Copy)]
 pub struct PhaseShift {
     angle: f64,
 }
@@ -997,6 +998,7 @@ impl Operator for PhaseShift {
 /// Defines the rotate-X operator
 ///
 /// A single-qubit operator that applies a rotation around the X axis of the Bloch sphere by the given angle. Also known as the RX gate.
+#[derive(Debug, Clone, Copy)]
 pub struct RotateX {
     angle: f64,
 }
@@ -1097,6 +1099,7 @@ impl Operator for RotateX {
 /// Defines the rotate-Y operator
 ///
 /// A single-qubit operator that applies a rotation around the Y axis of the Bloch sphere by the given angle. Also known as the RY gate.
+#[derive(Debug, Clone, Copy)]
 pub struct RotateY {
     angle: f64,
 }
@@ -1196,6 +1199,7 @@ impl Operator for RotateY {
 /// Defines the rotate-Z operator
 ///
 /// A single-qubit operator that applies a rotation around the Z axis of the Bloch sphere by the given angle. Also known as the RZ gate.
+#[derive(Debug, Clone, Copy)]
 pub struct RotateZ {
     angle: f64,
 }
@@ -1287,6 +1291,7 @@ impl Operator for RotateZ {
 /// An arbitrary 2×2 unitary operator.
 ///
 /// This operator can be applied to a single qubit in a quantum state. It is represented by a 2×2 unitary matrix.
+#[derive(Debug, Clone, Copy)]
 pub struct Unitary2 {
     /// The 2×2 unitary matrix representing the operator.
     matrix: [[Complex<f64>; 2]; 2],
