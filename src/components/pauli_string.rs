@@ -54,18 +54,18 @@ impl PauliString {
     }
 
     /// Adds a Pauli operator to the Pauli string at the specified qubit index and returns the new `PauliString` instance.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubit` - The index of the qubit to which the operator is applied.
     /// * `op` - The Pauli operator to be added (X, Y, or Z).
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Self` - A new `PauliString` instance with the added operator.
-    pub fn with_op(&mut self, qubit: usize, op: Pauli) -> Self {
+    pub fn with_op(mut self, qubit: usize, op: Pauli) -> Self {
         self.add_op(qubit, op);
-        self.clone()
+        self
     }
 
     /// Returns the coefficient of the Pauli string.
@@ -106,9 +106,25 @@ impl PauliString {
         // Apply the Pauli string to the state
         let mut new_state: State = state.clone();
         for (qubit, op) in &self.ops {
-            new_state = op.apply(&mut new_state, &[*qubit], &[])?;
+            new_state = op.apply(&mut new_state, &[*qubit], &[])?; // Assumes op.apply can take &mut State and modify it or returns a new one
         }
         Ok(new_state * self.coefficient)
+    }
+
+    /// Helper function to apply only the operator part of the Pauli string (P_ops) to a state.
+    /// This does not include the PauliString's own coefficient.
+    fn apply_operators(&self, state: &State) -> Result<State, Error> {
+        if self.ops.is_empty() {
+            // If there are no operators, P_ops is effectively Identity.
+            // P_ops |state> = |state>.
+            return Ok(state.clone());
+        }
+
+        let mut current_state = state.clone();
+        for (qubit_idx, pauli_op) in &self.ops {
+            current_state = pauli_op.apply(&mut current_state, &[*qubit_idx], &[])?;
+        }
+        Ok(current_state)
     }
 
     /// Applies the exponential of the Pauli string to a given state.
@@ -133,11 +149,9 @@ impl PauliString {
             return Ok(state.clone() * alpha.exp());
         }
 
-        // 1. Calculate P_ops |state>
-        let mut p_ops_psi_state: State = state.clone();
-        for (qubit_idx, pauli_op) in &self.ops {
-            p_ops_psi_state = pauli_op.apply(&mut p_ops_psi_state, &[*qubit_idx], &[])?;
-        }
+        // 1. Calculate P_ops |state> using the helper
+        let p_ops_psi_state = self.apply_operators(state)?;
+
         // 2. Calculate scalar coefficients for exp(alpha * P_ops) = cosh(alpha)*I + sinh(alpha)*P_ops
         let cosh_alpha: Complex<f64> = alpha.cosh();
         let sinh_alpha: Complex<f64> = alpha.sinh();
@@ -173,12 +187,9 @@ impl PauliString {
             return Ok(state.clone() * alpha.exp());
         }
 
-        // 1. Calculate P_ops |state> (operator part only, without self.coefficient)
-        let mut p_ops_psi_state: State = state.clone();
-        for (qubit_idx, pauli_op) in &self.ops {
-            p_ops_psi_state = pauli_op.apply(&mut p_ops_psi_state, &[*qubit_idx], &[])?;
-        }
-        // p_ops_psi_state now holds P_ops |state>
+        // 1. Calculate P_ops |state> using the helper
+        let p_ops_psi_state = self.apply_operators(state)?;
+        // p_ops_psi_state now holds P_ops |state> (where P_ops is the product of Pauli operators without self.coefficient)
 
         // 2. Calculate scalar coefficients for exp(alpha * P_ops) = cosh(alpha)*I + sinh(alpha)*P_ops
         let cosh_alpha: Complex<f64> = alpha.cosh();
@@ -264,8 +275,8 @@ impl std::fmt::Display for PauliString {
 
         let mut result: String = coeff_str + " * ";
 
-        let mut sorted_ops: Vec<(&usize, &Pauli)> = self.ops.iter().collect();
-        sorted_ops.sort_by(|&(qubit_a, op_a), &(qubit_b, op_b)| {
+            let mut sorted_ops: Vec<(&usize, &Pauli)> = self.ops.iter().collect();
+            sorted_ops.sort_by(|&(qubit_a, op_a), &(qubit_b, op_b)| {
             if qubit_a == qubit_b {
                 // If qubits are the same, sort by operator type (X -> Y -> Z)
                 let op_a_str: String = format!("{}", op_a);
@@ -282,7 +293,7 @@ impl std::fmt::Display for PauliString {
         });
         for (qubit, op) in sorted_ops {
             result.push_str(&format!("{}[{}] ", op, qubit));
-        }
+            }
 
         write!(f, "{}", result.trim())
     }
