@@ -38,22 +38,25 @@ impl State {
     /// * Returns an error if the state vector is not normalised (i.e., the square norm is not 1).
     /// * Returns an error if the number of qubits is invalid (i.e., the length of the state vector is not a power of 2).
     pub fn new(state_vector: Vec<Complex<f64>>) -> Result<Self, Error> {
-        // Check if the state vector is empty
-        if state_vector.is_empty() {
+        let len = state_vector.len();
+
+        if len == 0 {
             return Err(Error::InvalidNumberOfQubits(0));
         }
+
+        // Check if the length of the state vector is a power of 2
+        if !len.is_power_of_two() {
+            // For error reporting, num_qubits can be approximated or a specific error used.
+            return Err(Error::InvalidNumberOfQubits( (len as f64).log2().floor() as usize ));
+        }
+        // num_qubits can be safely calculated as len is non-zero and a power of two.
+        let num_qubits = len.trailing_zeros() as usize;
+
         // Check if the square norm (probability) of the state vector is 1
-        let norm: f64 = state_vector.iter().map(|x| x.norm_sqr()).sum();
-        let tol: f64 = f64::EPSILON * state_vector.len() as f64;
+        let norm: f64 = state_vector.par_iter().map(|x| x.norm_sqr()).sum();
+        let tol: f64 = f64::EPSILON * len as f64; // Using len directly
         if (norm - 1.0).abs() > tol {
             return Err(Error::StateVectorNotNormalised);
-        }
-
-        let num_qubits: usize = (state_vector.len() as f64).log(2.0).round() as usize;
-
-        // Check if the number of qubits is valid (i.e., the length of the state vector is a power of 2)
-        if (1 << num_qubits) != state_vector.len() {
-            return Err(Error::InvalidNumberOfQubits(num_qubits as usize));
         }
 
         Ok(Self {
@@ -167,18 +170,32 @@ impl State {
         }
         let dim: usize = 1 << num_qubits;
         let amplitude: Complex<f64> = Complex::new(1.0 / (dim as f64).sqrt(), 0.0);
+        const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelization
 
-        let mut state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
-
-        for i in 0..dim {
-            // Set +amplitude for even number of 1s, -amplitude for odd number of 1s
-            let num_ones = i.count_ones() as usize;
-            state_vector[i] = if num_ones % 2 == 0 {
-                amplitude
-            } else {
-                -amplitude
-            };
-        }
+        let state_vector: Vec<Complex<f64>> = if dim > PARALLEL_THRESHOLD {
+            (0..dim)
+                .into_par_iter()
+                .map(|i| {
+                    let num_ones = i.count_ones() as usize;
+                    if num_ones % 2 == 0 {
+                        amplitude
+                    } else {
+                        -amplitude
+                    }
+                })
+                .collect()
+        } else {
+            let mut sv = Vec::with_capacity(dim);
+            for i in 0..dim {
+                let num_ones = i.count_ones() as usize;
+                sv.push(if num_ones % 2 == 0 {
+                    amplitude
+                } else {
+                    -amplitude
+                });
+            }
+            sv
+        };
 
         Ok(Self {
             state_vector,
@@ -286,47 +303,37 @@ impl State {
         match basis {
             MeasurementBasis::Computational => {
                 let num_outcomes: usize = 1 << num_measured;
-                let num_unmeasured: usize = self.num_qubits - num_measured;
-
-                let measured_mask: usize = actual_measured_qubits
-                    .iter()
-                    .fold(0, |mask, &q| mask | (1 << q));
-                let unmeasured_qubit_indices: Vec<usize> = (0..self.num_qubits)
-                    .filter(|&q| ((measured_mask >> q) & 1) == 0) // Collect indices where the bit is NOT set in measured_mask
-                    .collect();
 
                 // Calculate probabilities for each outcome (outcome as a single integer 0..num_outcomes-1)
-                let probabilities: Vec<f64> = (0..num_outcomes)
-                    .into_par_iter()
-                    .map(|outcome_val| {
-                        let mut amplitude_sum_sqr: f64 = 0.0;
-
-                        let mut outcome_base_index = 0;
-                        for (bit_index, &qubit_index) in actual_measured_qubits.iter().enumerate() {
-                            if ((outcome_val >> bit_index) & 1) != 0 {
-                                outcome_base_index |= 1 << qubit_index;
-                            }
-                        }
-
-                        for unmeasured_comb_val in 0..(1 << num_unmeasured) {
-                            let mut unmeasured_part_index = 0;
-                            for (unmeasured_bit_index, &global_qubit_index) in
-                                unmeasured_qubit_indices.iter().enumerate()
-                            {
-                                if ((unmeasured_comb_val >> unmeasured_bit_index) & 1) != 0 {
-                                    unmeasured_part_index |= 1 << global_qubit_index;
+                let probabilities: Vec<f64> = self.state_vector
+                    .par_iter()
+                    .enumerate()
+                    .fold(
+                        || vec![0.0; num_outcomes], // Thread-local accumulator
+                        |mut acc_probs, (idx, amplitude)| {
+                            let mut outcome_val_for_this_state = 0;
+                            // Extract the bits corresponding to measured_qubits to form the outcome value
+                            for (bit_idx, &qubit_pos) in actual_measured_qubits.iter().enumerate() {
+                                if (idx >> qubit_pos) & 1 != 0 {
+                                    outcome_val_for_this_state |= 1 << bit_idx;
                                 }
                             }
-                            // Combine the measured bits (in outcome_base_index) with the unmeasured bits (in unmeasured_part_index)
-                            let basis_state_index: usize =
-                                outcome_base_index | unmeasured_part_index;
-
-                            // Add the probability contribution of this matching basis state
-                            amplitude_sum_sqr += self.state_vector[basis_state_index].norm_sqr();
-                        }
-                        amplitude_sum_sqr
-                    })
-                    .collect();
+                            // Ensure outcome_val_for_this_state is within bounds (0 to num_outcomes-1)
+                            if outcome_val_for_this_state < num_outcomes {
+                                 acc_probs[outcome_val_for_this_state] += amplitude.norm_sqr();
+                            }
+                            acc_probs
+                        },
+                    )
+                    .reduce(
+                        || vec![0.0; num_outcomes], // Initializer for combining thread-local results
+                        |mut total_probs, local_probs| {
+                            for i in 0..num_outcomes {
+                                total_probs[i] += local_probs[i];
+                            }
+                            total_probs
+                        },
+                    );
 
                 // Normalise probabilities
                 let total_probability: f64 = probabilities.iter().sum();
@@ -358,33 +365,29 @@ impl State {
                 // Collapse the state vector into a new vector
                 let mut collapsed_state_data: Vec<Complex<f64>> =
                     vec![Complex::new(0.0, 0.0); self.state_vector.len()];
-                let mut normalisation_sq: f64 = 0.0;
-
-                // Calculate sampled_outcome_base_index (bits from sampled_outcome_int at measured_qubits positions)
-                let mut sampled_outcome_base_index = 0;
-                for (bit_index, &qubit_index) in actual_measured_qubits.iter().enumerate() {
-                    if ((sampled_outcome_int >> bit_index) & 1) != 0 {
-                        sampled_outcome_base_index |= 1 << qubit_index;
-                    }
-                }
-
-                for unmeasured_comb_val in 0..(1 << num_unmeasured) {
-                    let mut unmeasured_part_index = 0;
-                    for (unmeasured_bit_index, &global_qubit_index) in
-                        unmeasured_qubit_indices.iter().enumerate()
-                    {
-                        if ((unmeasured_comb_val >> unmeasured_bit_index) & 1) != 0 {
-                            unmeasured_part_index |= 1 << global_qubit_index;
+                
+                let normalisation_sq: f64 = collapsed_state_data
+                    .par_iter_mut()
+                    .enumerate()
+                    .zip(self.state_vector.par_iter()) // Zip with original state vector amplitudes
+                    .map(|((idx, collapsed_amp_ref), &original_amp)| {
+                        let mut current_outcome_val_for_this_state = 0;
+                        // Extract the bits corresponding to measured_qubits
+                        for (bit_idx, &qubit_pos) in actual_measured_qubits.iter().enumerate() {
+                            if (idx >> qubit_pos) & 1 != 0 {
+                                current_outcome_val_for_this_state |= 1 << bit_idx;
+                            }
                         }
-                    }
-                    let basis_state_index: usize =
-                        sampled_outcome_base_index | unmeasured_part_index;
 
-                    // Copy the amplitude from the original state to the collapsed state
-                    collapsed_state_data[basis_state_index] = self.state_vector[basis_state_index];
-                    // Update normalisation based on the amplitude from the ORIGINAL state
-                    normalisation_sq += self.state_vector[basis_state_index].norm_sqr();
-                }
+                        if current_outcome_val_for_this_state == sampled_outcome_int {
+                            *collapsed_amp_ref = original_amp;
+                            original_amp.norm_sqr() // Contribution to normalisation_sq
+                        } else {
+                            // *collapsed_amp_ref remains Complex::new(0.0, 0.0)
+                            0.0 // No contribution
+                        }
+                    })
+                    .sum(); // Sums up all contributions to get total normalisation_sq
 
                 // Renormalise the new collapsed state vector
                 if normalisation_sq > f64::EPSILON {
@@ -542,12 +545,22 @@ impl State {
             ));
         }
 
-        let inner_product: Complex<f64> = self
-            .state_vector
-            .iter()
-            .zip(other.state_vector.iter())
-            .map(|(a, b)| a.conj() * b)
-            .sum();
+        const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelization
+        let len = self.state_vector.len();
+
+        let inner_product: Complex<f64> = if len > PARALLEL_THRESHOLD {
+            self.state_vector
+                .par_iter()
+                .zip(other.state_vector.par_iter())
+                .map(|(a, b)| a.conj() * b)
+                .sum()
+        } else {
+            self.state_vector
+                .iter()
+                .zip(other.state_vector.iter())
+                .map(|(a, b)| a.conj() * b)
+                .sum()
+        };
 
         Ok(inner_product)
     }
