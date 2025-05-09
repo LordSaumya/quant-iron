@@ -1,5 +1,8 @@
 use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
+use rayon::prelude::*;
+
+const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
 
 /// A trait defining the interface for all operators.
 pub trait Operator {
@@ -33,7 +36,9 @@ pub trait Operator {
 
 /// Helper function to check if all control qubits are in the |1> state for a given basis state index.
 fn check_controls(index: usize, control_qubits: &[usize]) -> bool {
-    control_qubits.iter().all(|&qubit| (index >> qubit) & 1 == 1)
+    control_qubits
+        .iter()
+        .all(|&qubit| (index >> qubit) & 1 == 1)
 }
 
 /// Helper function to validate target and control qubits
@@ -74,7 +79,7 @@ fn validate_qubits(
         if control_qubit >= num_qubits {
             return Err(Error::InvalidQubitIndex(control_qubit, num_qubits));
         }
-        
+
         for &target_qubit in target_qubits {
             if control_qubit == target_qubit {
                 return Err(Error::OverlappingControlAndTargetQubits(
@@ -88,7 +93,7 @@ fn validate_qubits(
     // Special check for multiple target qubits to ensure no duplicates
     if expected_targets > 1 {
         for i in 0..target_qubits.len() {
-            for j in i+1..target_qubits.len() {
+            for j in i + 1..target_qubits.len() {
                 if target_qubits[i] == target_qubits[j] {
                     return Err(Error::InvalidQubitIndex(target_qubits[i], num_qubits));
                 }
@@ -135,55 +140,94 @@ impl Operator for Hadamard {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit: usize = target_qubits[0];
         let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Hadamard operator
         let sqrt_2_inv: f64 = 1.0 / (2.0f64).sqrt();
         let dim: usize = 1 << num_qubits;
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
-        
-        // Fast path for uncontrolled Hadamard
-        if control_qubits.is_empty() {
-            for i in 0..dim / 2 {
-                // Create index with target bit = 0
-                let mask: usize = !(1 << target_qubit);
-                let i0: usize = i & mask | (0 << target_qubit);
-                
-                // Create matching index with target bit = 1
-                let i1: usize = i0 | (1 << target_qubit);
-                
-                // Get amplitudes once
-                let amp0: Complex<f64> = state.amplitude(i0)?;
-                let amp1: Complex<f64> = state.amplitude(i1)?;
-                
-                // Apply Hadamard transform
-                new_state[i0] = sqrt_2_inv * (amp0 + amp1);
-                new_state[i1] = sqrt_2_inv * (amp0 - amp1);
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
+
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            if control_qubits.is_empty() {
+                // Parallel uncontrolled Hadamard
+                let updates: Vec<(usize, Complex<f64>)> = (0..(1 << (num_qubits - 1)))
+                    .into_par_iter()
+                    .flat_map(|k| {
+                        let i0 = (k >> target_qubit << (target_qubit + 1))
+                            | (k & ((1 << target_qubit) - 1));
+                        let i1 = i0 | (1 << target_qubit);
+                        let amp0 = state.state_vector[i0];
+                        let amp1 = state.state_vector[i1];
+                        vec![
+                            (i0, sqrt_2_inv * (amp0 + amp1)),
+                            (i1, sqrt_2_inv * (amp0 - amp1)),
+                        ]
+                    })
+                    .collect();
+                for (idx, val) in updates {
+                    new_state_vec[idx] = val;
+                }
+            } else {
+                // Parallel controlled Hadamard
+                let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                    .into_par_iter()
+                    .filter_map(|i| {
+                        if (i >> target_qubit) & 1 == 0 {
+                            let j = i | (1 << target_qubit);
+                            if check_controls(i, control_qubits) {
+                                let amp_i = state.state_vector[i];
+                                let amp_j = state.state_vector[j];
+                                Some(vec![
+                                    (i, sqrt_2_inv * (amp_i + amp_j)),
+                                    (j, sqrt_2_inv * (amp_i - amp_j)),
+                                ])
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .collect();
+                for (idx, val) in updates {
+                    new_state_vec[idx] = val;
+                }
             }
         } else {
-            // Handle controlled Hadamard
-            for i in 0..dim {
-                if (i >> target_qubit) & 1 == 0 {
-                    let j: usize = i | (1 << target_qubit);
-                    
-                    // Only check controls if both indices might be affected
-                    if check_controls(i, control_qubits) && check_controls(j, control_qubits) {
-                        // Get amplitudes once
-                        let amp_i: Complex<f64> = state.amplitude(i)?;
-                        let amp_j: Complex<f64> = state.amplitude(j)?;
-                        
-                        // Apply Hadamard transform
-                        new_state[i] = sqrt_2_inv * (amp_i + amp_j);
-                        new_state[j] = sqrt_2_inv * (amp_i - amp_j);
+            // Sequential implementation
+            if control_qubits.is_empty() {
+                // Sequential uncontrolled Hadamard
+                for k in 0..(1 << (num_qubits - 1)) {
+                    let i0 =
+                        (k >> target_qubit << (target_qubit + 1)) | (k & ((1 << target_qubit) - 1));
+                    let i1 = i0 | (1 << target_qubit);
+                    let amp0 = state.state_vector[i0];
+                    let amp1 = state.state_vector[i1];
+                    new_state_vec[i0] = sqrt_2_inv * (amp0 + amp1);
+                    new_state_vec[i1] = sqrt_2_inv * (amp0 - amp1);
+                }
+            } else {
+                // Sequential controlled Hadamard
+                for i in 0..dim {
+                    if (i >> target_qubit) & 1 == 0 {
+                        let j = i | (1 << target_qubit);
+                        if check_controls(i, control_qubits) {
+                            let amp_i = state.state_vector[i];
+                            let amp_j = state.state_vector[j];
+                            new_state_vec[i] = sqrt_2_inv * (amp_i + amp_j);
+                            new_state_vec[j] = sqrt_2_inv * (amp_i - amp_j);
+                        }
                     }
                 }
             }
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits,
         })
     }
@@ -234,53 +278,94 @@ impl Operator for Pauli {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit: usize = target_qubits[0];
         let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Pauli operator
         let dim: usize = 1 << num_qubits;
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
+        let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
 
-        let i_complex = Complex::new(0.0, 1.0);
-
-        for i in 0..dim {
-            // Check if controls are met for this basis state index
-            if check_controls(i, control_qubits) {
-                match self {
-                    Pauli::X => {
-                        // Process pairs (i, j) where target bit differs.
-                        if (i >> target_qubit) & 1 == 0 {
-                            // Process pairs starting from |..0..>
-                            let j = i | (1 << target_qubit); // Index where target qubit is |1>
-                            if check_controls(j, control_qubits) {
-                                let amp_i: Complex<f64> = state.amplitude(i)?;
-                                let amp_j: Complex<f64> = state.amplitude(j)?;
-                                new_state[i] = amp_j; // Swap amplitudes
-                                new_state[j] = amp_i;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            match self {
+                Pauli::X => {
+                    let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                        .into_par_iter()
+                        .filter_map(|i| {
+                            if check_controls(i, control_qubits) && ((i >> target_qubit) & 1 == 0) {
+                                let j = i | (1 << target_qubit);
+                                let amp_i = state.state_vector[i];
+                                let amp_j = state.state_vector[j];
+                                Some(vec![(i, amp_j), (j, amp_i)])
+                            } else {
+                                None
+                            }
+                        })
+                        .flatten()
+                        .collect();
+                    for (idx, val) in updates {
+                        new_state_vec[idx] = val;
+                    }
+                }
+                Pauli::Y => {
+                    let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                        .into_par_iter()
+                        .filter_map(|i| {
+                            if check_controls(i, control_qubits) && ((i >> target_qubit) & 1 == 0) {
+                                let j = i | (1 << target_qubit);
+                                let amp_i = state.state_vector[i];
+                                let amp_j = state.state_vector[j];
+                                Some(vec![(i, -i_complex * amp_j), (j, i_complex * amp_i)])
+                            } else {
+                                None
+                            }
+                        })
+                        .flatten()
+                        .collect();
+                    for (idx, val) in updates {
+                        new_state_vec[idx] = val;
+                    }
+                }
+                Pauli::Z => {
+                    new_state_vec
+                        .par_iter_mut()
+                        .enumerate()
+                        .for_each(|(i, current_amp_ref)| {
+                            if check_controls(i, control_qubits) && ((i >> target_qubit) & 1 == 1) {
+                                *current_amp_ref = -state.state_vector[i];
+                            }
+                        });
+                }
+            }
+        } else {
+            // Sequential implementation
+            for i in 0..dim {
+                if check_controls(i, control_qubits) {
+                    match self {
+                        Pauli::X => {
+                            if (i >> target_qubit) & 1 == 0 {
+                                let j = i | (1 << target_qubit);
+                                let amp_i = state.state_vector[i];
+                                let amp_j = state.state_vector[j];
+                                new_state_vec[i] = amp_j;
+                                new_state_vec[j] = amp_i;
                             }
                         }
-                    }
-
-                    Pauli::Y => {
-                        // Process pairs (i, j) where target bit differs.
-                        if (i >> target_qubit) & 1 == 0 {
-                            // Process pairs starting from |..0..>
-                            let j = i | (1 << target_qubit); // Index where target qubit is |1>
-                            if check_controls(j, control_qubits) {
-                                let amp_i = state.amplitude(i)?;
-                                let amp_j = state.amplitude(j)?;
-                                new_state[i] = -i_complex * amp_j; // Apply Y logic
-                                new_state[j] = i_complex * amp_i;
+                        Pauli::Y => {
+                            if (i >> target_qubit) & 1 == 0 {
+                                let j = i | (1 << target_qubit);
+                                let amp_i = state.state_vector[i];
+                                let amp_j = state.state_vector[j];
+                                new_state_vec[i] = -i_complex * amp_j;
+                                new_state_vec[j] = i_complex * amp_i;
                             }
                         }
-                    }
-
-                    Pauli::Z => {
-                        // Apply phase flip only if target qubit is |1>
-                        if (i >> target_qubit) & 1 == 1 {
-                            // Controls already checked for index 'i' at the start of the loop
-                            new_state[i] = -state.amplitude(i)?; // Phase flip
+                        Pauli::Z => {
+                            if (i >> target_qubit) & 1 == 1 {
+                                new_state_vec[i] = -state.state_vector[i];
+                            }
                         }
                     }
                 }
@@ -288,7 +373,7 @@ impl Operator for Pauli {
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -349,7 +434,7 @@ impl Operator for CNOT {
         if control_qubits.len() != 1 {
             return Err(Error::InvalidNumberOfQubits(control_qubits.len()));
         }
-        
+
         let control_qubit: usize = control_qubits[0];
 
         // Apply CNOT operator (same as Pauli-X with 1 control qubit)
@@ -398,45 +483,63 @@ impl Operator for SWAP {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 2)?;
-        
+
         let target_qubit_1: usize = target_qubits[0];
         let target_qubit_2: usize = target_qubits[1];
         let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled SWAP operator
         let dim: usize = 1 << num_qubits;
-        let mut new_state = state.state_vector.clone(); // Start with a copy
+        let mut new_state_vec = state.state_vector.clone(); // Start with a copy
 
-        for i in 0..dim {
-            // Check if target bits are different for this basis state index 'i'
-            let target_bit_1 = (i >> target_qubit_1) & 1;
-            let target_bit_2 = (i >> target_qubit_2) & 1;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                .into_par_iter()
+                .filter_map(|i| {
+                    let target_bit_1 = (i >> target_qubit_1) & 1;
+                    let target_bit_2 = (i >> target_qubit_2) & 1;
 
-            if target_bit_1 != target_bit_2 {
-                // Calculate the index 'j' with target bits swapped
-                let j = i ^ (1 << target_qubit_1) ^ (1 << target_qubit_2);
-
-                // Only perform the swap once per pair (i, j) by convention (e.g., when i < j)
-                // And only if controls are met for *both* states involved in the swap
-                if i < j {
-                    let i_controls_met = check_controls(i, control_qubits);
-                    let j_controls_met = check_controls(j, control_qubits);
-
-                    if i_controls_met && j_controls_met {
-                        // Use original state amplitudes for the swap
-                        let amp_i = state.amplitude(i)?;
-                        let amp_j = state.amplitude(j)?;
-                        new_state[i] = amp_j;
-                        new_state[j] = amp_i;
+                    if target_bit_1 != target_bit_2 {
+                        let j = i ^ (1 << target_qubit_1) ^ (1 << target_qubit_2);
+                        if i < j && check_controls(i, control_qubits) {
+                            let amp_i = state.state_vector[i];
+                            let amp_j = state.state_vector[j];
+                            Some(vec![(i, amp_j), (j, amp_i)])
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
                     }
-                    // else: Controls not met for the pair, leave amplitudes unchanged (already handled by clone)
+                })
+                .flatten()
+                .collect();
+            for (idx, val) in updates {
+                new_state_vec[idx] = val;
+            }
+        } else {
+            // Sequential implementation
+            for i in 0..dim {
+                let target_bit_1 = (i >> target_qubit_1) & 1;
+                let target_bit_2 = (i >> target_qubit_2) & 1;
+
+                if target_bit_1 != target_bit_2 {
+                    let j = i ^ (1 << target_qubit_1) ^ (1 << target_qubit_2);
+                    if i < j {
+                        if check_controls(i, control_qubits) {
+                            let amp_i = state.state_vector[i];
+                            let amp_j = state.state_vector[j];
+                            new_state_vec[i] = amp_j;
+                            new_state_vec[j] = amp_i;
+                        }
+                    }
                 }
             }
-            // else: Target bits are the same, no swap needed for this 'i' (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -567,28 +670,35 @@ impl Operator for PhaseS {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit: usize = target_qubits[0];
         let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Phase S operator
         let dim: usize = 1 << num_qubits;
-        // Start with a copy, only modify elements where the operation applies
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
 
-        for i in 0..dim {
-            let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-            // Apply phase shift only if target is |1> AND controls are met
-            if target_bit_is_one && check_controls(i, control_qubits) {
-                new_state[i] = state.amplitude(i)? * phase_factor;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if ((i >> target_qubit) & 1 == 1) && check_controls(i, control_qubits) {
+                        *current_amp_ref = state.state_vector[i] * phase_factor;
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                if target_bit_is_one && check_controls(i, control_qubits) {
+                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                }
             }
-            // else: No change if target is |0> or controls are not met (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -625,29 +735,36 @@ impl Operator for PhaseT {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase T operator
         let dim: usize = 1 << num_qubits;
-        // Start with a copy, only modify elements where the operation applies
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
         let phase_factor = Complex::new(invsqrt2, invsqrt2); // Phase shift of pi/4 (exp(i*pi/4))
 
-        for i in 0..dim {
-            let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-            // Apply phase shift only if target is |1> AND controls are met
-            if target_bit_is_one && check_controls(i, control_qubits) {
-                new_state[i] = state.amplitude(i)? * phase_factor;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if ((i >> target_qubit) & 1 == 1) && check_controls(i, control_qubits) {
+                        *current_amp_ref = state.state_vector[i] * phase_factor;
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                if target_bit_is_one && check_controls(i, control_qubits) {
+                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                }
             }
-            // else: No change if target is |0> or controls are not met (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -685,28 +802,35 @@ impl Operator for PhaseSdag {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Sdag operator
         let dim: usize = 1 << num_qubits;
-        // Start with a copy, only modify elements where the operation applies
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let phase_factor = Complex::new(0.0, -1.0); // Phase shift of -pi/2 (-i)
 
-        for i in 0..dim {
-            let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-            // Apply phase shift only if target is |1> AND controls are met
-            if target_bit_is_one && check_controls(i, control_qubits) {
-                new_state[i] = state.amplitude(i)? * phase_factor;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if ((i >> target_qubit) & 1 == 1) && check_controls(i, control_qubits) {
+                        *current_amp_ref = state.state_vector[i] * phase_factor;
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                if target_bit_is_one && check_controls(i, control_qubits) {
+                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                }
             }
-            // else: No change if target is |0> or controls are not met (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -743,30 +867,37 @@ impl Operator for PhaseTdag {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Tdag operator
         let dim: usize = 1 << num_qubits;
-        // Start with a copy, only modify elements where the operation applies
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
         // Phase shift of -pi/4 (exp(-i*pi/4) = cos(-pi/4) + i*sin(-pi/4) = cos(pi/4) - i*sin(pi/4))
         let phase_factor = Complex::new(invsqrt2, -invsqrt2);
 
-        for i in 0..dim {
-            let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-            // Apply phase shift only if target is |1> AND controls are met
-            if target_bit_is_one && check_controls(i, control_qubits) {
-                new_state[i] = state.amplitude(i)? * phase_factor;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if ((i >> target_qubit) & 1 == 1) && check_controls(i, control_qubits) {
+                        *current_amp_ref = state.state_vector[i] * phase_factor;
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                if target_bit_is_one && check_controls(i, control_qubits) {
+                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                }
             }
-            // else: No change if target is |0> or controls are not met (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -824,29 +955,36 @@ impl Operator for PhaseShift {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Shift operator
         let dim: usize = 1 << num_qubits;
-        // Start with a copy, only modify elements where the operation applies
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         // Calculate phase factor: exp(i * angle) = cos(angle) + i * sin(angle)
         let phase_factor = Complex::new(self.angle.cos(), self.angle.sin());
 
-        for i in 0..dim {
-            let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-            // Apply phase shift only if target is |1> AND controls are met
-            if target_bit_is_one && check_controls(i, control_qubits) {
-                new_state[i] = state.amplitude(i)? * phase_factor;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if ((i >> target_qubit) & 1 == 1) && check_controls(i, control_qubits) {
+                        *current_amp_ref = state.state_vector[i] * phase_factor;
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                if target_bit_is_one && check_controls(i, control_qubits) {
+                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                }
             }
-            // else: No change if target is |0> or controls are not met (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -896,41 +1034,57 @@ impl Operator for RotateX {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateX operator
         let dim: usize = 1 << num_qubits;
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone();
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let half_angle: f64 = self.angle / 2.0;
         let cos_half: f64 = half_angle.cos();
         let sin_half: f64 = half_angle.sin();
         let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
 
-        for i in 0..dim {
-            // Process pairs (i, j) where target bit differs.
-            if (i >> target_qubit) & 1 == 0 { // Process pairs starting from |..0..>
-                let j: usize = i | (1 << target_qubit); // Index where target qubit is |1>
-
-                // Check controls for both i and j.
-                let i_controls_met: bool = check_controls(i, control_qubits);
-                let j_controls_met: bool = check_controls(j, control_qubits);
-
-                if i_controls_met && j_controls_met {
-                    // Apply RotateX logic if controls met for both i and j
-                    let amp_i: Complex<f64> = state.amplitude(i)?; // Use original state amplitudes
-                    let amp_j: Complex<f64> = state.amplitude(j)?;
-
-                    new_state[i] = cos_half * amp_i - i_complex * sin_half * amp_j;
-                    new_state[j] = -i_complex * sin_half * amp_i + cos_half * amp_j;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                .into_par_iter()
+                .filter_map(|i| {
+                    if ((i >> target_qubit) & 1 == 0) && check_controls(i, control_qubits) {
+                        let j = i | (1 << target_qubit);
+                        let amp_i = state.state_vector[i];
+                        let amp_j = state.state_vector[j];
+                        Some(vec![
+                            (i, cos_half * amp_i - i_complex * sin_half * amp_j),
+                            (j, -i_complex * sin_half * amp_i + cos_half * amp_j),
+                        ])
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            for (idx, val) in updates {
+                new_state_vec[idx] = val;
+            }
+        } else {
+            // Sequential implementation
+            for i in 0..dim {
+                if (i >> target_qubit) & 1 == 0 {
+                    let j = i | (1 << target_qubit);
+                    if check_controls(i, control_qubits) {
+                        let amp_i = state.state_vector[i];
+                        let amp_j = state.state_vector[j];
+                        new_state_vec[i] = cos_half * amp_i - i_complex * sin_half * amp_j;
+                        new_state_vec[j] = -i_complex * sin_half * amp_i + cos_half * amp_j;
+                    }
                 }
             }
-            // Skip when target bit is 1, as the pair was handled when it was 0.
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -980,40 +1134,56 @@ impl Operator for RotateY {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateY operator
         let dim: usize = 1 << num_qubits;
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
         let half_angle: f64 = self.angle / 2.0;
         let cos_half: f64 = half_angle.cos();
         let sin_half: f64 = half_angle.sin();
 
-        for i in 0..dim {
-            // Process pairs (i, j) where target bit differs.
-            if (i >> target_qubit) & 1 == 0 { // Process pairs starting from |..0..>
-                let j = i | (1 << target_qubit); // Index where target qubit is |1>
-
-                // Check controls for both i and j.
-                let i_controls_met: bool = check_controls(i, control_qubits);
-                let j_controls_met: bool = check_controls(j, control_qubits);
-
-                if i_controls_met && j_controls_met {
-                    // Apply RotateY logic if controls met for both i and j
-                    let amp_i: Complex<f64> = state.amplitude(i)?; // Use original state amplitudes
-                    let amp_j: Complex<f64> = state.amplitude(j)?;
-
-                    new_state[i] = cos_half * amp_i - sin_half * amp_j;
-                    new_state[j] = sin_half * amp_i + cos_half * amp_j;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                .into_par_iter()
+                .filter_map(|i| {
+                    if ((i >> target_qubit) & 1 == 0) && check_controls(i, control_qubits) {
+                        let j = i | (1 << target_qubit);
+                        let amp_i = state.state_vector[i];
+                        let amp_j = state.state_vector[j];
+                        Some(vec![
+                            (i, cos_half * amp_i - sin_half * amp_j),
+                            (j, sin_half * amp_i + cos_half * amp_j),
+                        ])
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            for (idx, val) in updates {
+                new_state_vec[idx] = val;
+            }
+        } else {
+            // Sequential implementation
+            for i in 0..dim {
+                if (i >> target_qubit) & 1 == 0 {
+                    let j = i | (1 << target_qubit);
+                    if check_controls(i, control_qubits) {
+                        let amp_i = state.state_vector[i];
+                        let amp_j = state.state_vector[j];
+                        new_state_vec[i] = cos_half * amp_i - sin_half * amp_j;
+                        new_state_vec[j] = sin_half * amp_i + cos_half * amp_j;
+                    }
                 }
             }
-            // Skip when target bit is 1, as the pair was handled when it was 0.
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -1063,37 +1233,48 @@ impl Operator for RotateZ {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let target_qubit = target_qubits[0];
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateZ operator
         let dim: usize = 1 << num_qubits;
-        let mut new_state: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
         let half_angle = self.angle / 2.0;
         // Phase factor for |0> state: exp(-i * angle / 2)
         let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin());
         // Phase factor for |1> state: exp(i * angle / 2)
         let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());
 
-        for i in 0..dim {
-            // Apply phase shift only if controls are met
-            if check_controls(i, control_qubits) {
-                let target_bit_is_one = (i >> target_qubit) & 1 == 1;
-
-                if target_bit_is_one {
-                    // Apply phase_1 to |1> component
-                    new_state[i] = state.amplitude(i)? * phase_1;
-                } else {
-                    // Apply phase_0 to |0> component
-                    new_state[i] = state.amplitude(i)? * phase_0;
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            new_state_vec
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, current_amp_ref)| {
+                    if check_controls(i, control_qubits) {
+                        let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                        if target_bit_is_one {
+                            *current_amp_ref = state.state_vector[i] * phase_1;
+                        } else {
+                            *current_amp_ref = state.state_vector[i] * phase_0;
+                        }
+                    }
+                });
+        } else {
+            for i in 0..dim {
+                if check_controls(i, control_qubits) {
+                    let target_bit_is_one = (i >> target_qubit) & 1 == 1;
+                    if target_bit_is_one {
+                        new_state_vec[i] = state.state_vector[i] * phase_1;
+                    } else {
+                        new_state_vec[i] = state.state_vector[i] * phase_0;
+                    }
                 }
             }
-            // else: Controls not met, leave amplitude unchanged (already handled by clone)
         }
 
         Ok(State {
-            state_vector: new_state,
+            state_vector: new_state_vec,
             num_qubits: state.num_qubits(),
         })
     }
@@ -1103,9 +1284,8 @@ impl Operator for RotateZ {
     }
 }
 
-
 /// An arbitrary 2×2 unitary operator.
-/// 
+///
 /// This operator can be applied to a single qubit in a quantum state. It is represented by a 2×2 unitary matrix.
 pub struct Unitary2 {
     /// The 2×2 unitary matrix representing the operator.
@@ -1114,34 +1294,40 @@ pub struct Unitary2 {
 
 impl Unitary2 {
     /// Creates a new Unitary2 operator with the given 2×2 unitary matrix.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `matrix` - A 2×2 unitary matrix represented as a 2D array of complex numbers.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * `Result<Self, Error>` - A result containing the new Unitary2 operator or an error if the matrix is not unitary.
-    /// 
+    ///
     /// # Errors:
-    /// 
+    ///
     /// * `Error::NonUnitaryMatrix` - If the provided matrix is not unitary.
     pub fn new(matrix: [[Complex<f64>; 2]; 2]) -> Result<Self, Error> {
-        // Faster 2×2 unitary check:
-        let tol: f64 = f64::EPSILON * 2.0;
-        let a: Complex<f64> = matrix[0][0];
-        let b: Complex<f64> = matrix[0][1];
-        let c: Complex<f64> = matrix[1][0];
-        let d: Complex<f64> = matrix[1][1];
+        // Faster 2×2 unitary check: U U_dagger = I (rows are orthonormal)
+        let tol: f64 = f64::EPSILON * 2.0; // Tolerance for floating point comparisons
+        let a: Complex<f64> = matrix[0][0]; // U_00
+        let b: Complex<f64> = matrix[0][1]; // U_01
+        let c: Complex<f64> = matrix[1][0]; // U_10
+        let d: Complex<f64> = matrix[1][1]; // U_11
 
-        // each column has norm 1
-        if ((a.norm_sqr() + b.norm_sqr()) - 1.0).abs() > tol
-            || ((c.norm_sqr() + d.norm_sqr()) - 1.0).abs() > tol
-        {
+        // Check if each row has norm 1
+        // Row 0: |a|^2 + |b|^2 == 1
+        if ((a.norm_sqr() + b.norm_sqr()) - 1.0).abs() > tol {
             return Err(Error::NonUnitaryMatrix);
         }
-        // columns are orthogonal
-        if (a * c.conj() + b * d.conj()).norm() > tol {
+        // Row 1: |c|^2 + |d|^2 == 1
+        if ((c.norm_sqr() + d.norm_sqr()) - 1.0).abs() > tol {
+            return Err(Error::NonUnitaryMatrix);
+        }
+
+        // Check if rows are orthogonal
+        // Row 0 dot Row 1_conj: a*c_conj + b*d_conj == 0
+        if (a * c.conj() + b * d.conj()).norm_sqr() > tol * tol {
+            // Compare norm_sqr with tol^2
             return Err(Error::NonUnitaryMatrix);
         }
 
@@ -1150,19 +1336,18 @@ impl Unitary2 {
 }
 
 impl Operator for Unitary2 {
-
     /// Applies the Unitary2 operator to the given state's target qubit.
-    /// 
+    ///
     /// # Arguments:
-    /// 
+    ///
     /// * `state` - The state to apply the operator to.
-    /// 
+    ///
     /// * `target_qubits` - The target qubits to apply the operator to. This should be a single qubit.
-    /// 
+    ///
     /// * `control_qubits` - The control qubits for the operator. If not empty, the operator will be applied conditionally based on the control qubits. Otherwise, it will be applied unconditionally.
-    /// 
+    ///
     /// # Returns:
-    /// 
+    ///
     /// * The new state after applying the Unitary2 operator.
     fn apply(
         &self,
@@ -1172,26 +1357,55 @@ impl Operator for Unitary2 {
     ) -> Result<State, Error> {
         // Validation
         validate_qubits(state, target_qubits, control_qubits, 1)?;
-        
+
         let t: usize = target_qubits[0];
         let nq: usize = state.num_qubits();
 
         // Apply 2×2 block on each basis‐pair
         let dim = 1 << nq;
-        let mut new_sv = state.state_vector.clone();
-        for i in 0..dim {
-            if (i >> t) & 1 == 0 {
-                let j = i | (1 << t);
-                if check_controls(i, control_qubits) && check_controls(j, control_qubits) {
-                    let ai = state.amplitude(i)?;
-                    let aj = state.amplitude(j)?;
-                    new_sv[i] = self.matrix[0][0] * ai + self.matrix[0][1] * aj;
-                    new_sv[j] = self.matrix[1][0] * ai + self.matrix[1][1] * aj;
+        let mut new_state_vec = state.state_vector.clone();
+
+        if nq >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let updates: Vec<(usize, Complex<f64>)> = (0..dim)
+                .into_par_iter()
+                .filter_map(|i| {
+                    if ((i >> t) & 1 == 0) && check_controls(i, control_qubits) {
+                        let j = i | (1 << t);
+                        let ai = state.state_vector[i];
+                        let aj = state.state_vector[j];
+                        Some(vec![
+                            (i, self.matrix[0][0] * ai + self.matrix[0][1] * aj),
+                            (j, self.matrix[1][0] * ai + self.matrix[1][1] * aj),
+                        ])
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            for (idx, val) in updates {
+                new_state_vec[idx] = val;
+            }
+        } else {
+            // Sequential implementation
+            for i in 0..dim {
+                if (i >> t) & 1 == 0 {
+                    let j = i | (1 << t);
+                    if check_controls(i, control_qubits) {
+                        let ai = state.state_vector[i];
+                        let aj = state.state_vector[j];
+                        new_state_vec[i] = self.matrix[0][0] * ai + self.matrix[0][1] * aj;
+                        new_state_vec[j] = self.matrix[1][0] * ai + self.matrix[1][1] * aj;
+                    }
                 }
             }
         }
 
-        Ok(State { state_vector: new_sv, num_qubits: nq })
+        Ok(State {
+            state_vector: new_state_vec,
+            num_qubits: nq,
+        })
     }
 
     fn base_qubits(&self) -> usize {
