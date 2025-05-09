@@ -626,9 +626,10 @@ impl Gate {
     ///
     /// * `Vec<Gate>` - A vector of Gate structs representing Phase Shift gates for each qubit index.
     pub fn p_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        let op_template = PhaseShift::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::p_gate(qubit_index, angle))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -648,10 +649,11 @@ impl Gate {
         control_indices: Vec<usize>,
         angle: f64,
     ) -> Vec<Self> {
+        let op_template = PhaseShift::new(angle);
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(PhaseShift::new(angle)),
+                Box::new(op_template.clone()),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -683,9 +685,10 @@ impl Gate {
     ///
     /// * `Vec<Gate>` - A vector of Gate structs representing RotateX gates for each qubit index.
     pub fn rx_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        let op_template = RotateX::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::rx_gate(qubit_index, angle))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -705,10 +708,11 @@ impl Gate {
         control_indices: Vec<usize>,
         angle: f64,
     ) -> Vec<Self> {
+        let op_template = RotateX::new(angle);
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(RotateX::new(angle)),
+                Box::new(op_template.clone()),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -740,9 +744,10 @@ impl Gate {
     ///
     /// * `Vec<Gate>` - A vector of Gate structs representing RotateY gates for each qubit index.
     pub fn ry_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        let op_template = RotateY::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::ry_gate(qubit_index, angle))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -762,10 +767,11 @@ impl Gate {
         control_indices: Vec<usize>,
         angle: f64,
     ) -> Vec<Self> {
+        let op_template = RotateY::new(angle);
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(RotateY::new(angle)),
+                Box::new(op_template.clone()),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -797,9 +803,10 @@ impl Gate {
     ///
     /// * `Vec<Gate>` - A vector of Gate structs representing RotateZ gates for each qubit index.
     pub fn rz_multi_gate(qubit_indices: Vec<usize>, angle: f64) -> Vec<Self> {
+        let op_template = RotateZ::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::rz_gate(qubit_index, angle))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -819,10 +826,11 @@ impl Gate {
         control_indices: Vec<usize>,
         angle: f64,
     ) -> Vec<Self> {
+        let op_template = RotateZ::new(angle);
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(RotateZ::new(angle)),
+                Box::new(op_template.clone()),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -862,9 +870,10 @@ impl Gate {
         qubit_indices: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
     ) -> Vec<Self> {
+        let op_template = Unitary2::new(unitary).unwrap();
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::unitary2_gate(qubit_index, unitary))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -886,10 +895,11 @@ impl Gate {
         control_indices: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
     ) -> Vec<Self> {
+        let op_template = Unitary2::new(unitary).unwrap();
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(Unitary2::new(unitary).unwrap()),
+                Box::new(op_template.clone()),
                 vec![target_index],
                 control_indices.clone(),
             ))
