@@ -1745,7 +1745,7 @@ impl PartialEq for State {
             let real_diff = (a.re - b.re).abs();
             let imag_diff = (a.im - b.im).abs();
 
-            if real_diff > f64::EPSILON || imag_diff > f64::EPSILON {
+            if real_diff > f32::EPSILON.into() || imag_diff > f32::EPSILON.into() {
                 return false;
             }
         }
