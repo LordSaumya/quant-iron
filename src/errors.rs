@@ -65,6 +65,7 @@ pub enum Error {
     OpenCLError(String),
 }
 
+#[cfg(feature = "gpu")]
 impl From<ocl::Error> for Error {
     fn from(err: ocl::Error) -> Self {
         Error::OpenCLError(err.to_string())
