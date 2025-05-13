@@ -1,13 +1,87 @@
 use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
 use rayon::prelude::*;
+#[cfg(feature = "gpu")]
 use ocl::{ProQue, Buffer,flags, prm::Float2}; // Added ocl imports
 
 const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
 const OPENCL_THRESHOLD_NUM_QUBITS: usize = 15; // Threshold for using OpenCL
 
-// Kernel source - assumes hadamard.cl is in src/components/kernels/
+// Kernel sources - assumes .cl files are in src/components/kernels/
 const HADAMARD_KERNEL_SRC: &str = include_str!("kernels/hadamard.cl");
+const PAULI_X_KERNEL_SRC: &str = include_str!("kernels/pauli_x.cl");
+const PAULI_Y_KERNEL_SRC: &str = include_str!("kernels/pauli_y.cl");
+const PAULI_Z_KERNEL_SRC: &str = include_str!("kernels/pauli_z.cl");
+
+#[cfg(feature = "gpu")]
+fn execute_on_gpu(
+    state: &State,
+    target_qubit: usize,
+    control_qubits: &[usize],
+    kernel_name: &str,
+    kernel_src: &str,
+) -> Result<Vec<Complex<f64>>, Error> {
+    let num_qubits = state.num_qubits();
+    let pro_que = ProQue::builder()
+        .src(kernel_src)
+        .dims(state.state_vector.len())
+        .build()
+        .map_err(|e| Error::OpenCLError(format!("Failed to build ProQue: {}", e)))?;
+
+    let state_vector_f32: Vec<Float2> = state.state_vector.iter()
+        .map(|c| Float2::new(c.re as f32, c.im as f32))
+        .collect();
+
+    let state_buffer = Buffer::builder()
+        .queue(pro_que.queue().clone())
+        .flags(flags::MEM_READ_WRITE | flags::MEM_COPY_HOST_PTR)
+        .len(state_vector_f32.len())
+        .copy_host_slice(&state_vector_f32)
+        .build()
+        .map_err(|e| Error::OpenCLError(format!("Failed to create state buffer: {}", e)))?;
+
+    let control_qubits_i32: Vec<i32> = control_qubits.iter().map(|&q| q as i32).collect();
+    let control_buffer: Buffer<i32> = if !control_qubits_i32.is_empty() {
+        Buffer::builder()
+            .queue(pro_que.queue().clone())
+            .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
+            .len(control_qubits_i32.len())
+            .copy_host_slice(&control_qubits_i32)
+            .build()
+            .map_err(|e| Error::OpenCLError(format!("Failed to create control buffer: {}", e)))?
+    } else {
+        let dummy_control_data = [0i32];
+        Buffer::builder()
+            .queue(pro_que.queue().clone())
+            .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
+            .len(dummy_control_data.len())
+            .copy_host_slice(&dummy_control_data)
+            .build()
+            .map_err(|e| Error::OpenCLError(format!("Failed to create dummy control buffer: {}", e)))?
+    };
+
+    let kernel = pro_que.kernel_builder(kernel_name)
+        .global_work_size((1 << (num_qubits - 1)) as usize)
+        .arg(&state_buffer)
+        .arg(num_qubits as i32)
+        .arg(target_qubit as i32)
+        .arg(&control_buffer)
+        .arg(control_qubits_i32.len() as i32)
+        .build()
+        .map_err(|e| Error::OpenCLError(format!("Failed to build kernel: {}", e)))?;
+
+    unsafe {
+        kernel.enq().map_err(|e| Error::OpenCLError(format!("Failed to enqueue kernel: {}", e)))?;
+    }
+
+    let mut state_vector_ocl_result = vec![Float2::new(0.0, 0.0); state_vector_f32.len()];
+    state_buffer.read(&mut state_vector_ocl_result).enq()
+        .map_err(|e| Error::OpenCLError(format!("Failed to read state buffer: {}", e)))?;
+
+    Ok(state_vector_ocl_result.iter()
+        .map(|f2| Complex::new(f2[0] as f64, f2[1] as f64))
+        .collect())
+}
 
 /// A trait defining the interface for all operators.
 pub trait Operator {
