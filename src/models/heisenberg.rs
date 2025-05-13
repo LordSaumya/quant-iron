@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 /// Generates the Hamiltonian for a 1D anisotropic Heisenberg model with periodic boundary conditions
 /// and constant coupling and field strengths.
-/// H = -1/2 Σ (J_x X_i X_{i+1} + J_y Y_i Y_{i+1} + J_z Z_i Z_{i+1}) - Σ μ h Z_i
+/// H = -1/2 Σ (J_x X_i X_{i+1} + J_y Y_i Y_{i+1} + J_z Z_i Z_{i+1}) - 1/2 Σ μ h Z_i
 ///
 /// # Arguments
 ///
@@ -103,7 +103,7 @@ pub fn heisenberg_1d(
 
 /// Generates the Hamiltonian for a 2D anisotropic Heisenberg model with periodic boundary conditions
 /// and constant coupling and field strengths.
-/// H = -1/2 Σ_{<i,j>} (J_x X_i X_j + J_y Y_i Y_j + J_z Z_i Z_j) - Σ_k μ h Z_k
+/// H = -1/2 Σ_{<i,j>} (J_x X_i X_j + J_y Y_i Y_j + J_z Z_i Z_j) - 1/2 Σ_k μ h Z_k
 /// where <i,j> denotes nearest neighbors (vertical and horizontal).
 ///
 /// # Arguments
@@ -142,7 +142,7 @@ pub fn heisenberg_2d(
     let coeff_x: Complex<f64> = Complex::new(-0.5 * jx, 0.0);
     let coeff_y: Complex<f64> = Complex::new(-0.5 * jy, 0.0);
     let coeff_z_coupling: Complex<f64> = Complex::new(-0.5 * jz, 0.0);
-    let field_coeff: Complex<f64> = -mu * Complex::new(-0.5 * h_field, 0.0);
+    let field_coeff: Complex<f64> = mu * Complex::new(-0.5 * h_field, 0.0);
 
     let include_jx = jx != 0.0;
     let include_jy = jy != 0.0;
