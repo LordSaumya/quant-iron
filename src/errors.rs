@@ -55,4 +55,18 @@ pub enum Error {
     /// Unexpected error occurred
     #[error("An unknown error occurred")]
     UnknownError,
+
+    /// An error occurred during OpenCL operation
+    ///
+    /// # Arguments:
+    ///
+    /// * `0` - The OpenCL error message
+    #[error("OpenCL error: {0}")]
+    OpenCLError(String),
+}
+
+impl From<ocl::Error> for Error {
+    fn from(err: ocl::Error) -> Self {
+        Error::OpenCLError(err.to_string())
+    }
 }
