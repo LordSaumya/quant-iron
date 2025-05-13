@@ -226,78 +226,20 @@ impl Operator for Hadamard {
         // Apply potentially controlled Hadamard operator
         let sqrt_2_inv: f64 = 1.0 / (2.0f64).sqrt();
         let dim: usize = 1 << num_qubits;
-        let mut new_state_vec: Vec<Complex<f64>>; // Declare, will be initialised by one of the paths
+        let mut new_state_vec: Vec<Complex<f64>>;
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS {
-            // OpenCL implementation
-            // Note: This section initialises ProQue on each call, which might be inefficient for frequent calls.
-            // Consider a shared ProQue instance for better performance in such cases.
-            // Also, this implementation converts f64 state vector to f32 for OpenCL, involving precision loss.
-
-            let pro_que = ProQue::builder()
-                .src(HADAMARD_KERNEL_SRC)
-                .dims(state.state_vector.len()) // Default buffer size, not strictly needed here as we create explicitly
-                .build()
-                .map_err(|e| Error::OpenCLError(format!("Failed to build ProQue: {}", e)))?; // Assumes Error::OpenCLError variant
-
-            println!("Proque built: {:?}", pro_que);
-            // Convert state_vector from Vec<Complex<f64>> to Vec<Float2> (ocl's f32 complex type)
-            let state_vector_f32: Vec<Float2> = state.state_vector.iter()
-                .map(|c| Float2::new(c.re as f32, c.im as f32))
-                .collect();
-
-            let state_buffer = Buffer::builder()
-                .queue(pro_que.queue().clone())
-                .flags(flags::MEM_READ_WRITE | flags::MEM_COPY_HOST_PTR)
-                .len(state_vector_f32.len())
-                .copy_host_slice(&state_vector_f32)
-                .build()
-                .map_err(|e| Error::OpenCLError(format!("Failed to create state buffer: {}", e)))?;
-
-            let control_qubits_i32: Vec<i32> = control_qubits.iter().map(|&q| q as i32).collect();
-            let control_buffer: Buffer<i32> = if !control_qubits_i32.is_empty() {
-                Buffer::builder()
-                    .queue(pro_que.queue().clone())
-                    .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
-                    .len(control_qubits_i32.len())
-                    .copy_host_slice(&control_qubits_i32)
-                    .build()
-                    .map_err(|e| Error::OpenCLError(format!("Failed to create control buffer: {}", e)))?
-            } else {
-                // Create a dummy buffer if control_qubits is empty
-                let dummy_control_data = [0i32]; // Dummy data, content doesn't matter as len will be 0
-                Buffer::builder()
-                    .queue(pro_que.queue().clone())
-                    .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
-                    .len(dummy_control_data.len()) // len is 1 for the dummy buffer
-                    .copy_host_slice(&dummy_control_data)
-                    .build()
-                    .map_err(|e| Error::OpenCLError(format!("Failed to create dummy control buffer: {}", e)))?
-            };
-
-            let kernel = pro_que.kernel_builder("hadamard_kernel")
-                .global_work_size((1 << (num_qubits - 1)) as usize) // Number of pairs to process
-                .arg(&state_buffer)
-                .arg(num_qubits as i32)
-                .arg(target_qubit as i32)
-                .arg(&control_buffer) // Pass the buffer (real or dummy)
-                .arg(control_qubits_i32.len() as i32) // Pass actual number of control qubits (0 if empty)
-                .build()
-                .map_err(|e| Error::OpenCLError(format!("Failed to build kernel: {}", e)))?;
-
-            unsafe {
-                kernel.enq().map_err(|e| Error::OpenCLError(format!("Failed to enqueue kernel: {}", e)))?;
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    "hadamard_kernel",
+                    HADAMARD_KERNEL_SRC,
+                )?;
             }
-
-            let mut state_vector_ocl_result = vec![Float2::new(0.0, 0.0); state_vector_f32.len()];
-            state_buffer.read(&mut state_vector_ocl_result).enq()
-                .map_err(|e| Error::OpenCLError(format!("Failed to read state buffer: {}", e)))?;
-
-            // Convert back from Vec<Float2> to Vec<Complex<f64>>
-            new_state_vec = state_vector_ocl_result.iter()
-                .map(|f2| Complex::new(f2[0] as f64, f2[1] as f64))
-                .collect();
-
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
             // Rayon CPU Parallel implementation
             new_state_vec = state.state_vector.clone(); // Initialise for CPU path
@@ -437,8 +379,25 @@ impl Operator for Pauli {
         let dim: usize = 1 << num_qubits;
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let kernel = match self {
+                    Pauli::X => ("pauli_x_kernel", PAULI_X_KERNEL_SRC),
+                    Pauli::Y => ("pauli_y_kernel", PAULI_Y_KERNEL_SRC),
+                    Pauli::Z => ("pauli_z_kernel", PAULI_Z_KERNEL_SRC),
+                };
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    kernel.0,
+                    kernel.1,
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
             // Parallel implementation
             match self {
                 Pauli::X => {
