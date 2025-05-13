@@ -80,6 +80,39 @@ fn test_operator_hadamard_success() {
     let expected_state_ch_c1 = State { state_vector: expected_vec_ch_c1, num_qubits: num_test_qubits_ch };
     assert_eq!(new_state_ch_c1, expected_state_ch_c1, "Controlled H (c=1) parallel failed");
 
+    // Hardware acceleration test on 15 qubits
+    // h(|0...0>) = |+...+> on 15 qubits [check if gpu method works (uncontrolled, multi-target)]
+    let num_test_qubits_h_unc = 15;
+    let state_h_unc = State::new_zero(num_test_qubits_h_unc).unwrap();
+    let targets_h_unc: Vec<usize> = (0..num_test_qubits_h_unc).collect();
+    let new_state_h_unc = state_h_unc.h_multi(&targets_h_unc).unwrap();
+    let expected_state_h_unc = State::new_plus(num_test_qubits_h_unc).unwrap();
+    assert_eq!(new_state_h_unc, expected_state_h_unc, "Uncontrolled H parallel (multi-target) failed");
+
+    // ch(control=10, target=0) on 15 qubits. [check if controlled gpu method works]
+    let num_test_qubits_ch = 15;
+    let control_q_ch = &[num_test_qubits_ch - 1]; // qubit 14
+    let target_q_ch = &[0]; // qubit 0
+
+    // Case 1: Control is 0 (|0...0>)
+    let initial_state_ch_c0 = State::new_zero(num_test_qubits_ch).unwrap();
+    let new_state_ch_c0 = initial_state_ch_c0.ch_multi(target_q_ch, control_q_ch).unwrap();
+    assert_eq!(new_state_ch_c0, initial_state_ch_c0, "Controlled H (c=0) gpu failed");
+
+    // Case 2: Control is 1 (|...1...0...>)
+    let mut initial_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
+    let idx_ch_c1_t0 = 1 << control_q_ch[0]; // Control is 1 (at q10), target is 0 (at q0)
+    initial_vec_ch_c1[idx_ch_c1_t0] = Complex::new(1.0, 0.0);
+    let initial_state_ch_c1 = State { state_vector: initial_vec_ch_c1, num_qubits: num_test_qubits_ch };
+    let new_state_ch_c1 = initial_state_ch_c1.ch_multi(target_q_ch, control_q_ch).unwrap();
+
+    let mut expected_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
+    let sqrt2_inv_h = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+    expected_vec_ch_c1[idx_ch_c1_t0] = sqrt2_inv_h; // Control=1, Target=0 component of H|0>
+    expected_vec_ch_c1[idx_ch_c1_t0 | (1 << target_q_ch[0])] = sqrt2_inv_h; // Control=1, Target=1 component of H|0>
+    let expected_state_ch_c1 = State { state_vector: expected_vec_ch_c1, num_qubits: num_test_qubits_ch };
+    assert_eq!(new_state_ch_c1, expected_state_ch_c1, "Controlled H (c=1) gpu failed");
+
     // Base qubits = 1
     assert_eq!(Hadamard {}.base_qubits(), 1);
 }
