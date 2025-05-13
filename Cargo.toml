@@ -5,11 +5,15 @@ edition = "2024"
 
 [dependencies]
 num-complex = "0.4.6"
-ocl = "0.19.7"
+ocl = { version = "0.19.7", optional = true }
 paste = "1.0.15"
 rand = "0.9.1"
 rayon = "1.10.0"
 thiserror = "2.0.12"
+
+[features]
+default = []
+gpu = ["ocl"]
 
 # Disable doctests
 [lib]
