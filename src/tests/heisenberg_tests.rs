@@ -9,7 +9,6 @@ use crate::{
 };
 
 use num_complex::Complex;
-use rayon::vec;
 
 #[test]
 fn test_heisenberg_1d_success() {
