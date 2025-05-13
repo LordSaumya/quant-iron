@@ -226,7 +226,7 @@ impl Operator for Hadamard {
         // Apply potentially controlled Hadamard operator
         let sqrt_2_inv: f64 = 1.0 / (2.0f64).sqrt();
         let dim: usize = 1 << num_qubits;
-        let mut new_state_vec: Vec<Complex<f64>>;
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let gpu_enabled: bool = cfg!(feature = "gpu");
 
         if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
