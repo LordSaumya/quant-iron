@@ -80,38 +80,41 @@ fn test_operator_hadamard_success() {
     let expected_state_ch_c1 = State { state_vector: expected_vec_ch_c1, num_qubits: num_test_qubits_ch };
     assert_eq!(new_state_ch_c1, expected_state_ch_c1, "Controlled H (c=1) parallel failed");
 
-    // Hardware acceleration test on 15 qubits
-    // h(|0...0>) = |+...+> on 15 qubits [check if gpu method works (uncontrolled, multi-target)]
-    let num_test_qubits_h_unc = 15;
-    let state_h_unc = State::new_zero(num_test_qubits_h_unc).unwrap();
-    let targets_h_unc: Vec<usize> = (0..num_test_qubits_h_unc).collect();
-    let new_state_h_unc = state_h_unc.h_multi(&targets_h_unc).unwrap();
-    let expected_state_h_unc = State::new_plus(num_test_qubits_h_unc).unwrap();
-    assert_eq!(new_state_h_unc, expected_state_h_unc, "Uncontrolled H parallel (multi-target) failed");
+    #[cfg(feature = "gpu")]
+    {
+        // Hardware acceleration test on 15 qubits
+        // h(|0...0>) = |+...+> on 15 qubits [check if gpu method works (uncontrolled, multi-target)]
+        let num_test_qubits_h_unc = 15;
+        let state_h_unc = State::new_zero(num_test_qubits_h_unc).unwrap();
+        let targets_h_unc: Vec<usize> = (0..num_test_qubits_h_unc).collect();
+        let new_state_h_unc = state_h_unc.h_multi(&targets_h_unc).unwrap();
+        let expected_state_h_unc = State::new_plus(num_test_qubits_h_unc).unwrap();
+        assert_eq!(new_state_h_unc, expected_state_h_unc, "Uncontrolled H gpu (multi-target) failed"); // Corrected message
 
-    // ch(control=10, target=0) on 15 qubits. [check if controlled gpu method works]
-    let num_test_qubits_ch = 15;
-    let control_q_ch = &[num_test_qubits_ch - 1]; // qubit 14
-    let target_q_ch = &[0]; // qubit 0
+        // ch(control=10, target=0) on 15 qubits. [check if controlled gpu method works]
+        let num_test_qubits_ch = 15;
+        let control_q_ch = &[num_test_qubits_ch - 1]; // qubit 14
+        let target_q_ch = &[0]; // qubit 0
 
-    // Case 1: Control is 0 (|0...0>)
-    let initial_state_ch_c0 = State::new_zero(num_test_qubits_ch).unwrap();
-    let new_state_ch_c0 = initial_state_ch_c0.ch_multi(target_q_ch, control_q_ch).unwrap();
-    assert_eq!(new_state_ch_c0, initial_state_ch_c0, "Controlled H (c=0) gpu failed");
+        // Case 1: Control is 0 (|0...0>)
+        let initial_state_ch_c0 = State::new_zero(num_test_qubits_ch).unwrap();
+        let new_state_ch_c0 = initial_state_ch_c0.ch_multi(target_q_ch, control_q_ch).unwrap();
+        assert_eq!(new_state_ch_c0, initial_state_ch_c0, "Controlled H (c=0) gpu failed");
 
-    // Case 2: Control is 1 (|...1...0...>)
-    let mut initial_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
-    let idx_ch_c1_t0 = 1 << control_q_ch[0]; // Control is 1 (at q10), target is 0 (at q0)
-    initial_vec_ch_c1[idx_ch_c1_t0] = Complex::new(1.0, 0.0);
-    let initial_state_ch_c1 = State { state_vector: initial_vec_ch_c1, num_qubits: num_test_qubits_ch };
-    let new_state_ch_c1 = initial_state_ch_c1.ch_multi(target_q_ch, control_q_ch).unwrap();
+        // Case 2: Control is 1 (|...1...0...>)
+        let mut initial_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
+        let idx_ch_c1_t0 = 1 << control_q_ch[0]; // Control is 1 (at q10), target is 0 (at q0)
+        initial_vec_ch_c1[idx_ch_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_ch_c1 = State { state_vector: initial_vec_ch_c1, num_qubits: num_test_qubits_ch };
+        let new_state_ch_c1 = initial_state_ch_c1.ch_multi(target_q_ch, control_q_ch).unwrap();
 
-    let mut expected_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
-    let sqrt2_inv_h = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
-    expected_vec_ch_c1[idx_ch_c1_t0] = sqrt2_inv_h; // Control=1, Target=0 component of H|0>
-    expected_vec_ch_c1[idx_ch_c1_t0 | (1 << target_q_ch[0])] = sqrt2_inv_h; // Control=1, Target=1 component of H|0>
-    let expected_state_ch_c1 = State { state_vector: expected_vec_ch_c1, num_qubits: num_test_qubits_ch };
-    assert_eq!(new_state_ch_c1, expected_state_ch_c1, "Controlled H (c=1) gpu failed");
+        let mut expected_vec_ch_c1 = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_ch];
+        let sqrt2_inv_h = Complex::new(1.0 / 2.0_f64.sqrt(), 0.0);
+        expected_vec_ch_c1[idx_ch_c1_t0] = sqrt2_inv_h; // Control=1, Target=0 component of H|0>
+        expected_vec_ch_c1[idx_ch_c1_t0 | (1 << target_q_ch[0])] = sqrt2_inv_h; // Control=1, Target=1 component of H|0>
+        let expected_state_ch_c1 = State { state_vector: expected_vec_ch_c1, num_qubits: num_test_qubits_ch };
+        assert_eq!(new_state_ch_c1, expected_state_ch_c1, "Controlled H (c=1) gpu failed");
+    }
 
     // Base qubits = 1
     assert_eq!(Hadamard {}.base_qubits(), 1);
@@ -193,6 +196,44 @@ fn test_operator_pauli_x_success() {
     expected_vec_cx_c1[idx_cx_c1_t0 | (1 << target_q_cx[0])] = Complex::new(1.0, 0.0); // Control=1, Target=1 (X|0> = |1>)
     let expected_state_cx_c1 = State { state_vector: expected_vec_cx_c1, num_qubits: num_test_qubits_cx };
     assert_eq!(new_state_cx_c1, expected_state_cx_c1, "Controlled X (c=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        // --- GPU Path Tests (15 qubits) ---
+        let num_test_qubits_x_gpu = 15;
+        let control_q_x_gpu = &[num_test_qubits_x_gpu - 1]; // qubit 14
+        let target_q_x_gpu = &[0]; // qubit 0
+        let i_complex_x_gpu = Complex::new(0.0, 1.0);
+        let sqrt2_inv_x_gpu = 1.0 / 2.0_f64.sqrt();
+
+        // Uncontrolled X on 15 qubits |0...0>
+        let initial_state_x_gpu_unc = State::new_zero(num_test_qubits_x_gpu).unwrap();
+        let targets_x_gpu_unc: Vec<usize> = (0..num_test_qubits_x_gpu).collect();
+        let new_state_x_gpu_unc = initial_state_x_gpu_unc.x_multi(&targets_x_gpu_unc).unwrap();
+        let expected_state_x_gpu_unc = State::new_basis_n(num_test_qubits_x_gpu, (1 << num_test_qubits_x_gpu) - 1).unwrap(); // |1...1>
+        assert_eq!(new_state_x_gpu_unc, expected_state_x_gpu_unc, "Uncontrolled X GPU (multi-target) failed");
+
+        // Controlled X (CX) on 15 qubits
+        // Case 1: Control is 0, Target is |0>
+        let initial_state_cx_gpu_c0 = State::new_zero(num_test_qubits_x_gpu).unwrap();
+        let new_state_cx_gpu_c0 = initial_state_cx_gpu_c0.cx_multi(target_q_x_gpu, control_q_x_gpu).unwrap();
+        assert_eq!(new_state_cx_gpu_c0, initial_state_cx_gpu_c0, "Controlled X GPU (c=0) failed");
+
+        // Case 2: Control is 1, Target is (i|0> + |1>)/sqrt(2)
+        let mut initial_vec_cx_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_x_gpu];
+        let idx_cx_gpu_c1_base = 1 << control_q_x_gpu[0]; // Base index for control=1
+        initial_vec_cx_gpu_c1_imag[idx_cx_gpu_c1_base | (0 << target_q_x_gpu[0])] = i_complex_x_gpu * sqrt2_inv_x_gpu; // (i/sqrt(2)) for |1...1>_C |0>_T
+        initial_vec_cx_gpu_c1_imag[idx_cx_gpu_c1_base | (1 << target_q_x_gpu[0])] = Complex::new(1.0, 0.0) * sqrt2_inv_x_gpu; // (1/sqrt(2)) for |1...1>_C |1>_T
+        let initial_state_cx_gpu_c1_imag = State { state_vector: initial_vec_cx_gpu_c1_imag, num_qubits: num_test_qubits_x_gpu };
+        let new_state_cx_gpu_c1_imag = initial_state_cx_gpu_c1_imag.cx_multi(target_q_x_gpu, control_q_x_gpu).unwrap();
+
+        let mut expected_vec_cx_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_x_gpu];
+        // X(i|0> + |1>)/sqrt(2) = (i|1> + |0>)/sqrt(2)
+        expected_vec_cx_gpu_c1_imag[idx_cx_gpu_c1_base | (0 << target_q_x_gpu[0])] = Complex::new(1.0, 0.0) * sqrt2_inv_x_gpu; // (1/sqrt(2)) for |1...1>_C |0>_T
+        expected_vec_cx_gpu_c1_imag[idx_cx_gpu_c1_base | (1 << target_q_x_gpu[0])] = i_complex_x_gpu * sqrt2_inv_x_gpu; // (i/sqrt(2)) for |1...1>_C |1>_T
+        let expected_state_cx_gpu_c1_imag = State { state_vector: expected_vec_cx_gpu_c1_imag, num_qubits: num_test_qubits_x_gpu };
+        assert_eq!(new_state_cx_gpu_c1_imag, expected_state_cx_gpu_c1_imag, "Controlled X GPU (c=1, imag target) failed");
+    }
 }
 
 #[test]
@@ -274,10 +315,48 @@ fn test_operator_pauli_y_success() {
     expected_vec_cy_c1[idx_cy_c1_t0 | (1 << target_q_cy[0])] = i_complex_y; // Control=1, Target=1 component of Y|0>
     let expected_state_cy_c1 = State { state_vector: expected_vec_cy_c1, num_qubits: num_test_qubits_cy };
     assert_eq!(new_state_cy_c1, expected_state_cy_c1, "Controlled Y (c=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        // --- GPU Path Tests (15 qubits) ---
+        let num_test_qubits_y_gpu = 15;
+        let control_q_y_gpu = &[num_test_qubits_y_gpu - 1]; // qubit 14
+        let target_q_y_gpu = &[0]; // qubit 0
+        let i_complex_y_gpu = Complex::new(0.0, 1.0);
+
+        // Uncontrolled Y on 15 qubits |0...0>
+        let initial_state_y_gpu_unc = State::new_zero(num_test_qubits_y_gpu).unwrap();
+        let targets_y_gpu_unc: Vec<usize> = (0..num_test_qubits_y_gpu).collect();
+        let new_state_y_gpu_unc = initial_state_y_gpu_unc.y_multi(&targets_y_gpu_unc).unwrap();
+        // Y^N |0...0> = (i)^N |1...1>. For N=15, i^15 = -i.
+        let phase_factor_y_gpu = i_complex_y_gpu.powu(num_test_qubits_y_gpu as u32);
+        let basis_one_state_y_gpu = State::new_basis_n(num_test_qubits_y_gpu, (1 << num_test_qubits_y_gpu) - 1).unwrap();
+        let expected_state_y_gpu_unc = basis_one_state_y_gpu * phase_factor_y_gpu;
+        assert_eq!(new_state_y_gpu_unc, expected_state_y_gpu_unc, "Uncontrolled Y GPU (multi-target) failed");
+
+        // Controlled Y (CY) on 15 qubits
+        // Case 1: Control is 0, Target is |0>
+        let initial_state_cy_gpu_c0 = State::new_zero(num_test_qubits_y_gpu).unwrap();
+        let new_state_cy_gpu_c0 = initial_state_cy_gpu_c0.cy_multi(target_q_y_gpu, control_q_y_gpu).unwrap();
+        assert_eq!(new_state_cy_gpu_c0, initial_state_cy_gpu_c0, "Controlled Y GPU (c=0) failed");
+
+        // Case 2: Control is 1, Target is i|0>
+        let mut initial_vec_cy_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_y_gpu];
+        let idx_cy_gpu_c1_base = 1 << control_q_y_gpu[0]; // Base index for control=1
+        initial_vec_cy_gpu_c1_imag[idx_cy_gpu_c1_base | (0 << target_q_y_gpu[0])] = i_complex_y_gpu; // i for |1...1>_C |0>_T
+        let initial_state_cy_gpu_c1_imag = State { state_vector: initial_vec_cy_gpu_c1_imag, num_qubits: num_test_qubits_y_gpu };
+        let new_state_cy_gpu_c1_imag = initial_state_cy_gpu_c1_imag.cy_multi(target_q_y_gpu, control_q_y_gpu).unwrap();
+
+        let mut expected_vec_cy_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_y_gpu];
+        // Y(i|0>) = i * Y|0> = i * (i|1>) = -|1>
+        expected_vec_cy_gpu_c1_imag[idx_cy_gpu_c1_base | (1 << target_q_y_gpu[0])] = Complex::new(-1.0, 0.0); // -1 for |1...1>_C |1>_T
+        let expected_state_cy_gpu_c1_imag = State { state_vector: expected_vec_cy_gpu_c1_imag, num_qubits: num_test_qubits_y_gpu };
+        assert_eq!(new_state_cy_gpu_c1_imag, expected_state_cy_gpu_c1_imag, "Controlled Y GPU (c=1, imag target i|0>) failed");
+    }
 }
 
 #[test]
-fn test_operator_pauli_success() {
+fn test_operator_pauli_z_success() {
     // z(|0>) = |0> (|0> is an eigenstate of Z with eigenvalue = +1)
     // z(|1>) = -|1> (|1> is an eigenstate of Z with eigenvalue = -1)
     // z(|+>) = |->
@@ -362,6 +441,52 @@ fn test_operator_pauli_success() {
     expected_vec_cz_c1_t1[idx_cz_c1_t1] = Complex::new(-1.0, 0.0); // Phase flip
     let expected_state_cz_c1_t1 = State { state_vector: expected_vec_cz_c1_t1, num_qubits: num_test_qubits_cz };
     assert_eq!(new_state_cz_c1_t1, expected_state_cz_c1_t1, "Controlled Z (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        // --- GPU Path Tests (15 qubits) ---
+        let num_test_qubits_z_gpu = 15;
+        let control_q_z_gpu = &[num_test_qubits_z_gpu - 1]; // qubit 14
+        let target_q_z_gpu = &[0]; // qubit 0
+        let i_complex_z_gpu = Complex::new(0.0, 1.0);
+        let sqrt2_inv_z_gpu = 1.0 / 2.0_f64.sqrt();
+
+        // Uncontrolled Z on 15 qubits |0...0>
+        let initial_state_z_gpu_unc0 = State::new_zero(num_test_qubits_z_gpu).unwrap();
+        let targets_z_gpu_unc0: Vec<usize> = (0..num_test_qubits_z_gpu).collect();
+        let new_state_z_gpu_unc0 = initial_state_z_gpu_unc0.z_multi(&targets_z_gpu_unc0).unwrap();
+        assert_eq!(new_state_z_gpu_unc0, initial_state_z_gpu_unc0, "Uncontrolled Z GPU (multi-target) on |0...0> failed");
+
+        // Uncontrolled Z on 15 qubits |1...1>
+        let initial_val_z_gpu_unc1 = (1 << num_test_qubits_z_gpu) - 1;
+        let initial_state_z_gpu_unc1 = State::new_basis_n(num_test_qubits_z_gpu, initial_val_z_gpu_unc1).unwrap();
+        let targets_z_gpu_unc1: Vec<usize> = (0..num_test_qubits_z_gpu).collect();
+        let new_state_z_gpu_unc1 = initial_state_z_gpu_unc1.z_multi(&targets_z_gpu_unc1).unwrap();
+        // Z^N |1...1> = (-1)^N |1...1>. For N=15, (-1)^15 = -1.
+        let expected_state_z_gpu_unc1 = initial_state_z_gpu_unc1 * Complex::new(-1.0, 0.0);
+        assert_eq!(new_state_z_gpu_unc1, expected_state_z_gpu_unc1, "Uncontrolled Z GPU (multi-target) on |1...1> failed");
+        
+        // Controlled Z (CZ) on 15 qubits
+        // Case 1: Control is 0, Target is |0>
+        let initial_state_cz_gpu_c0 = State::new_zero(num_test_qubits_z_gpu).unwrap();
+        let new_state_cz_gpu_c0 = initial_state_cz_gpu_c0.cz_multi(target_q_z_gpu, control_q_z_gpu).unwrap();
+        assert_eq!(new_state_cz_gpu_c0, initial_state_cz_gpu_c0, "Controlled Z GPU (c=0) failed");
+
+        // Case 2: Control is 1, Target is (|0> + i|1>)/sqrt(2)
+        let mut initial_vec_cz_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_z_gpu];
+        let idx_cz_gpu_c1_base = 1 << control_q_z_gpu[0]; // Base index for control=1
+        initial_vec_cz_gpu_c1_imag[idx_cz_gpu_c1_base | (0 << target_q_z_gpu[0])] = Complex::new(1.0, 0.0) * sqrt2_inv_z_gpu; // (1/sqrt(2)) for |1...1>_C |0>_T
+        initial_vec_cz_gpu_c1_imag[idx_cz_gpu_c1_base | (1 << target_q_z_gpu[0])] = i_complex_z_gpu * sqrt2_inv_z_gpu;       // (i/sqrt(2)) for |1...1>_C |1>_T
+        let initial_state_cz_gpu_c1_imag = State { state_vector: initial_vec_cz_gpu_c1_imag, num_qubits: num_test_qubits_z_gpu };
+        let new_state_cz_gpu_c1_imag = initial_state_cz_gpu_c1_imag.cz_multi(target_q_z_gpu, control_q_z_gpu).unwrap();
+
+        let mut expected_vec_cz_gpu_c1_imag = vec![Complex::new(0.0, 0.0); 1 << num_test_qubits_z_gpu];
+        // Z(|0> + i|1>)/sqrt(2) = (|0> - i|1>)/sqrt(2)
+        expected_vec_cz_gpu_c1_imag[idx_cz_gpu_c1_base | (0 << target_q_z_gpu[0])] = Complex::new(1.0, 0.0) * sqrt2_inv_z_gpu; // (1/sqrt(2)) for |1...1>_C |0>_T
+        expected_vec_cz_gpu_c1_imag[idx_cz_gpu_c1_base | (1 << target_q_z_gpu[0])] = -i_complex_z_gpu * sqrt2_inv_z_gpu;      // (-i/sqrt(2)) for |1...1>_C |1>_T
+        let expected_state_cz_gpu_c1_imag = State { state_vector: expected_vec_cz_gpu_c1_imag, num_qubits: num_test_qubits_z_gpu };
+        assert_eq!(new_state_cz_gpu_c1_imag, expected_state_cz_gpu_c1_imag, "Controlled Z GPU (c=1, imag target) failed");
+    }
 }
 
 #[test]
