@@ -119,10 +119,10 @@ fn circuits() {
 ```rust
 fn hamiltonian() {
   // Define a Hamiltonian for a 2-qubit system
-  let hamiltonian = SumOp::new()                                         // 2 X_0 + Y_1 + 0.5 Z_0 X_1
-    .add(PauliString::new(2.0).add_op(0, Pauli::X))                      // 2X_0
-    .add(PauliString::new(1.0).add_op(1, Pauli::Y))                      // Y_1
-    .add(PauliString::new(0.5).add_op(0, Pauli::Z).add_op(1, Pauli::X)); // 0.5Z_0 X_1
+  let hamiltonian = SumOp::new()                                              // 2 X_0 + Y_1 + 0.5 Z_0 X_1
+    .add_term(PauliString::new(2.0).add_op(0, Pauli::X))                      // 2X_0
+    .add_term(PauliString::new(1.0).add_op(1, Pauli::Y))                      // Y_1
+    .add_term(PauliString::new(0.5).add_op(0, Pauli::Z).add_op(1, Pauli::X)); // 0.5Z_0 X_1
 
   let state = State::new_plus(2)?;                                // Initialise a |++> state
   let expectation_value = hamiltonian.expectation_value(&state)?; // Compute the expectation value for the given state
