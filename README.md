@@ -90,8 +90,8 @@ fn qubits() {
         .cnot(0, 1)         // CNOT with control=0, target=1
         .measure_n(MeasurementBasis::Computational, &[0, 1], 100)?; // Measure both qubits 100 times
 
-    println!("Measurement results: {:?}", measurement.outcomes); // Print the outcomes
-    println!("New state: {:?}", measurement.new_state); // Print the new state after measurement
+    println!("Measurement results: {:?}", measurement.outcomes);    // Print the outcomes
+    println!("New state: {:?}", measurement.new_state);             // Print the new state after measurement
 }
 ```
 
