@@ -47,7 +47,7 @@ impl KernelType {
     }
 }
 
-pub struct GpuContext {
+pub(crate) struct GpuContext {
     pub pro_que: ProQue,
     pub state_buffer: Option<Buffer<Float2>>,
     pub control_buffer: Option<Buffer<i32>>,
@@ -112,6 +112,6 @@ impl GpuContext {
     }
 }
 
-pub static GPU_CONTEXT: Lazy<Mutex<Result<GpuContext, Error>>> = Lazy::new(|| {
+pub(crate) static GPU_CONTEXT: Lazy<Mutex<Result<GpuContext, Error>>> = Lazy::new(|| {
     Mutex::new(GpuContext::new())
 });
