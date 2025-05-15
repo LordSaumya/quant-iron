@@ -54,6 +54,8 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 
 - **Error Handling**: Comprehensive error handling for invalid operations and state manipulations.
 
+- **Quality of Life**: Implementation of `std` and arithmetic traits for easy, intuitive usage.
+
 ---
 
 ## Getting Started
@@ -117,15 +119,15 @@ fn circuits() {
 ```rust
 fn hamiltonian() {
   // Define a Hamiltonian for a 2-qubit system
-  let hamiltonian = SumOp::new()
-    .add(PauliString::new("X", 0, 1.0))     // Pauli-X on qubit 0
-    .add(PauliString::new("Y", 1, -0.5))    // Pauli-Y on qubit 1
-    .add(PauliString::new("Z", 0, 0.5));    // Pauli-Z on qubit 0
+  let hamiltonian = SumOp::new()                                         // 2 X_0 + Y_1 + 0.5 Z_0 X_1
+    .add(PauliString::new(2.0).add_op(0, Pauli::X))                      // 2X_0
+    .add(PauliString::new(1.0).add_op(1, Pauli::Y))                      // Y_1
+    .add(PauliString::new(0.5).add_op(0, Pauli::Z).add_op(1, Pauli::X)); // 0.5Z_0 X_1
 
   let state = State::new_plus(2)?;                                // Initialise a |++> state
-  let expectation_value = hamiltonian.expectation_value(&state)?; // Compute the expectation value
+  let expectation_value = hamiltonian.expectation_value(&state)?; // Compute the expectation value for the given state
 
-  println!("Expectation value: {:?}", expectation_value);         // Print the expectation value
+  println!("Expectation value: {:?}", expectation_value);         // Print the expectation value for the Hamiltonian
 }
 ```
 
