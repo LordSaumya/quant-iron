@@ -19,7 +19,7 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 
 ## Features
 
-- **Quantum State Representation**: Create and manipulate quantum states of arbitrary qubit count, along with methods to construct common states.
+- **Quantum State Representation**: Create and manipulate predefined or custom quantum states of arbitrary qubit count.
 
 - **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, Phase shifts, Rotations, and custom unitary operations.
 
