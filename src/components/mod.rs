@@ -1,4 +1,6 @@
 pub mod gate;
+#[cfg(feature = "gpu")]
+pub mod gpu_context;
 pub mod measurement;
 pub mod operator;
 pub mod state;

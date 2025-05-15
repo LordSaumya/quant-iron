@@ -2,80 +2,72 @@ use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
 use rayon::prelude::*;
 #[cfg(feature = "gpu")]
-use ocl::{ProQue, Buffer,flags, prm::Float2}; // Added ocl imports
+use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
+#[cfg(feature = "gpu")]
+use ocl::prm::Float2;
 
 const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
 const OPENCL_THRESHOLD_NUM_QUBITS: usize = 15; // Threshold for using OpenCL
-
-// Kernel sources - assumes .cl files are in src/components/kernels/
-const HADAMARD_KERNEL_SRC: &str = include_str!("kernels/hadamard.cl");
-const PAULI_X_KERNEL_SRC: &str = include_str!("kernels/pauli_x.cl");
-const PAULI_Y_KERNEL_SRC: &str = include_str!("kernels/pauli_y.cl");
-const PAULI_Z_KERNEL_SRC: &str = include_str!("kernels/pauli_z.cl");
 
 #[cfg(feature = "gpu")]
 fn execute_on_gpu(
     state: &State,
     target_qubit: usize,
     control_qubits: &[usize],
-    kernel_name: &str,
-    kernel_src: &str,
+    kernel_type: KernelType,
+    global_work_size: usize,
 ) -> Result<Vec<Complex<f64>>, Error> {
-    let num_qubits = state.num_qubits();
-    let pro_que = ProQue::builder()
-        .src(kernel_src)
-        .dims(state.state_vector.len())
-        .build()
-        .map_err(|e| Error::OpenCLError(format!("Failed to build ProQue: {}", e)))?;
+    let mut context_guard = GPU_CONTEXT.lock().map_err(|_| Error::GpuContextLockError)?;
+    let context = match *context_guard {
+        Ok(ref mut ctx) => ctx,
+        Err(ref e) => return Err(e.clone()), // Propagate initialisation error
+    };
 
+    let num_qubits = state.num_qubits();
+    let num_state_elements = state.state_vector.len();
+
+    // Ensure buffers are ready and get mutable references
+    let state_buffer_cloned = context.ensure_state_buffer(num_state_elements)?.clone();
+    
+    let control_qubits_i32: Vec<i32> = control_qubits.iter().map(|&q| q as i32).collect();
+    let control_buffer_len = control_qubits_i32.len();
+    let control_buffer_cloned = context.ensure_control_buffer(control_buffer_len)?.clone();
+    
     let state_vector_f32: Vec<Float2> = state.state_vector.iter()
         .map(|c| Float2::new(c.re as f32, c.im as f32))
         .collect();
+    
+    // Copy data to GPU buffers
+    state_buffer_cloned.write(&state_vector_f32).enq()
+        .map_err(|e| Error::OpenCLError(format!("Failed to write to state buffer: {}", e)))?;
 
-    let state_buffer = Buffer::builder()
-        .queue(pro_que.queue().clone())
-        .flags(flags::MEM_READ_WRITE | flags::MEM_COPY_HOST_PTR)
-        .len(state_vector_f32.len())
-        .copy_host_slice(&state_vector_f32)
-        .build()
-        .map_err(|e| Error::OpenCLError(format!("Failed to create state buffer: {}", e)))?;
-
-    let control_qubits_i32: Vec<i32> = control_qubits.iter().map(|&q| q as i32).collect();
-    let control_buffer: Buffer<i32> = if !control_qubits_i32.is_empty() {
-        Buffer::builder()
-            .queue(pro_que.queue().clone())
-            .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
-            .len(control_qubits_i32.len())
-            .copy_host_slice(&control_qubits_i32)
-            .build()
-            .map_err(|e| Error::OpenCLError(format!("Failed to create control buffer: {}", e)))?
+    if !control_qubits_i32.is_empty() {
+        control_buffer_cloned.write(&control_qubits_i32).enq()
+            .map_err(|e| Error::OpenCLError(format!("Failed to write to control buffer: {}", e)))?;
     } else {
-        let dummy_control_data = [0i32];
-        Buffer::builder()
-            .queue(pro_que.queue().clone())
-            .flags(flags::MEM_READ_ONLY | flags::MEM_COPY_HOST_PTR)
-            .len(dummy_control_data.len())
-            .copy_host_slice(&dummy_control_data)
-            .build()
-            .map_err(|e| Error::OpenCLError(format!("Failed to create dummy control buffer: {}", e)))?
-    };
+        // Write dummy data if no control qubits
+        let dummy_control_data = vec![0; 1]; // Dummy data for control buffer
+         control_buffer_cloned.write(&dummy_control_data).enq()
+            .map_err(|e| Error::OpenCLError(format!("Failed to write to dummy control buffer: {}", e)))?;
+    }
 
-    let kernel = pro_que.kernel_builder(kernel_name)
-        .global_work_size((1 << (num_qubits - 1)) as usize)
-        .arg(&state_buffer)
+    let kernel = context.pro_que.kernel_builder(kernel_type.name())
+        .global_work_size(global_work_size)
+        .arg(&state_buffer_cloned) // Pass by reference
         .arg(num_qubits as i32)
         .arg(target_qubit as i32)
-        .arg(&control_buffer)
+        .arg(control_buffer_cloned) 
         .arg(control_qubits_i32.len() as i32)
         .build()
-        .map_err(|e| Error::OpenCLError(format!("Failed to build kernel: {}", e)))?;
+        .map_err(|e| Error::OpenCLError(format!("Failed to build kernel '{}': {}", kernel_type.name(), e)))?;
 
     unsafe {
         kernel.enq().map_err(|e| Error::OpenCLError(format!("Failed to enqueue kernel: {}", e)))?;
     }
 
-    let mut state_vector_ocl_result = vec![Float2::new(0.0, 0.0); state_vector_f32.len()];
-    state_buffer.read(&mut state_vector_ocl_result).enq()
+    let mut state_vector_ocl_result = vec![Float2::new(0.0, 0.0); num_state_elements];
+    // Read data back from state_buffer
+    state_buffer_cloned.read(&mut state_vector_ocl_result).enq()
         .map_err(|e| Error::OpenCLError(format!("Failed to read state buffer: {}", e)))?;
 
     Ok(state_vector_ocl_result.iter()
@@ -226,18 +218,20 @@ impl Operator for Hadamard {
         // Apply potentially controlled Hadamard operator
         let sqrt_2_inv: f64 = 1.0 / (2.0f64).sqrt();
         let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
         let gpu_enabled: bool = cfg!(feature = "gpu");
 
         if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
             #[cfg(feature = "gpu")]
             {
+                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit,
                     control_qubits,
-                    "hadamard_kernel",
-                    HADAMARD_KERNEL_SRC,
+                    KernelType::Hadamard,
+                    global_work_size,
                 )?;
             }
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
@@ -384,17 +378,25 @@ impl Operator for Pauli {
         if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
             #[cfg(feature = "gpu")]
             {
-                let kernel = match self {
-                    Pauli::X => ("pauli_x_kernel", PAULI_X_KERNEL_SRC),
-                    Pauli::Y => ("pauli_y_kernel", PAULI_Y_KERNEL_SRC),
-                    Pauli::Z => ("pauli_z_kernel", PAULI_Z_KERNEL_SRC),
+                let kernel_type = match self {
+                    Pauli::X => KernelType::PauliX,
+                    Pauli::Y => KernelType::PauliY,
+                    Pauli::Z => KernelType::PauliZ,
+                };
+                let global_work_size = if num_qubits == 0 {
+                    1
+                } else {
+                    match self {
+                        Pauli::Z => 1 << num_qubits, // N work items for Pauli Z
+                        _ => 1 << (num_qubits - 1),   // N/2 work items for Pauli X, Y
+                    }
                 };
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit,
                     control_qubits,
-                    kernel.0,
-                    kernel.1,
+                    kernel_type,
+                    global_work_size,
                 )?;
             }
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
