@@ -1,8 +1,8 @@
 # Quant-Iron
 
-A high-performance, modular quantum computing library written in Rust.
+A high-performance, hardware-accelerated modular quantum computing library with a focus on physical applications.
 
-Quant-Iron provides tools to represent quantum states, apply standard quantum gates, perform measurements, and build quantum circuits.
+Quant-Iron provides tools to represent quantum states, apply standard quantum gates, perform measurements, build quantum circuits, and implement quantum algorithms.
 
 ---
 
@@ -19,13 +19,36 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 
 ## Features
 
-- **Quantum State Representation**: Create and manipulate quantum states of arbitrary qubit count.
+- **Quantum State Representation**: Create and manipulate quantum states of arbitrary qubit count, along with methods to construct common states.
 
-- **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, and custom unitary operations.
+- **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, Phase shifts, Rotations, and custom unitary operations.
 
-- **Measurement**: Collapse wavefunction in computational basis with single or repeated measurements.
+- **Pauli String Algebra**:
+  - Represent products of Pauli operators with complex coefficients (`PauliString`).
 
-- **Speed**: Optimised for parallel execution and low memory overhead.
+  - Construct sums of Pauli strings (`SumOp`) to define Hamiltonians and other observables.
+
+  - Apply Pauli strings and their sums to quantum states.
+
+  - Calculate expectation values of `SumOp` with respect to a quantum state.
+
+  - Apply exponentials of `PauliString` instances to states.
+
+- **GPU Acceleration**: OpenCL-accelerated operations for key quantum gates (Hadamard, Pauli-X, Pauli-Y, Pauli-Z) for enhanced performance on compatible hardware. (Requires `gpu` feature flag).
+
+- **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and support for subroutines.
+
+- **Predefined Quantum Models**:
+  - **Heisenberg Model**: Generate Hamiltonians for 1D and 2D anisotropic Heisenberg models using `SumOp`.
+  - **Ising Model**: Generate Hamiltonians for 1D and 2D Ising models with configurable site-specific or uniform interactions and fields using `SumOp`.
+
+- **Predefined Quantum Algorithms**:
+  - **Quantum Fourier Transform (QFT)**: Efficiently compute the QFT for a given number of qubits.
+  - **Inverse Quantum Fourier Transform (IQFT)**: Efficiently compute the inverse QFT for a given number of qubits.
+
+- **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements.
+
+- **Speed**: Optimised for parallel execution (CPU and GPU) and low memory overhead.
 
 - **Extensibility**: Easily extensible for custom gates and measurement bases.
 
@@ -52,6 +75,8 @@ cargo add quant-iron
 
 ### Quickstart
 
+**Create a new quantum state, apply gates, and measure:**
+
 ```rust
 
 fn qubits() {
@@ -66,24 +91,64 @@ fn qubits() {
     println!("Measurement results: {:?}", measurement.outcomes); // Print the outcomes
     println!("New state: {:?}", measurement.new_state); // Print the new state after measurement
 }
+```
 
+**Build a quantum circuit with a QFT subroutine and execute it on a state:**
+
+```rust
 fn circuits() {
   // Build a circuit with 3 qubits
   let circuit = CircuitBuilder::new(3)
     .h_gate(0)                                                  // Add a Hadamard gate on qubit 0
     .cnot_gate(0, 1)                                            // Add a CNOT gate with control=0 and target=1
     .x_gates(vec![1, 2])                                        // Add Pauli-X gates on qubits 1 and 2
+    .add_subroutine(Subroutine::qft(vec![1, 2], 3))             // Add a QFT subroutine on qubits 1 and 2 for the 3 qubit system
     .measure_gate(MeasurementBasis::Computational, vec![0, 1])  // Measure qubits 0 and 1
     .build();                                                   // Build the circuit
 
   let result = circuit.execute(State::new_plus(3)?);        // Execute the circuit on the |++> state
   println!("Circuit result: {:?}", result);                 // Print the result of the circuit execution
-  println!("New state: {:?}", result.new_state);           // Print the new state after execution
+  println!("New state: {:?}", result.new_state);            // Print the new state after execution
 }
-
 ```
 
----
+**Define a Hamiltonian and compute its expectation value:**
+
+```rust
+fn hamiltonian() {
+  // Define a Hamiltonian for a 2-qubit system
+  let hamiltonian = SumOp::new()
+    .add(PauliString::new("X", 0, 1.0))     // Pauli-X on qubit 0
+    .add(PauliString::new("Y", 1, -0.5))    // Pauli-Y on qubit 1
+    .add(PauliString::new("Z", 0, 0.5));    // Pauli-Z on qubit 0
+
+  let state = State::new_plus(2)?;                                // Initialise a |++> state
+  let expectation_value = hamiltonian.expectation_value(&state)?; // Compute the expectation value
+
+  println!("Expectation value: {:?}", expectation_value);         // Print the expectation value
+}
+```
+
+**Create a Hamiltonian for the 1D Heisenberg model and execute it on a state:**
+
+```rust
+fn heisenberg() {
+  // Define a Hamiltonian for the 1D Heisenberg model
+  let number_of_spins = 3;
+  let coupling_constant_x = 1.0;
+  let coupling_constant_y = 2.0;
+  let coupling_constant_z = 3.0;
+  let field_strength = 0.5;
+  let magnetic_field = 0.1;
+
+  let hamiltonian = heisenberg_1d(number_of_spins, coupling_constant_x, 
+  coupling_constant_y, coupling_constant_z, field_strength, magnetic_field)?;
+
+  let state = State::new_plus(3)?;                  // Initialise a |+++> state
+  let modified_state = hamiltonian.apply(&state)?;  // Apply the Hamiltonian to the state
+  println!("Modified state: {:?}", modified_state); // Print the modified state
+}
+```
 
 ## License
 
@@ -94,7 +159,7 @@ This project is licensed under the [GNU General Public License v3.0](https://www
 ## Future Plans
 
 - **Measurement Bases**: Support for arbitrary measurement bases beyond the computational basis.
-- **Hardware Acceleration**: GPU/CUDA or OpenCL support for large-scale state-vector simulations.
 - **Density Matrix Support**: Extend to mixed states and density matrices for more complex quantum systems.
 - **Circuit Visualisation**: Graphical representation of quantum circuits for better understanding and debugging.
-- **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g., QFT, Grover, VQE).
+- **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g. Grover's algorithm, Variational Quantum Eigensolver (VQE)).
+- **Expanded GPU Kernel Support**: Extend GPU acceleration to more quantum operations and algorithms.
