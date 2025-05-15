@@ -63,6 +63,10 @@ pub enum Error {
     /// * `0` - The OpenCL error message
     #[error("OpenCL error: {0}")]
     OpenCLError(String),
+
+    /// Failed to lock the global GPU context
+    #[error("Failed to lock GPU context")]
+    GpuContextLockError,
 }
 
 #[cfg(feature = "gpu")]
