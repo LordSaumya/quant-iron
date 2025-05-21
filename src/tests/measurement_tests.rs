@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::{errors::Error, components::{measurement::MeasurementResult, measurement::MeasurementBasis, state::{State, ChainableState}}};
 use num_complex::Complex;
 
@@ -58,10 +60,9 @@ fn test_measurement_measure_1_qubit_computational_success() {
         _ => unreachable!(),
     };
 
-    // Compare expected state vector with the new state vector using norm
-    for (i, &value) in expected_state_vector.iter().enumerate() {
-        assert!(measurement_result.get_new_state().state_vector[i].norm() - value.norm() < f64::EPSILON);
-    }
+    // Compare expected state vector with the new state vector
+    let expected_s = State::new(expected_state_vector).unwrap();
+    assert_eq!(*measurement_result.get_new_state(), expected_s);
 
     assert_eq!(measurement_result.get_new_state().num_qubits, 2);
 }
@@ -209,4 +210,200 @@ fn test_measurement_measure_n_errors() {
     let measurement_results: Result<Vec<MeasurementResult>, Error> = state.measure_n(MeasurementBasis::Computational, measured_qubits, 0); // Invalid number of measurements
     assert!(measurement_results.is_err());
     assert_eq!(measurement_results.unwrap_err(), Error::InvalidNumberOfMeasurements(0));
+}
+
+#[test]
+fn test_measurement_measure_1_qubit_x_basis_success() {
+    // |+> * |0> = |+0>
+    let state = State::new_plus(1).unwrap().tensor_product(&State::new_zero(1).unwrap()).unwrap(); // |+0> state
+
+    // Measure the second qubit (|+>) in the X basis
+    let measured_qubits: &[usize] = &[1]; // Measure the second qubit (|+>) in the X basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::X, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::X);
+    assert_eq!(measurement_result.get_indices(), measured_qubits);
+
+    let outcome: u8 = measurement_result.get_outcomes()[0];
+    let new_state_ref = measurement_result.get_new_state();
+
+    // Outcome can only be 0
+    assert_eq!(outcome, 0);
+    
+    // Expected state is the same as the original state (|+0>)
+    assert_eq!(*new_state_ref, state);
+
+    // Measure the first qubit (|0>) in the X basis
+    let measured_qubits: &[usize] = &[0]; // Measure the first qubit (|0>) in the X basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::X, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::X);
+    assert_eq!(measurement_result.get_indices(), measured_qubits);
+
+    let outcome: u8 = measurement_result.get_outcomes()[0];
+    let new_state_ref = measurement_result.get_new_state();
+
+    let expected_plus_state = State::new_plus(2).unwrap(); // |+> state
+    let expected_minus_state = State::new_plus(1).unwrap().tensor_product(&State::new_minus(1).unwrap()).unwrap(); // |+-> state
+
+    // Outcome can be either 0 or 1
+    match outcome {
+        0 => assert_eq!(*new_state_ref, expected_plus_state),
+        1 => assert_eq!(*new_state_ref, expected_minus_state),
+        _ => panic!("Unexpected outcome: {}", outcome),
+    }
+}
+
+#[test]
+fn test_measurement_measure_all_qubits_x_basis_success() {
+    // |+> * |0> = |+0>
+    let state = State::new_plus(1).unwrap().tensor_product(&State::new_zero(1).unwrap()).unwrap(); // |+0> state
+
+    // Measure all qubits in the X basis
+    let measured_qubits: &[usize] = &[]; // Measure all qubits in the X basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::X, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::X);
+    assert_eq!(measurement_result.get_indices(), &(0..state.num_qubits()).collect::<Vec<usize>>());
+
+    let outcome: &Vec<u8> = measurement_result.get_outcomes();
+    let new_state_ref = measurement_result.get_new_state();
+
+    // Outcome can be (0, 0) or (1, 0)
+    let expected_plus_state = State::new_plus(2).unwrap(); // |++> state
+    let expected_minus_state = State::new_plus(1).unwrap().tensor_product(&State::new_minus(1).unwrap()).unwrap(); // |+-> state
+
+    match outcome.as_slice() {
+        [0, 0] => assert_eq!(*new_state_ref, expected_plus_state),
+        [1, 0] => assert_eq!(*new_state_ref, expected_minus_state),
+        _ => panic!("Unexpected outcome: {:?}", outcome),
+    }
+}
+
+#[test]
+fn test_measurement_measure_1_qubit_y_basis_success() {
+    // |+> * |0> = |+0>
+    let state = State::new_plus(1).unwrap().tensor_product(&State::new_zero(1).unwrap()).unwrap(); // |+0> state
+
+    let measured_qubits: &[usize] = &[0]; // Measure the first qubit (|0>) in the Y basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::Y, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::Y);
+    assert_eq!(measurement_result.get_indices(), measured_qubits);
+
+    let outcome: u8 = measurement_result.get_outcomes()[0];
+    let new_state_ref = measurement_result.get_new_state();
+    let i = Complex::new(0.0, 1.0);
+
+    // Outcome can be 0 or 1
+    let expected_state_0 = 0.5 * (
+        State::new_basis_n(2, 0).unwrap() +
+        i * State::new_basis_n(2, 1).unwrap() +
+        State::new_basis_n(2, 2).unwrap() +
+        i * State::new_basis_n(2, 3).unwrap()
+    );
+
+    let expected_state_1 = 0.5 * (
+        State::new_basis_n(2, 0).unwrap() -
+        i * State::new_basis_n(2, 1).unwrap() +
+        State::new_basis_n(2, 2).unwrap() -
+        i * State::new_basis_n(2, 3).unwrap()
+    );
+
+    match outcome {
+        0 => assert_eq!(*new_state_ref, expected_state_0),
+        1 => assert_eq!(*new_state_ref, expected_state_1),
+        _ => panic!("Unexpected outcome: {}", outcome),
+    }
+
+    // Measure the second qubit (|+>) in the Y basis
+    let measured_qubits: &[usize] = &[1]; // Measure the second qubit (|+>) in the Y basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::Y, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::Y);
+    assert_eq!(measurement_result.get_indices(), measured_qubits);
+
+    let outcome: u8 = measurement_result.get_outcomes()[0];
+    let new_state_ref: &State = measurement_result.get_new_state();
+    let i = Complex::new(0.0, 1.0);
+
+    // Outcome can be 0 or 1
+    let expected_state_0 = 0.5 * (
+        (1.0 - i) * State::new_basis_n(2, 0).unwrap() +
+        0.0 * State::new_basis_n(2, 1).unwrap() +
+        (1.0 + i) * State::new_basis_n(2, 2).unwrap() +
+        0.0 * State::new_basis_n(2, 3).unwrap()
+    );
+
+    let expected_state_1 = 0.5 * (
+        (1.0 + i) * State::new_basis_n(2, 0).unwrap() +
+        0.0 * State::new_basis_n(2, 1).unwrap() +
+        (1.0 - i) * State::new_basis_n(2, 2).unwrap() +
+        0.0 * State::new_basis_n(2, 3).unwrap()
+    );
+
+    match outcome {
+        0 => assert_eq!(*new_state_ref, expected_state_0),
+        1 => assert_eq!(*new_state_ref, expected_state_1),
+        _ => panic!("Unexpected outcome: {}", outcome),
+    }
+}
+
+#[test]
+fn test_measurement_measure_all_qubits_y_basis_success() {
+    // |+> * |0> = |+0>
+    let state = State::new_plus(1).unwrap().tensor_product(&State::new_zero(1).unwrap()).unwrap(); // |+0> state
+
+    // Measure all qubits in the Y basis
+    let measured_qubits: &[usize] = &[]; // Measure all qubits in the Y basis
+    let measurement_result: MeasurementResult = state.measure(MeasurementBasis::Y, measured_qubits).unwrap();
+
+    assert_eq!(measurement_result.get_basis(), &MeasurementBasis::Y);
+    assert_eq!(measurement_result.get_indices(), &(0..state.num_qubits()).collect::<Vec<usize>>());
+
+    let outcome: &Vec<u8> = measurement_result.get_outcomes();
+    let new_state_ref = measurement_result.get_new_state();
+
+    // Outcome can be (0, 0), (0, 1), (1, 0), or (1, 1)
+    let expected_state_0_0 = State::new(vec![
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(-1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+    ]).unwrap();
+    
+    // Corresponds to (e^{-i pi/4} |i+>) tensor |i->
+    // State vector: (1/(2*sqrt(2))) * [ (1-i), -(1+i), (1+i), (1-i) ]
+    let expected_state_0_1 = State::new(vec![
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(-1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+    ]).unwrap();
+
+    // Corresponds to (e^{i pi/4} |i->) tensor |i+>
+    // State vector: (1/(2*sqrt(2))) * [ (1+i), (-1+i), (1-i), (1+i) ]
+    let expected_state_1_0 = State::new(vec![
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(-1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+    ]).unwrap();
+
+    // Corresponds to (e^{i pi/4} |i->) tensor |i->
+    // State vector: (1/(2*sqrt(2))) * [ (1+i), (1-i), (1-i), -(1+i) ]
+    let expected_state_1_1 = State::new(vec![
+        Complex::new(1.0, 1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+        Complex::new(-1.0, -1.0) / (2.0 * f64::sqrt(2.0)),
+    ]).unwrap();
+
+    match outcome.as_slice() {
+        [0, 0] => assert_eq!(*new_state_ref, expected_state_0_0),
+        [1, 0] => assert_eq!(*new_state_ref, expected_state_0_1),
+        [0, 1] => assert_eq!(*new_state_ref, expected_state_1_0),
+        [1, 1] => assert_eq!(*new_state_ref, expected_state_1_1),
+        _ => panic!("Unexpected outcome: {:?}", outcome),
+    }
 }
