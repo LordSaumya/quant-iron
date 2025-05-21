@@ -73,5 +73,10 @@ impl MeasurementResult {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MeasurementBasis {
     /// The computational basis |0> and |1>.
+    /// Also known as the standard basis or Z basis.
     Computational,
+    /// The X basis (|+> and |->).
+    X,
+    /// The Y basis (|i+> and |i->).
+    Y,
 }

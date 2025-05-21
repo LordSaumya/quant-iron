@@ -255,6 +255,13 @@ impl State {
 
     // ***** MEASUREMENT FUNCTIONS *****
 
+    fn _measure_computational(
+        &self,
+        measured_qubits: &[usize],
+    ) -> Result<MeasurementResult, Error> {
+        return self.measure(MeasurementBasis::Computational, measured_qubits);
+    }
+
     /// Measures the state vector in the specified basis and returns the measurement result.
     ///
     /// # Arguments
@@ -361,6 +368,11 @@ impl State {
                         break; // Found the outcome, exit loop
                     }
                 }
+                 // If, due to floating point issues, no outcome was selected, select the last one.
+                if random_value >= cumulative_probability && !normalised_probabilities.is_empty() {
+                    sampled_outcome_int = normalised_probabilities.len() - 1;
+                }
+
 
                 // Collapse the state vector into a new vector
                 let mut collapsed_state_data: Vec<Complex<f64>> =
@@ -409,6 +421,36 @@ impl State {
                     indices: actual_measured_qubits.to_vec(),
                     outcomes: outcome_binary_vec,
                     new_state: State::new(collapsed_state_data)?,
+                })
+            }
+            MeasurementBasis::X => {
+                // Apply Hadamard to measured qubits
+                let transformed_state = self.h_multi(actual_measured_qubits)?;
+                // Measure in computational basis
+                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+                // Transform the new state back by applying Hadamard again
+                let final_state = computational_measurement_result.new_state.h_multi(actual_measured_qubits)?;
+                Ok(MeasurementResult {
+                    basis: MeasurementBasis::X,
+                    indices: computational_measurement_result.indices,
+                    outcomes: computational_measurement_result.outcomes,
+                    new_state: final_state,
+                })
+            }
+            MeasurementBasis::Y => {
+                // Apply Sdg then H to measured qubits
+                let state_after_sdag = self.s_dag_multi(actual_measured_qubits)?;
+                let transformed_state = state_after_sdag.h_multi(actual_measured_qubits)?;
+                // Measure in computational basis
+                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+                // Transform the new state back by applying H then S
+                let state_after_h = computational_measurement_result.new_state.h_multi(actual_measured_qubits)?;
+                let final_state = state_after_h.s_multi(actual_measured_qubits)?;
+                Ok(MeasurementResult {
+                    basis: MeasurementBasis::Y,
+                    indices: computational_measurement_result.indices,
+                    outcomes: computational_measurement_result.outcomes,
+                    new_state: final_state,
                 })
             }
         }
