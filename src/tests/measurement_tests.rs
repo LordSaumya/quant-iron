@@ -1,5 +1,3 @@
-use std::f64::consts::PI;
-
 use crate::{errors::Error, components::{measurement::MeasurementResult, measurement::MeasurementBasis, state::{State, ChainableState}}};
 use num_complex::Complex;
 
