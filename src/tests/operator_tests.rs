@@ -625,6 +625,54 @@ fn test_operator_phase_s_success() {
     expected_vec_cs_c1_t1[idx_cs_c1_t1] = Complex::new(0.0, 1.0); // i factor
     let expected_state_cs_c1_t1 = State { state_vector: expected_vec_cs_c1_t1, num_qubits: num_test_qubits_cs };
     assert_eq!(new_state_cs_c1_t1, expected_state_cs_c1_t1, "Controlled S (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let i_complex_gpu = Complex::new(0.0, 1.0);
+
+        // --- Uncontrolled PhaseS GPU ---
+        // S|1> = i|1>
+        let initial_state_s_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001> (target qubit 0 is 1)
+        let new_state_s_gpu_unc_t1 = initial_state_s_gpu_unc_t1.s(0).unwrap();
+        let expected_state_s_gpu_unc_t1 = initial_state_s_gpu_unc_t1.clone() * i_complex_gpu;
+        assert_eq!(new_state_s_gpu_unc_t1, expected_state_s_gpu_unc_t1, "Uncontrolled S GPU on |...001> failed");
+
+        // S|0> = |0>
+        let initial_state_s_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap(); // |...000> (target qubit 0 is 0)
+        let new_state_s_gpu_unc_t0 = initial_state_s_gpu_unc_t0.s(0).unwrap();
+        assert_eq!(new_state_s_gpu_unc_t0, initial_state_s_gpu_unc_t0, "Uncontrolled S GPU on |...000> failed");
+
+        // --- Controlled PhaseS GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1]; // e.g., qubit 14
+        let target_q_gpu = &[0];                  // e.g., qubit 0
+
+        // Case 1: Control is 0, Target is |1> (CS|01> = |01>)
+        let mut initial_vec_cs_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_cs_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_cs_gpu_c0_t1 = State { state_vector: initial_vec_cs_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_cs_gpu_c0_t1 = initial_state_cs_gpu_c0_t1.cs_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_cs_gpu_c0_t1, initial_state_cs_gpu_c0_t1, "Controlled S GPU (c=0, t=1) failed");
+
+        // Case 2: Control is 1, Target is |1> (CS|11> = i|11>)
+        let mut initial_vec_cs_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cs_gpu_c1_t1 = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_cs_gpu_c1_t1[idx_cs_gpu_c1_t1] = Complex::new(1.0, 0.0);
+        let initial_state_cs_gpu_c1_t1 = State { state_vector: initial_vec_cs_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_cs_gpu_c1_t1 = initial_state_cs_gpu_c1_t1.cs_multi(target_q_gpu, control_q_gpu).unwrap();
+        let mut expected_vec_cs_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_cs_gpu_c1_t1[idx_cs_gpu_c1_t1] = i_complex_gpu;
+        let expected_state_cs_gpu_c1_t1 = State { state_vector: expected_vec_cs_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_cs_gpu_c1_t1, expected_state_cs_gpu_c1_t1, "Controlled S GPU (c=1, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CS|10> = |10>)
+        let mut initial_vec_cs_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cs_gpu_c1_t0 = 1 << control_q_gpu[0];
+        initial_vec_cs_gpu_c1_t0[idx_cs_gpu_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_cs_gpu_c1_t0 = State { state_vector: initial_vec_cs_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_cs_gpu_c1_t0 = initial_state_cs_gpu_c1_t0.cs_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_cs_gpu_c1_t0, initial_state_cs_gpu_c1_t0, "Controlled S GPU (c=1, t=0) failed");
+    }
 }
 
 #[test]
@@ -715,6 +763,54 @@ fn test_operator_phase_t_success() {
     expected_vec_ct_c1_t1[idx_ct_c1_t1] = eipi4_ct;
     let expected_state_ct_c1_t1 = State { state_vector: expected_vec_ct_c1_t1, num_qubits: num_test_qubits_ct };
     assert_eq!(new_state_ct_c1_t1, expected_state_ct_c1_t1, "Controlled T (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let eipi4_gpu = Complex::new(0.0, PI / 4.0).exp();
+
+        // --- Uncontrolled PhaseT GPU ---
+        // T|1> = e^(i*PI/4)|1>
+        let initial_state_t_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_t_gpu_unc_t1 = initial_state_t_gpu_unc_t1.t(0).unwrap();
+        let expected_state_t_gpu_unc_t1 = initial_state_t_gpu_unc_t1.clone() * eipi4_gpu;
+        assert_eq!(new_state_t_gpu_unc_t1, expected_state_t_gpu_unc_t1, "Uncontrolled T GPU on |...001> failed");
+
+        // T|0> = |0>
+        let initial_state_t_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap(); // |...000>
+        let new_state_t_gpu_unc_t0 = initial_state_t_gpu_unc_t0.t(0).unwrap();
+        assert_eq!(new_state_t_gpu_unc_t0, initial_state_t_gpu_unc_t0, "Uncontrolled T GPU on |...000> failed");
+
+        // --- Controlled PhaseT GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |1> (CT|01> = |01>)
+        let mut initial_vec_ct_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_ct_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_ct_gpu_c0_t1 = State { state_vector: initial_vec_ct_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_ct_gpu_c0_t1 = initial_state_ct_gpu_c0_t1.ct_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_ct_gpu_c0_t1, initial_state_ct_gpu_c0_t1, "Controlled T GPU (c=0, t=1) failed");
+
+        // Case 2: Control is 1, Target is |1> (CT|11> = e^(i*PI/4)|11>)
+        let mut initial_vec_ct_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_ct_gpu_c1_t1 = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_ct_gpu_c1_t1[idx_ct_gpu_c1_t1] = Complex::new(1.0, 0.0);
+        let initial_state_ct_gpu_c1_t1 = State { state_vector: initial_vec_ct_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_ct_gpu_c1_t1 = initial_state_ct_gpu_c1_t1.ct_multi(target_q_gpu, control_q_gpu).unwrap();
+        let mut expected_vec_ct_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_ct_gpu_c1_t1[idx_ct_gpu_c1_t1] = eipi4_gpu;
+        let expected_state_ct_gpu_c1_t1 = State { state_vector: expected_vec_ct_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_ct_gpu_c1_t1, expected_state_ct_gpu_c1_t1, "Controlled T GPU (c=1, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CT|10> = |10>)
+        let mut initial_vec_ct_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_ct_gpu_c1_t0 = 1 << control_q_gpu[0];
+        initial_vec_ct_gpu_c1_t0[idx_ct_gpu_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_ct_gpu_c1_t0 = State { state_vector: initial_vec_ct_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_ct_gpu_c1_t0 = initial_state_ct_gpu_c1_t0.ct_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_ct_gpu_c1_t0, initial_state_ct_gpu_c1_t0, "Controlled T GPU (c=1, t=0) failed");
+    }
 }
 
 #[test]
@@ -795,6 +891,54 @@ fn test_operator_s_dag_success() {
     expected_vec_csdag_c1_t1[idx_csdag_c1_t1] = Complex::new(0.0, -1.0); // -i factor
     let expected_state_csdag_c1_t1 = State { state_vector: expected_vec_csdag_c1_t1, num_qubits: num_test_qubits_csdag };
     assert_eq!(new_state_csdag_c1_t1, expected_state_csdag_c1_t1, "Controlled Sdag (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let neg_i_complex_gpu = Complex::new(0.0, -1.0);
+
+        // --- Uncontrolled Sdag GPU ---
+        // Sdag|1> = -i|1>
+        let initial_state_sdag_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_sdag_gpu_unc_t1 = initial_state_sdag_gpu_unc_t1.s_dag(0).unwrap();
+        let expected_state_sdag_gpu_unc_t1 = initial_state_sdag_gpu_unc_t1.clone() * neg_i_complex_gpu;
+        assert_eq!(new_state_sdag_gpu_unc_t1, expected_state_sdag_gpu_unc_t1, "Uncontrolled Sdag GPU on |...001> failed");
+
+        // Sdag|0> = |0>
+        let initial_state_sdag_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap(); // |...000>
+        let new_state_sdag_gpu_unc_t0 = initial_state_sdag_gpu_unc_t0.s_dag(0).unwrap();
+        assert_eq!(new_state_sdag_gpu_unc_t0, initial_state_sdag_gpu_unc_t0, "Uncontrolled Sdag GPU on |...000> failed");
+
+        // --- Controlled Sdag GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |1> (CSdag|01> = |01>)
+        let mut initial_vec_csdag_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_csdag_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_csdag_gpu_c0_t1 = State { state_vector: initial_vec_csdag_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_csdag_gpu_c0_t1 = initial_state_csdag_gpu_c0_t1.cs_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_csdag_gpu_c0_t1, initial_state_csdag_gpu_c0_t1, "Controlled Sdag GPU (c=0, t=1) failed");
+
+        // Case 2: Control is 1, Target is |1> (CSdag|11> = -i|11>)
+        let mut initial_vec_csdag_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_csdag_gpu_c1_t1 = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_csdag_gpu_c1_t1[idx_csdag_gpu_c1_t1] = Complex::new(1.0, 0.0);
+        let initial_state_csdag_gpu_c1_t1 = State { state_vector: initial_vec_csdag_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_csdag_gpu_c1_t1 = initial_state_csdag_gpu_c1_t1.cs_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        let mut expected_vec_csdag_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_csdag_gpu_c1_t1[idx_csdag_gpu_c1_t1] = neg_i_complex_gpu;
+        let expected_state_csdag_gpu_c1_t1 = State { state_vector: expected_vec_csdag_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_csdag_gpu_c1_t1, expected_state_csdag_gpu_c1_t1, "Controlled Sdag GPU (c=1, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CSdag|10> = |10>)
+        let mut initial_vec_csdag_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_csdag_gpu_c1_t0 = 1 << control_q_gpu[0];
+        initial_vec_csdag_gpu_c1_t0[idx_csdag_gpu_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_csdag_gpu_c1_t0 = State { state_vector: initial_vec_csdag_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_csdag_gpu_c1_t0 = initial_state_csdag_gpu_c1_t0.cs_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_csdag_gpu_c1_t0, initial_state_csdag_gpu_c1_t0, "Controlled Sdag GPU (c=1, t=0) failed");
+    }
 }
 
 #[test]
@@ -869,6 +1013,54 @@ fn test_operator_t_dag_success() {
     expected_vec_ctdag_c1_t1[idx_ctdag_c1_t1] = enegipi4_ctdag;
     let expected_state_ctdag_c1_t1 = State { state_vector: expected_vec_ctdag_c1_t1, num_qubits: num_test_qubits_ctdag };
     assert_eq!(new_state_ctdag_c1_t1, expected_state_ctdag_c1_t1, "Controlled Tdag (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let enegipi4_gpu = Complex::new(0.0, -PI / 4.0).exp();
+
+        // --- Uncontrolled PhaseTdag GPU ---
+        // Tdag|1> = e^(-i*PI/4)|1>
+        let initial_state_tdag_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_tdag_gpu_unc_t1 = initial_state_tdag_gpu_unc_t1.t_dag(0).unwrap();
+        let expected_state_tdag_gpu_unc_t1 = initial_state_tdag_gpu_unc_t1.clone() * enegipi4_gpu;
+        assert_eq!(new_state_tdag_gpu_unc_t1, expected_state_tdag_gpu_unc_t1, "Uncontrolled Tdag GPU on |...001> failed");
+
+        // Tdag|0> = |0>
+        let initial_state_tdag_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap(); // |...000>
+        let new_state_tdag_gpu_unc_t0 = initial_state_tdag_gpu_unc_t0.t_dag(0).unwrap();
+        assert_eq!(new_state_tdag_gpu_unc_t0, initial_state_tdag_gpu_unc_t0, "Uncontrolled Tdag GPU on |...000> failed");
+
+        // --- Controlled PhaseTdag GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |1> (CTdag|01> = |01>)
+        let mut initial_vec_ctdag_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_ctdag_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_ctdag_gpu_c0_t1 = State { state_vector: initial_vec_ctdag_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_ctdag_gpu_c0_t1 = initial_state_ctdag_gpu_c0_t1.ct_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_ctdag_gpu_c0_t1, initial_state_ctdag_gpu_c0_t1, "Controlled Tdag GPU (c=0, t=1) failed");
+
+        // Case 2: Control is 1, Target is |1> (CTdag|11> = e^(-i*PI/4)|11>)
+        let mut initial_vec_ctdag_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_ctdag_gpu_c1_t1 = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_ctdag_gpu_c1_t1[idx_ctdag_gpu_c1_t1] = Complex::new(1.0, 0.0);
+        let initial_state_ctdag_gpu_c1_t1 = State { state_vector: initial_vec_ctdag_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_ctdag_gpu_c1_t1 = initial_state_ctdag_gpu_c1_t1.ct_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        let mut expected_vec_ctdag_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_ctdag_gpu_c1_t1[idx_ctdag_gpu_c1_t1] = enegipi4_gpu;
+        let expected_state_ctdag_gpu_c1_t1 = State { state_vector: expected_vec_ctdag_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_ctdag_gpu_c1_t1, expected_state_ctdag_gpu_c1_t1, "Controlled Tdag GPU (c=1, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CTdag|10> = |10>)
+        let mut initial_vec_ctdag_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_ctdag_gpu_c1_t0 = 1 << control_q_gpu[0];
+        initial_vec_ctdag_gpu_c1_t0[idx_ctdag_gpu_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_ctdag_gpu_c1_t0 = State { state_vector: initial_vec_ctdag_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_ctdag_gpu_c1_t0 = initial_state_ctdag_gpu_c1_t0.ct_dag_multi(target_q_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_ctdag_gpu_c1_t0, initial_state_ctdag_gpu_c1_t0, "Controlled Tdag GPU (c=1, t=0) failed");
+    }
 }
 
 #[test]
@@ -962,6 +1154,55 @@ fn test_operator_phase_shift_success() {
     expected_vec_cp_c1_t1[idx_cp_c1_t1] = eitheta_cp;
     let expected_state_cp_c1_t1 = State { state_vector: expected_vec_cp_c1_t1, num_qubits: num_test_qubits_cp };
     assert_eq!(new_state_cp_c1_t1, expected_state_cp_c1_t1, "Controlled PhaseShift (c=1, t=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let angle_gpu = PI / 3.7; // Arbitrary angle for testing
+        let eitheta_gpu = Complex::new(0.0, angle_gpu).exp();
+
+        // --- Uncontrolled PhaseShift GPU ---
+        // P(angle)|1> = e^(i*angle)|1>
+        let initial_state_p_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_p_gpu_unc_t1 = initial_state_p_gpu_unc_t1.p(0, angle_gpu).unwrap();
+        let expected_state_p_gpu_unc_t1 = initial_state_p_gpu_unc_t1.clone() * eitheta_gpu;
+        assert_eq!(new_state_p_gpu_unc_t1, expected_state_p_gpu_unc_t1, "Uncontrolled PhaseShift GPU on |...001> failed");
+
+        // P(angle)|0> = |0>
+        let initial_state_p_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap(); // |...000>
+        let new_state_p_gpu_unc_t0 = initial_state_p_gpu_unc_t0.p(0, angle_gpu).unwrap();
+        assert_eq!(new_state_p_gpu_unc_t0, initial_state_p_gpu_unc_t0, "Uncontrolled PhaseShift GPU on |...000> failed");
+
+        // --- Controlled PhaseShift GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |1> (CP(angle)|01> = |01>)
+        let mut initial_vec_cp_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_cp_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_cp_gpu_c0_t1 = State { state_vector: initial_vec_cp_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_cp_gpu_c0_t1 = initial_state_cp_gpu_c0_t1.cp_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_cp_gpu_c0_t1, initial_state_cp_gpu_c0_t1, "Controlled PhaseShift GPU (c=0, t=1) failed");
+
+        // Case 2: Control is 1, Target is |1> (CP(angle)|11> = e^(i*angle)|11>)
+        let mut initial_vec_cp_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cp_gpu_c1_t1 = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_cp_gpu_c1_t1[idx_cp_gpu_c1_t1] = Complex::new(1.0, 0.0);
+        let initial_state_cp_gpu_c1_t1 = State { state_vector: initial_vec_cp_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_cp_gpu_c1_t1 = initial_state_cp_gpu_c1_t1.cp_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        let mut expected_vec_cp_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_cp_gpu_c1_t1[idx_cp_gpu_c1_t1] = eitheta_gpu;
+        let expected_state_cp_gpu_c1_t1 = State { state_vector: expected_vec_cp_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_cp_gpu_c1_t1, expected_state_cp_gpu_c1_t1, "Controlled PhaseShift GPU (c=1, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CP(angle)|10> = |10>)
+        let mut initial_vec_cp_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cp_gpu_c1_t0 = 1 << control_q_gpu[0];
+        initial_vec_cp_gpu_c1_t0[idx_cp_gpu_c1_t0] = Complex::new(1.0, 0.0);
+        let initial_state_cp_gpu_c1_t0 = State { state_vector: initial_vec_cp_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_cp_gpu_c1_t0 = initial_state_cp_gpu_c1_t0.cp_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_cp_gpu_c1_t0, initial_state_cp_gpu_c1_t0, "Controlled PhaseShift GPU (c=1, t=0) failed");
+    }
 }
 
 #[test]
