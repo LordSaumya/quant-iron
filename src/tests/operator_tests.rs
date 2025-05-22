@@ -1781,6 +1781,58 @@ fn test_operator_swap_success() {
     expected_vec_cswap_par_c1[(1 << control_cswap_par[0]) | (1 << t2_cswap_par)] = Complex::new(1.0, 0.0); // Control 1, t1 is 0, t2 is 1
     let expected_state_cswap_par_c1 = State { state_vector: expected_vec_cswap_par_c1, num_qubits: num_test_qubits_cswap_par };
     assert_eq!(new_state_cswap_par_c1, expected_state_cswap_par_c1, "CSWAP parallel (control=1) failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let t1_gpu = 0;
+        let t2_gpu = 1; // Ensure t1_gpu != t2_gpu
+
+        // --- Uncontrolled SWAP GPU ---
+        // SWAP |...01> -> |...10> (targets q0, q1)
+        // Initial state: |...00010> (qubit t1_gpu is 1, t2_gpu is 0)
+        let mut initial_vec_swap_gpu_unc = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_initial_unc = 1 << t1_gpu;
+        initial_vec_swap_gpu_unc[idx_initial_unc] = Complex::new(1.0, 0.0);
+        let initial_state_swap_gpu_unc = State { state_vector: initial_vec_swap_gpu_unc, num_qubits: num_qubits_gpu };
+
+        let new_state_swap_gpu_unc = initial_state_swap_gpu_unc.swap(t1_gpu, t2_gpu).unwrap();
+
+        let mut expected_vec_swap_gpu_unc = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_expected_unc = 1 << t2_gpu; // State after swap: |...00100> (qubit t2_gpu is 1, t1_gpu is 0)
+        expected_vec_swap_gpu_unc[idx_expected_unc] = Complex::new(1.0, 0.0);
+        let expected_state_swap_gpu_unc = State { state_vector: expected_vec_swap_gpu_unc, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_swap_gpu_unc, expected_state_swap_gpu_unc, "Uncontrolled SWAP GPU failed");
+
+        // --- Controlled SWAP (Fredkin) GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1]; // e.g., q14
+
+        // Case 1: Control is 0. SWAP should not happen.
+        // Initial state: |0...010> (control q14=0, t1_gpu=1, t2_gpu=0)
+        let mut initial_vec_cswap_gpu_c0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cswap_initial_c0 = 1 << t1_gpu;
+        initial_vec_cswap_gpu_c0[idx_cswap_initial_c0] = Complex::new(1.0, 0.0);
+        let initial_state_cswap_gpu_c0 = State { state_vector: initial_vec_cswap_gpu_c0, num_qubits: num_qubits_gpu };
+
+        let new_state_cswap_gpu_c0 = initial_state_cswap_gpu_c0.cswap(t1_gpu, t2_gpu, control_q_gpu).unwrap();
+        assert_eq!(new_state_cswap_gpu_c0, initial_state_cswap_gpu_c0, "Controlled SWAP GPU (control=0) failed");
+
+        // Case 2: Control is 1. SWAP should happen.
+        // Initial state: |1...010> (control q14=1, t1_gpu=1, t2_gpu=0)
+        let mut initial_vec_cswap_gpu_c1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cswap_initial_c1 = (1 << control_q_gpu[0]) | (1 << t1_gpu);
+        initial_vec_cswap_gpu_c1[idx_cswap_initial_c1] = Complex::new(1.0, 0.0);
+        let initial_state_cswap_gpu_c1 = State { state_vector: initial_vec_cswap_gpu_c1, num_qubits: num_qubits_gpu };
+
+        let new_state_cswap_gpu_c1 = initial_state_cswap_gpu_c1.cswap(t1_gpu, t2_gpu, control_q_gpu).unwrap();
+
+        let mut expected_vec_cswap_gpu_c1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        // Expected: |1...100> (control q14=1, t1_gpu=0, t2_gpu=1)
+        let idx_cswap_expected_c1 = (1 << control_q_gpu[0]) | (1 << t2_gpu);
+        expected_vec_cswap_gpu_c1[idx_cswap_expected_c1] = Complex::new(1.0, 0.0);
+        let expected_state_cswap_gpu_c1 = State { state_vector: expected_vec_cswap_gpu_c1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_cswap_gpu_c1, expected_state_cswap_gpu_c1, "Controlled SWAP GPU (control=1) failed");
+    }
 }
 
 #[test]
