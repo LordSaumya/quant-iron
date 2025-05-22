@@ -46,7 +46,7 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
   - **Quantum Fourier Transform (QFT)**: Efficiently compute the QFT for a given number of qubits.
   - **Inverse Quantum Fourier Transform (IQFT)**: Efficiently compute the inverse QFT for a given number of qubits.
 
-- **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements.
+- **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements in the `Computational`, `X`, `Y`, and custom bases.
 
 - **Speed**: Optimised for parallel execution (CPU and GPU) and low memory overhead.
 
@@ -159,8 +159,6 @@ This project is licensed under the [GNU General Public License v3.0](https://www
 ---
 
 ## Future Plans
-
-- **Measurement Bases**: Support for arbitrary measurement bases beyond the computational basis.
 - **Density Matrix Support**: Extend to mixed states and density matrices for more complex quantum systems.
 - **Circuit Visualisation**: Graphical representation of quantum circuits for better understanding and debugging.
 - **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g. Grover's algorithm, Variational Quantum Eigensolver (VQE)).

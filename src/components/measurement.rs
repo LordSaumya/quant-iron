@@ -1,4 +1,5 @@
 use crate::components::state::State;
+use num_complex::Complex;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,4 +80,6 @@ pub enum MeasurementBasis {
     X,
     /// The Y basis (|i+> and |i->).
     Y,
+    /// A custom measurement basis defined by a 2x2 unitary matrix.
+    Custom([[Complex<f64>; 2]; 2]),
 }

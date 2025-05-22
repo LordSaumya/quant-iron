@@ -11,6 +11,14 @@ use rand::Rng;
 use rayon::prelude::*;
 use std::ops::{Add, Mul, Sub};
 
+// Helper function to calculate the adjoint (conjugate transpose) of a 2x2 matrix
+fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] {
+    [
+        [matrix[0][0].conj(), matrix[1][0].conj()],
+        [matrix[0][1].conj(), matrix[1][1].conj()],
+    ]
+}
+
 #[derive(Clone)]
 pub struct State {
     /// The state vector of the system, represented as a complex vector.
@@ -333,7 +341,7 @@ impl State {
                         },
                     )
                     .reduce(
-                        || vec![0.0; num_outcomes], // Initializer for combining thread-local results
+                        || vec![0.0; num_outcomes], // Initialiser for combining thread-local results
                         |mut total_probs, local_probs| {
                             for i in 0..num_outcomes {
                                 total_probs[i] += local_probs[i];
@@ -448,6 +456,26 @@ impl State {
                 let final_state = state_after_h.s_multi(actual_measured_qubits)?;
                 Ok(MeasurementResult {
                     basis: MeasurementBasis::Y,
+                    indices: computational_measurement_result.indices,
+                    outcomes: computational_measurement_result.outcomes,
+                    new_state: final_state,
+                })
+            }
+            MeasurementBasis::Custom(u_matrix) => {
+                // Apply the custom unitary U to measured qubits
+                let transformed_state = self.unitary_multi(actual_measured_qubits, u_matrix)?;
+
+                // Measure in computational basis
+                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+
+                // Calculate U_dagger (adjoint of u_matrix)
+                let u_dagger_matrix = calculate_adjoint(&u_matrix);
+
+                // Transform the new state back by applying U_dagger
+                let final_state = computational_measurement_result.new_state.unitary_multi(actual_measured_qubits, u_dagger_matrix)?;
+
+                Ok(MeasurementResult {
+                    basis: MeasurementBasis::Custom(u_matrix),
                     indices: computational_measurement_result.indices,
                     outcomes: computational_measurement_result.outcomes,
                     new_state: final_state,
@@ -587,7 +615,7 @@ impl State {
             ));
         }
 
-        const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelization
+        const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelisation
         let len = self.state_vector.len();
 
         let inner_product: Complex<f64> = if len > PARALLEL_THRESHOLD {
