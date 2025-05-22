@@ -112,7 +112,6 @@ fn test_ising_2d_success() {
     let m: f64 = 0.1;
 
     let result: SumOp = ising_2d(h, j, m).unwrap();
-    println!("Result: {}", result);
     assert_eq!(result.terms.len(), 27);
 
     let expected_terms: Vec<PauliString> = vec![
