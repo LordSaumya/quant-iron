@@ -80,6 +80,9 @@ fn execute_on_gpu(
         GpuKernelArgs::SwapTarget { q1 } => {
             kernel_builder.arg(q1);
         }
+        GpuKernelArgs::RotationGate { cos_half_angle, sin_half_angle } => {
+            kernel_builder.arg(cos_half_angle).arg(sin_half_angle);
+        }
     }
 
     let kernel = kernel_builder.build()
@@ -1298,15 +1301,36 @@ impl Operator for RotateX {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateX operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        let half_angle: f64 = self.angle / 2.0;
-        let cos_half: f64 = half_angle.cos();
-        let sin_half: f64 = half_angle.sin();
-        let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let half_angle = self.angle / 2.0;
+                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::RotateX,
+                    global_work_size,
+                    GpuKernelArgs::RotationGate {
+                        cos_half_angle: half_angle.cos() as f32,
+                        sin_half_angle: half_angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
             // Parallel implementation
+            let half_angle: f64 = self.angle / 2.0;
+            let cos_half: f64 = half_angle.cos();
+            let sin_half: f64 = half_angle.sin();
+            let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
+            let dim: usize = 1 << num_qubits;
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             let updates: Vec<(usize, Complex<f64>)> = (0..dim)
                 .into_par_iter()
                 .filter_map(|i| {
@@ -1329,6 +1353,13 @@ impl Operator for RotateX {
             }
         } else {
             // Sequential implementation
+            let half_angle: f64 = self.angle / 2.0;
+            let cos_half: f64 = half_angle.cos();
+            let sin_half: f64 = half_angle.sin();
+            let i_complex: Complex<f64> = Complex::new(0.0, 1.0);
+            let dim: usize = 1 << num_qubits;
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             for i in 0..dim {
                 if (i >> target_qubit) & 1 == 0 {
                     let j = i | (1 << target_qubit);
@@ -1399,14 +1430,35 @@ impl Operator for RotateY {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateY operator
-        let dim: usize = 1 << num_qubits;
-        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
-        let half_angle: f64 = self.angle / 2.0;
-        let cos_half: f64 = half_angle.cos();
-        let sin_half: f64 = half_angle.sin();
+        #[allow(unused_assignments)]
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let half_angle = self.angle / 2.0;
+                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::RotateY,
+                    global_work_size,
+                    GpuKernelArgs::RotationGate {
+                        cos_half_angle: half_angle.cos() as f32,
+                        sin_half_angle: half_angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
             // Parallel implementation
+            let half_angle: f64 = self.angle / 2.0;
+            let cos_half: f64 = half_angle.cos();
+            let sin_half: f64 = half_angle.sin();
+            let dim: usize = 1 << num_qubits;
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             let updates: Vec<(usize, Complex<f64>)> = (0..dim)
                 .into_par_iter()
                 .filter_map(|i| {
@@ -1429,6 +1481,12 @@ impl Operator for RotateY {
             }
         } else {
             // Sequential implementation
+            let half_angle: f64 = self.angle / 2.0;
+            let cos_half: f64 = half_angle.cos();
+            let sin_half: f64 = half_angle.sin();
+            let dim: usize = 1 << num_qubits;
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             for i in 0..dim {
                 if (i >> target_qubit) & 1 == 0 {
                     let j = i | (1 << target_qubit);
@@ -1499,15 +1557,34 @@ impl Operator for RotateZ {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled RotateZ operator
-        let dim: usize = 1 << num_qubits;
-        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone(); // Start with a copy
-        let half_angle = self.angle / 2.0;
-        // Phase factor for |0> state: exp(-i * angle / 2)
-        let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin());
-        // Phase factor for |1> state: exp(i * angle / 2)
-        let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());
+        #[allow(unused_assignments)]
+        let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let half_angle = self.angle / 2.0;
+                let global_work_size = 1 << num_qubits; // N work items for RZ
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::RotateZ,
+                    global_work_size,
+                    GpuKernelArgs::RotationGate {
+                        cos_half_angle: half_angle.cos() as f32,
+                        sin_half_angle: half_angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let half_angle = self.angle / 2.0;
+            let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin());
+            let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -1522,6 +1599,13 @@ impl Operator for RotateZ {
                     }
                 });
         } else {
+            // Sequential implementation
+            let half_angle = self.angle / 2.0;
+            let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin());
+            let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());
+            let dim: usize = 1 << num_qubits;
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+
             for i in 0..dim {
                 if check_controls(i, control_qubits) {
                     let target_bit_is_one = (i >> target_qubit) & 1 == 1;
