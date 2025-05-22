@@ -77,6 +77,9 @@ fn execute_on_gpu(
         GpuKernelArgs::PhaseShift { cos_angle, sin_angle } => {
             kernel_builder.arg(cos_angle).arg(sin_angle);
         }
+        GpuKernelArgs::SwapTarget { q1 } => {
+            kernel_builder.arg(q1);
+        }
     }
 
     let kernel = kernel_builder.build()
@@ -625,9 +628,27 @@ impl Operator for SWAP {
 
         // Apply potentially controlled SWAP operator
         let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)] // new_state_vec might be reassigned by GPU path
         let mut new_state_vec = state.state_vector.clone(); // Start with a copy
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                // For SWAP, global_work_size is 2^(N-2) because each work item handles
+                // a pair of states differing at target_qubit_1 and target_qubit_2.
+                // The kernel iterates over the 2^(N-2) combinations of other qubits.
+                let global_work_size = if num_qubits >= 2 { 1 << (num_qubits - 2) } else { 1 }; // Handle N=0,1 edge cases for work size
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit_1, // target_a in kernel
+                    control_qubits,
+                    KernelType::Swap,
+                    global_work_size,
+                    GpuKernelArgs::SwapTarget { q1: target_qubit_2 as i32 }, // target_b in kernel
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
             // Parallel implementation
             let updates: Vec<(usize, Complex<f64>)> = (0..dim)
                 .into_par_iter()
