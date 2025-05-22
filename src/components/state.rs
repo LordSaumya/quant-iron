@@ -590,6 +590,44 @@ impl State {
         Ok(Self::new(new_state_vector)?) // For normalisation check
     }
 
+    /// Performs a tensor product of two state vectors without checking for validity.
+    #[allow(dead_code)]
+    pub(crate) fn tensor_product_unchecked(&self, other: &Self) -> Self {
+        let new_num_qubits: usize = self.num_qubits + other.num_qubits;
+        let new_dim: usize = 1 << new_num_qubits;
+        let other_dim: usize = 1 << other.num_qubits; // Cache dimension of other state
+
+        // Threshold for using parallel computation
+        const PARALLEL_THRESHOLD: usize = 1 << 6; // Parallelise when dimension is larger than 64
+
+        let new_state_vector: Vec<Complex<f64>> = if new_dim > PARALLEL_THRESHOLD {
+            // Parallel calculation for large states
+            (0..new_dim)
+                .into_par_iter()
+                .map(|new_index| {
+                    let i: usize = new_index >> other.num_qubits; // Index for self.state_vector
+                    let j: usize = new_index & (other_dim - 1); // Index for other.state_vector
+                    self.state_vector[i] * other.state_vector[j]
+                })
+                .collect()
+        } else {
+            // Sequential calculation for smaller states
+            let mut temp_state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); new_dim];
+            for i in 0..self.state_vector.len() {
+                for j in 0..other.state_vector.len() {
+                    temp_state_vector[(i * other_dim) + j] =
+                        self.state_vector[i] * other.state_vector[j];
+                }
+            }
+            temp_state_vector
+        };
+
+        Self {
+            state_vector: new_state_vector,
+            num_qubits: new_num_qubits,
+        }
+    }
+
     /// Performs an inner product of two state vectors and returns the resulting complex number.
     /// 
     /// # Arguments
