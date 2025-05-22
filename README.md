@@ -23,6 +23,12 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 
 - **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, Phase shifts, Rotations, and custom unitary operations.
 
+- **Hardware Acceleration**: Optimised for parallel execution (CPU and GPU) and low memory overhead, with OpenCL-accelerated operations for enhanced performance on compatible hardware. (Requires `gpu` feature flag).
+
+- **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and support for subroutines.
+
+- **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements in the `Computational`, `X`, `Y`, and custom bases.
+
 - **Pauli String Algebra**:
   - Represent products of Pauli operators with complex coefficients (`PauliString`).
 
@@ -34,10 +40,6 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 
   - Apply exponentials of `PauliString` instances to states.
 
-- **GPU Acceleration**: OpenCL-accelerated operations for key quantum gates (Hadamard, Pauli-X, Pauli-Y, Pauli-Z) for enhanced performance on compatible hardware. (Requires `gpu` feature flag).
-
-- **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and support for subroutines.
-
 - **Predefined Quantum Models**:
   - **Heisenberg Model**: Generate Hamiltonians for 1D and 2D anisotropic Heisenberg models using `SumOp`.
   - **Ising Model**: Generate Hamiltonians for 1D and 2D Ising models with configurable site-specific or uniform interactions and fields using `SumOp`.
@@ -45,10 +47,6 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 - **Predefined Quantum Algorithms**:
   - **Quantum Fourier Transform (QFT)**: Efficiently compute the QFT for a given number of qubits.
   - **Inverse Quantum Fourier Transform (IQFT)**: Efficiently compute the inverse QFT for a given number of qubits.
-
-- **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements in the `Computational`, `X`, `Y`, and custom bases.
-
-- **Speed**: Optimised for parallel execution (CPU and GPU) and low memory overhead.
 
 - **Extensibility**: Easily extensible for custom gates and measurement bases.
 
@@ -159,7 +157,7 @@ This project is licensed under the [GNU General Public License v3.0](https://www
 ---
 
 ## Future Plans
+
 - **Density Matrix Support**: Extend to mixed states and density matrices for more complex quantum systems.
 - **Circuit Visualisation**: Graphical representation of quantum circuits for better understanding and debugging.
 - **Quantum Arithmetic & Algorithms**: Implement common subroutines (e.g. Grover's algorithm, Variational Quantum Eigensolver (VQE)).
-- **Expanded GPU Kernel Support**: Extend GPU acceleration to more quantum operations and algorithms.
