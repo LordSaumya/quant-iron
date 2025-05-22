@@ -40,4 +40,5 @@ debug = false
 
 # Enable better error messages in debug builds
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 1
+debug = true
