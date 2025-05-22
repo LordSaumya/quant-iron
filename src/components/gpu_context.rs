@@ -55,6 +55,13 @@ impl KernelType {
     }
 }
 
+/// Represents the arguments for GPU kernels.
+pub(crate) enum GpuKernelArgs {
+    None,
+    SOrSdag { sign: f32 },
+    PhaseShift { cos_angle: f32, sin_angle: f32 },
+}
+
 pub(crate) struct GpuContext {
     pub pro_que: ProQue,
     pub state_buffer: Option<Buffer<Float2>>,
