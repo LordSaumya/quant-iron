@@ -1271,7 +1271,7 @@ fn test_operator_rotate_x_success() {
     let mut expected_state_rx_unc = rx_on_zero_one_q.clone();
     if num_test_qubits_rx_unc > 0 { // Should always be true here (11)
         for _ in 1..num_test_qubits_rx_unc {
-            expected_state_rx_unc = expected_state_rx_unc.tensor_product(&rx_on_zero_one_q).unwrap();
+            expected_state_rx_unc = expected_state_rx_unc.tensor_product_unchecked(&rx_on_zero_one_q);
         }
     } else {
         // Handle 0 qubit case if necessary, though num_test_qubits_rx_unc is 11
@@ -1308,6 +1308,79 @@ fn test_operator_rotate_x_success() {
     }
     let expected_state_crx_c1 = State { state_vector: expected_vec_crx_c1, num_qubits: num_test_qubits_crx };
     assert_eq!(new_state_crx_c1, expected_state_crx_c1, "Controlled Rx (c=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let angle_gpu = PI / 3.7; // Arbitrary angle for testing
+        let cos_half_theta_gpu = (angle_gpu / 2.0).cos();
+        let sin_half_theta_gpu = (angle_gpu / 2.0).sin();
+        let i_gpu = Complex::new(0.0, 1.0);
+
+        // --- Uncontrolled RotateX GPU ---
+        // Rx(angle)|0> = cos(angle/2)|0> - i*sin(angle/2)|1>
+        let initial_state_rx_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_rx_gpu_unc_t0 = initial_state_rx_gpu_unc_t0.rx(0, angle_gpu).unwrap();
+        let mut expected_vec_rx_gpu_unc_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_rx_gpu_unc_t0[0] = Complex::new(cos_half_theta_gpu, 0.0);
+        expected_vec_rx_gpu_unc_t0[1] = -i_gpu * sin_half_theta_gpu;
+        let expected_state_rx_gpu_unc_t0 = State { state_vector: expected_vec_rx_gpu_unc_t0, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_rx_gpu_unc_t0, expected_state_rx_gpu_unc_t0, "Uncontrolled RotateX GPU on |...000> failed");
+
+        // Rx(angle)|1> = -i*sin(angle/2)|0> + cos(angle/2)|1>
+        let initial_state_rx_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_rx_gpu_unc_t1 = initial_state_rx_gpu_unc_t1.rx(0, angle_gpu).unwrap();
+        let mut expected_vec_rx_gpu_unc_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_rx_gpu_unc_t1[0] = -i_gpu * sin_half_theta_gpu;
+        expected_vec_rx_gpu_unc_t1[1] = Complex::new(cos_half_theta_gpu, 0.0);
+        let expected_state_rx_gpu_unc_t1 = State { state_vector: expected_vec_rx_gpu_unc_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_rx_gpu_unc_t1, expected_state_rx_gpu_unc_t1, "Uncontrolled RotateX GPU on |...001> failed");
+
+        // --- Controlled RotateX GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |0> (CRx(angle)|00> = |00>)
+        let initial_state_crx_gpu_c0_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_crx_gpu_c0_t0 = initial_state_crx_gpu_c0_t0.crx_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_crx_gpu_c0_t0, initial_state_crx_gpu_c0_t0, "Controlled RotateX GPU (c=0, t=0) failed");
+
+        // Case 2: Control is 0, Target is |1> (CRx(angle)|01> = |01>)
+        let mut initial_vec_crx_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_crx_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0); // |...01> (control is 0, target is 1)
+        let initial_state_crx_gpu_c0_t1 = State { state_vector: initial_vec_crx_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_crx_gpu_c0_t1 = initial_state_crx_gpu_c0_t1.crx_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_crx_gpu_c0_t1, initial_state_crx_gpu_c0_t1, "Controlled RotateX GPU (c=0, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CRx(angle)|10> = |1> (X) (cos(angle/2)|0> - i*sin(angle/2)|1>))
+        let mut initial_vec_crx_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_crx_gpu_c1_t0_control = 1 << control_q_gpu[0]; // Control bit is 1
+        initial_vec_crx_gpu_c1_t0[idx_crx_gpu_c1_t0_control] = Complex::new(1.0, 0.0); // |1...0...0> (control is 1, target is 0)
+        let initial_state_crx_gpu_c1_t0 = State { state_vector: initial_vec_crx_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_crx_gpu_c1_t0 = initial_state_crx_gpu_c1_t0.crx_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+
+        let mut expected_vec_crx_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_crx_gpu_c1_t0[idx_crx_gpu_c1_t0_control] = Complex::new(cos_half_theta_gpu, 0.0); // cos(angle/2) |1...0>
+        expected_vec_crx_gpu_c1_t0[idx_crx_gpu_c1_t0_control | (1 << target_q_gpu[0])] = -i_gpu * sin_half_theta_gpu; // -i*sin(angle/2) |1...1>
+        let expected_state_crx_gpu_c1_t0 = State { state_vector: expected_vec_crx_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_crx_gpu_c1_t0, expected_state_crx_gpu_c1_t0, "Controlled RotateX GPU (c=1, t=0) failed");
+
+        // Case 4: Control is 1, Target is |1> (CRx(angle)|11> = |1> (X) (-i*sin(angle/2)|0> + cos(angle/2)|1>))
+        let mut initial_vec_crx_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_crx_gpu_c1_t1_control_target = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]); // Control bit 1, target bit 1
+        initial_vec_crx_gpu_c1_t1[idx_crx_gpu_c1_t1_control_target] = Complex::new(1.0, 0.0); // |1...1>
+        let initial_state_crx_gpu_c1_t1 = State { state_vector: initial_vec_crx_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_crx_gpu_c1_t1 = initial_state_crx_gpu_c1_t1.crx_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+
+        let mut expected_vec_crx_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        // Target |1> becomes -i*sin|0> + cos|1>
+        // So |1...1> becomes |1... (-i*sin|0>_target + cos|1>_target) >
+        // which is -i*sin |1...0>_target + cos |1...1>_target
+        expected_vec_crx_gpu_c1_t1[idx_crx_gpu_c1_t1_control_target & !(1 << target_q_gpu[0])] = -i_gpu * sin_half_theta_gpu; // -i*sin(angle/2) |1...0> (target becomes 0)
+        expected_vec_crx_gpu_c1_t1[idx_crx_gpu_c1_t1_control_target] = Complex::new(cos_half_theta_gpu, 0.0); // cos(angle/2) |1...1> (target stays 1)
+        let expected_state_crx_gpu_c1_t1 = State { state_vector: expected_vec_crx_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_crx_gpu_c1_t1, expected_state_crx_gpu_c1_t1, "Controlled RotateX GPU (c=1, t=1) failed");
+    }
 }
 
 #[test]
@@ -1378,7 +1451,7 @@ fn test_operator_rotate_y_success() {
     let mut expected_state_ry_unc = ry_on_zero_one_q.clone();
     if num_test_qubits_ry_unc > 0 { // Should always be true here (11)
         for _ in 1..num_test_qubits_ry_unc {
-            expected_state_ry_unc = expected_state_ry_unc.tensor_product(&ry_on_zero_one_q).unwrap();
+            expected_state_ry_unc = expected_state_ry_unc.tensor_product_unchecked(&ry_on_zero_one_q);
         }
     } else {
         panic!("num_test_qubits_ry_unc is 0, which is not expected for this test");
@@ -1413,6 +1486,75 @@ fn test_operator_rotate_y_success() {
     }
     let expected_state_cry_c1 = State { state_vector: expected_vec_cry_c1, num_qubits: num_test_qubits_cry };
     assert_eq!(new_state_cry_c1, expected_state_cry_c1, "Controlled Ry (c=1) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let angle_gpu = PI / 3.7; // Arbitrary angle for testing
+        let cos_half_theta_gpu = (angle_gpu / 2.0).cos();
+        let sin_half_theta_gpu = (angle_gpu / 2.0).sin();
+
+        // --- Uncontrolled RotateY GPU ---
+        // Ry(angle)|0> = cos(angle/2)|0> + sin(angle/2)|1>
+        let initial_state_ry_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_ry_gpu_unc_t0 = initial_state_ry_gpu_unc_t0.ry(0, angle_gpu).unwrap();
+        let mut expected_vec_ry_gpu_unc_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_ry_gpu_unc_t0[0] = Complex::new(cos_half_theta_gpu, 0.0);
+        expected_vec_ry_gpu_unc_t0[1] = Complex::new(sin_half_theta_gpu, 0.0);
+        let expected_state_ry_gpu_unc_t0 = State { state_vector: expected_vec_ry_gpu_unc_t0, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_ry_gpu_unc_t0, expected_state_ry_gpu_unc_t0, "Uncontrolled RotateY GPU on |...000> failed");
+
+        // Ry(angle)|1> = -sin(angle/2)|0> + cos(angle/2)|1>
+        let initial_state_ry_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_ry_gpu_unc_t1 = initial_state_ry_gpu_unc_t1.ry(0, angle_gpu).unwrap();
+        let mut expected_vec_ry_gpu_unc_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_ry_gpu_unc_t1[0] = Complex::new(-sin_half_theta_gpu, 0.0);
+        expected_vec_ry_gpu_unc_t1[1] = Complex::new(cos_half_theta_gpu, 0.0);
+        let expected_state_ry_gpu_unc_t1 = State { state_vector: expected_vec_ry_gpu_unc_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_ry_gpu_unc_t1, expected_state_ry_gpu_unc_t1, "Uncontrolled RotateY GPU on |...001> failed");
+
+        // --- Controlled RotateY GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |0> (CRy(angle)|00> = |00>)
+        let initial_state_cry_gpu_c0_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_cry_gpu_c0_t0 = initial_state_cry_gpu_c0_t0.cry_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_cry_gpu_c0_t0, initial_state_cry_gpu_c0_t0, "Controlled RotateY GPU (c=0, t=0) failed");
+
+        // Case 2: Control is 0, Target is |1> (CRy(angle)|01> = |01>)
+        let mut initial_vec_cry_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_cry_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_cry_gpu_c0_t1 = State { state_vector: initial_vec_cry_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_cry_gpu_c0_t1 = initial_state_cry_gpu_c0_t1.cry_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_cry_gpu_c0_t1, initial_state_cry_gpu_c0_t1, "Controlled RotateY GPU (c=0, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CRy(angle)|10> = |1> (X) (cos(angle/2)|0> + sin(angle/2)|1>))
+        let mut initial_vec_cry_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cry_gpu_c1_t0_control = 1 << control_q_gpu[0];
+        initial_vec_cry_gpu_c1_t0[idx_cry_gpu_c1_t0_control] = Complex::new(1.0, 0.0);
+        let initial_state_cry_gpu_c1_t0 = State { state_vector: initial_vec_cry_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_cry_gpu_c1_t0 = initial_state_cry_gpu_c1_t0.cry_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+
+        let mut expected_vec_cry_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_cry_gpu_c1_t0[idx_cry_gpu_c1_t0_control] = Complex::new(cos_half_theta_gpu, 0.0);
+        expected_vec_cry_gpu_c1_t0[idx_cry_gpu_c1_t0_control | (1 << target_q_gpu[0])] = Complex::new(sin_half_theta_gpu, 0.0);
+        let expected_state_cry_gpu_c1_t0 = State { state_vector: expected_vec_cry_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_cry_gpu_c1_t0, expected_state_cry_gpu_c1_t0, "Controlled RotateY GPU (c=1, t=0) failed");
+
+        // Case 4: Control is 1, Target is |1> (CRy(angle)|11> = |1> (X) (-sin(angle/2)|0> + cos(angle/2)|1>))
+        let mut initial_vec_cry_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_cry_gpu_c1_t1_control_target = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_cry_gpu_c1_t1[idx_cry_gpu_c1_t1_control_target] = Complex::new(1.0, 0.0);
+        let initial_state_cry_gpu_c1_t1 = State { state_vector: initial_vec_cry_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_cry_gpu_c1_t1 = initial_state_cry_gpu_c1_t1.cry_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+
+        let mut expected_vec_cry_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        expected_vec_cry_gpu_c1_t1[idx_cry_gpu_c1_t1_control_target & !(1 << target_q_gpu[0])] = Complex::new(-sin_half_theta_gpu, 0.0);
+        expected_vec_cry_gpu_c1_t1[idx_cry_gpu_c1_t1_control_target] = Complex::new(cos_half_theta_gpu, 0.0);
+        let expected_state_cry_gpu_c1_t1 = State { state_vector: expected_vec_cry_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        assert_eq!(new_state_cry_gpu_c1_t1, expected_state_cry_gpu_c1_t1, "Controlled RotateY GPU (c=1, t=1) failed");
+    }
 }
 
 #[test]
@@ -1477,7 +1619,7 @@ fn test_operator_rotate_z_success() {
     let mut expected_state_rz_unc = rz_on_zero_one_q.clone();
     if num_test_qubits_rz_unc > 0 { // Should always be true here (11)
         for _ in 1..num_test_qubits_rz_unc {
-            expected_state_rz_unc = expected_state_rz_unc.tensor_product(&rz_on_zero_one_q).unwrap();
+            expected_state_rz_unc = expected_state_rz_unc.tensor_product_unchecked(&rz_on_zero_one_q);
         }
     } else {
         panic!("num_test_qubits_rz_unc is 0, which is not expected for this test");
@@ -1508,6 +1650,61 @@ fn test_operator_rotate_z_success() {
     expected_vec_crz_c1_t0_calc[idx_crz_c1_t0] = rz_on_zero_for_crz.state_vector[0];
     let expected_state_crz_c1_t0 = State { state_vector: expected_vec_crz_c1_t0_calc, num_qubits: num_test_qubits_crz };
     assert_eq!(new_state_crz_c1_t0, expected_state_crz_c1_t0, "Controlled Rz (c=1, t=0) parallel failed");
+
+    #[cfg(feature = "gpu")]
+    {
+        let num_qubits_gpu = 15; // OPENCL_THRESHOLD_NUM_QUBITS
+        let angle_gpu = PI / 3.7; // Arbitrary angle for testing
+        let e_neg_i_half_theta_gpu = Complex::new(0.0, -angle_gpu / 2.0).exp();
+        let e_pos_i_half_theta_gpu = Complex::new(0.0, angle_gpu / 2.0).exp();
+
+        // --- Uncontrolled RotateZ GPU ---
+        // Rz(angle)|0> = e^(-i*angle/2)|0>
+        let initial_state_rz_gpu_unc_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_rz_gpu_unc_t0 = initial_state_rz_gpu_unc_t0.rz(0, angle_gpu).unwrap();
+        let expected_state_rz_gpu_unc_t0 = initial_state_rz_gpu_unc_t0.clone() * e_neg_i_half_theta_gpu;
+        assert_eq!(new_state_rz_gpu_unc_t0, expected_state_rz_gpu_unc_t0, "Uncontrolled RotateZ GPU on |...000> failed");
+
+        // Rz(angle)|1> = e^(i*angle/2)|1>
+        let initial_state_rz_gpu_unc_t1 = State::new_basis_n(num_qubits_gpu, 1).unwrap(); // |...001>
+        let new_state_rz_gpu_unc_t1 = initial_state_rz_gpu_unc_t1.rz(0, angle_gpu).unwrap();
+        let expected_state_rz_gpu_unc_t1 = initial_state_rz_gpu_unc_t1.clone() * e_pos_i_half_theta_gpu;
+        assert_eq!(new_state_rz_gpu_unc_t1, expected_state_rz_gpu_unc_t1, "Uncontrolled RotateZ GPU on |...001> failed");
+
+        // --- Controlled RotateZ GPU ---
+        let control_q_gpu = &[num_qubits_gpu - 1];
+        let target_q_gpu = &[0];
+
+        // Case 1: Control is 0, Target is |0> (CRz(angle)|00> = |00>)
+        let initial_state_crz_gpu_c0_t0 = State::new_zero(num_qubits_gpu).unwrap();
+        let new_state_crz_gpu_c0_t0 = initial_state_crz_gpu_c0_t0.crz_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_crz_gpu_c0_t0, initial_state_crz_gpu_c0_t0, "Controlled RotateZ GPU (c=0, t=0) failed");
+
+        // Case 2: Control is 0, Target is |1> (CRz(angle)|01> = |01>)
+        let mut initial_vec_crz_gpu_c0_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        initial_vec_crz_gpu_c0_t1[1 << target_q_gpu[0]] = Complex::new(1.0, 0.0);
+        let initial_state_crz_gpu_c0_t1 = State { state_vector: initial_vec_crz_gpu_c0_t1, num_qubits: num_qubits_gpu };
+        let new_state_crz_gpu_c0_t1 = initial_state_crz_gpu_c0_t1.crz_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        assert_eq!(new_state_crz_gpu_c0_t1, initial_state_crz_gpu_c0_t1, "Controlled RotateZ GPU (c=0, t=1) failed");
+
+        // Case 3: Control is 1, Target is |0> (CRz(angle)|10> = e^(-i*angle/2)|10>)
+        let mut initial_vec_crz_gpu_c1_t0 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_crz_gpu_c1_t0_control = 1 << control_q_gpu[0];
+        initial_vec_crz_gpu_c1_t0[idx_crz_gpu_c1_t0_control] = Complex::new(1.0, 0.0);
+        let initial_state_crz_gpu_c1_t0 = State { state_vector: initial_vec_crz_gpu_c1_t0, num_qubits: num_qubits_gpu };
+        let new_state_crz_gpu_c1_t0 = initial_state_crz_gpu_c1_t0.crz_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        let expected_state_crz_gpu_c1_t0 = initial_state_crz_gpu_c1_t0.clone() * e_neg_i_half_theta_gpu;
+        assert_eq!(new_state_crz_gpu_c1_t0, expected_state_crz_gpu_c1_t0, "Controlled RotateZ GPU (c=1, t=0) failed");
+
+        // Case 4: Control is 1, Target is |1> (CRz(angle)|11> = e^(i*angle/2)|11>)
+        let mut initial_vec_crz_gpu_c1_t1 = vec![Complex::new(0.0, 0.0); 1 << num_qubits_gpu];
+        let idx_crz_gpu_c1_t1_control_target = (1 << control_q_gpu[0]) | (1 << target_q_gpu[0]);
+        initial_vec_crz_gpu_c1_t1[idx_crz_gpu_c1_t1_control_target] = Complex::new(1.0, 0.0);
+        let initial_state_crz_gpu_c1_t1 = State { state_vector: initial_vec_crz_gpu_c1_t1, num_qubits: num_qubits_gpu };
+        let new_state_crz_gpu_c1_t1 = initial_state_crz_gpu_c1_t1.crz_multi(target_q_gpu, control_q_gpu, angle_gpu).unwrap();
+        let expected_state_crz_gpu_c1_t1 = initial_state_crz_gpu_c1_t1.clone() * e_pos_i_half_theta_gpu;
+        assert_eq!(new_state_crz_gpu_c1_t1, expected_state_crz_gpu_c1_t1, "Controlled RotateZ GPU (c=1, t=1) failed");
+    }
 }
 
 #[test]
