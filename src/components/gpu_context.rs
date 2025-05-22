@@ -13,6 +13,8 @@ pub(crate) enum KernelType {
     PauliX,
     PauliY,
     PauliZ,
+    PhaseSOrSdag,
+    PhaseShift,
 }
 
 impl std::fmt::Display for KernelType {
@@ -22,6 +24,8 @@ impl std::fmt::Display for KernelType {
             KernelType::PauliX => write!(f, "PauliX"),
             KernelType::PauliY => write!(f, "PauliY"),
             KernelType::PauliZ => write!(f, "PauliZ"),
+            KernelType::PhaseSOrSdag => write!(f, "PhaseSOrSdag"),
+            KernelType::PhaseShift => write!(f, "PhaseShift"),
         }
     }
 }
@@ -34,6 +38,8 @@ impl KernelType {
             KernelType::PauliX => include_str!("kernels/pauli_x.cl"),
             KernelType::PauliY => include_str!("kernels/pauli_y.cl"),
             KernelType::PauliZ => include_str!("kernels/pauli_z.cl"),
+            KernelType::PhaseSOrSdag => include_str!("kernels/phase_s_sdag.cl"),
+            KernelType::PhaseShift => include_str!("kernels/phase_shift.cl"),
         }
     }
 
@@ -43,6 +49,8 @@ impl KernelType {
             KernelType::PauliX => "pauli_x_kernel",
             KernelType::PauliY => "pauli_y_kernel",
             KernelType::PauliZ => "pauli_z_kernel",
+            KernelType::PhaseSOrSdag => "phase_s_sdag_kernel",
+            KernelType::PhaseShift => "phase_shift_kernel",
         }
     }
 }
@@ -58,11 +66,13 @@ pub(crate) struct GpuContext {
 impl GpuContext {
     fn new() -> Result<Self, Error> {
         let all_kernels_src = format!(
-            "{}\n{}\n{}\n{}",
+            "{}\n{}\n{}\n{}\n{}\n{}",
             KernelType::Hadamard.src(),
             KernelType::PauliX.src(),
             KernelType::PauliY.src(),
-            KernelType::PauliZ.src()
+            KernelType::PauliZ.src(),
+            KernelType::PhaseSOrSdag.src(),
+            KernelType::PhaseShift.src()
         );
 
         let pro_que = ProQue::builder()
