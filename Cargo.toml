@@ -2,6 +2,18 @@
 name = "quant-iron"
 version = "0.1.0"
 edition = "2024"
+keywords = ["quantum_computing", "science", "gpu"]
+categories = ["science"]
+authors = ["LordSaumya"]
+license = "MIT"
+repository = "https://github.com/LordSaumya/quant-iron"
+description = "A high-performance, hardware-accelerated modular quantum computing library with a focus on physical applications. Quant-Iron provides tools to represent quantum states, apply standard quantum gates, perform measurements, build quantum circuits, and implement quantum algorithms."
+readme = "README.md"
+
+[lib]
+name = "quant_iron"
+path = "src/lib.rs"
+doctest = false
 
 [dependencies]
 num-complex = "0.4.6"
@@ -16,9 +28,6 @@ thiserror = "2.0.12"
 default = []
 gpu = ["ocl"]
 
-# Disable doctests
-[lib]
-doctest = false
 
 # Optimise dependencies in release mode
 [profile.release]
@@ -29,10 +38,6 @@ panic = "abort"
 strip = true  # Strip symbols from binary
 debug = false
 
-# Development profile with some optimisations but faster compile times
-[profile.dev]
-opt-level = 1  # Basic optimisations without slowing compilation too much
-
 # Enable better error messages in debug builds
 [profile.dev.package."*"]
-debug = true
+opt-level = 3
