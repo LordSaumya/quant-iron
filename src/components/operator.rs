@@ -5,9 +5,16 @@ use rayon::prelude::*;
 use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 #[cfg(feature = "gpu")]
 use ocl::prm::Float2;
+#[cfg(feature = "gpu")]
+use std::f64::consts::PI;
+#[cfg(feature = "gpu")]
+use crate::components::gpu_context::GpuKernelArgs;
 
+/// Threshold for using parallel CPU implementation
 const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
-const OPENCL_THRESHOLD_NUM_QUBITS: usize = 15; // Threshold for using OpenCL
+
+ /// Threshold for using OpenCL (GPU acceleration)
+const OPENCL_THRESHOLD_NUM_QUBITS: usize = 15;
 
 #[cfg(feature = "gpu")]
 fn execute_on_gpu(
@@ -16,6 +23,7 @@ fn execute_on_gpu(
     control_qubits: &[usize],
     kernel_type: KernelType,
     global_work_size: usize,
+    kernel_args: GpuKernelArgs,
 ) -> Result<Vec<Complex<f64>>, Error> {
     let mut context_guard = GPU_CONTEXT.lock().map_err(|_| Error::GpuContextLockError)?;
     let context = match *context_guard {
@@ -51,14 +59,27 @@ fn execute_on_gpu(
             .map_err(|e| Error::OpenCLError(format!("Failed to write to dummy control buffer: {}", e)))?;
     }
 
-    let kernel = context.pro_que.kernel_builder(kernel_type.name())
-        .global_work_size(global_work_size)
+    let mut kernel_builder = context.pro_que.kernel_builder(kernel_type.name());
+    kernel_builder.global_work_size(global_work_size)
         .arg(&state_buffer_cloned) // Pass by reference
         .arg(num_qubits as i32)
         .arg(target_qubit as i32)
-        .arg(control_buffer_cloned) 
-        .arg(control_qubits_i32.len() as i32)
-        .build()
+        .arg(control_buffer_cloned)
+        .arg(control_qubits_i32.len() as i32);
+
+    match kernel_args {
+        GpuKernelArgs::None => {
+            // No additional arguments needed for Hadamard, PauliX, PauliY, PauliZ
+        }
+        GpuKernelArgs::SOrSdag { sign } => {
+            kernel_builder.arg(sign);
+        }
+        GpuKernelArgs::PhaseShift { cos_angle, sin_angle } => {
+            kernel_builder.arg(cos_angle).arg(sin_angle);
+        }
+    }
+
+    let kernel = kernel_builder.build()
         .map_err(|e| Error::OpenCLError(format!("Failed to build kernel '{}': {}", kernel_type.name(), e)))?;
 
     unsafe {
@@ -232,6 +253,7 @@ impl Operator for Hadamard {
                     control_qubits,
                     KernelType::Hadamard,
                     global_work_size,
+                    GpuKernelArgs::None,
                 )?;
             }
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
@@ -397,6 +419,7 @@ impl Operator for Pauli {
                     control_qubits,
                     kernel_type,
                     global_work_size,
+                    GpuKernelArgs::None,
                 )?;
             }
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
@@ -787,11 +810,26 @@ impl Operator for PhaseS {
         let num_qubits: usize = state.num_qubits();
 
         // Apply potentially controlled Phase S operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << num_qubits;
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::PhaseSOrSdag,
+                    global_work_size,
+                    GpuKernelArgs::SOrSdag { sign: 1.0f32 },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -801,6 +839,9 @@ impl Operator for PhaseS {
                     }
                 });
         } else {
+            let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+            let dim: usize = 1 << num_qubits;
             for i in 0..dim {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
@@ -811,7 +852,7 @@ impl Operator for PhaseS {
 
         Ok(State {
             state_vector: new_state_vec,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
@@ -852,12 +893,31 @@ impl Operator for PhaseT {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase T operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
-        let phase_factor = Complex::new(invsqrt2, invsqrt2); // Phase shift of pi/4 (exp(i*pi/4))
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << num_qubits;
+                let angle = PI / 4.0;
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::PhaseShift,
+                    global_work_size,
+                    GpuKernelArgs::PhaseShift {
+                        cos_angle: angle.cos() as f32,
+                        sin_angle: angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
+            let phase_factor = Complex::new(invsqrt2, invsqrt2); // Phase shift of pi/4 (exp(i*pi/4))
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -867,6 +927,10 @@ impl Operator for PhaseT {
                     }
                 });
         } else {
+            let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
+            let phase_factor = Complex::new(invsqrt2, invsqrt2); // Phase shift of pi/4 (exp(i*pi/4))
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+            let dim: usize = 1 << num_qubits;
             for i in 0..dim {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
@@ -877,7 +941,7 @@ impl Operator for PhaseT {
 
         Ok(State {
             state_vector: new_state_vec,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
@@ -919,11 +983,26 @@ impl Operator for PhaseSdag {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Sdag operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        let phase_factor = Complex::new(0.0, -1.0); // Phase shift of -pi/2 (-i)
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << num_qubits;
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::PhaseSOrSdag,
+                    global_work_size,
+                    GpuKernelArgs::SOrSdag { sign: -1.0f32 },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            let phase_factor = Complex::new(0.0, -1.0); // Phase shift of -pi/2 (-i)
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -933,6 +1012,9 @@ impl Operator for PhaseSdag {
                     }
                 });
         } else {
+            let phase_factor = Complex::new(0.0, -1.0); // Phase shift of -pi/2 (-i)
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+            let dim: usize = 1 << num_qubits;
             for i in 0..dim {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
@@ -943,7 +1025,7 @@ impl Operator for PhaseSdag {
 
         Ok(State {
             state_vector: new_state_vec,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
@@ -984,13 +1066,31 @@ impl Operator for PhaseTdag {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Tdag operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
-        // Phase shift of -pi/4 (exp(-i*pi/4) = cos(-pi/4) + i*sin(-pi/4) = cos(pi/4) - i*sin(pi/4))
-        let phase_factor = Complex::new(invsqrt2, -invsqrt2);
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << num_qubits;
+                let angle = -PI / 4.0;
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::PhaseShift,
+                    global_work_size,
+                    GpuKernelArgs::PhaseShift {
+                        cos_angle: angle.cos() as f32,
+                        sin_angle: angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
+            let phase_factor = Complex::new(invsqrt2, -invsqrt2);
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -1000,6 +1100,10 @@ impl Operator for PhaseTdag {
                     }
                 });
         } else {
+            let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
+            let phase_factor = Complex::new(invsqrt2, -invsqrt2);
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+            let dim: usize = 1 << num_qubits;
             for i in 0..dim {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
@@ -1010,7 +1114,7 @@ impl Operator for PhaseTdag {
 
         Ok(State {
             state_vector: new_state_vec,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
@@ -1073,12 +1177,29 @@ impl Operator for PhaseShift {
         let num_qubits = state.num_qubits();
 
         // Apply potentially controlled Phase Shift operator
-        let dim: usize = 1 << num_qubits;
+        #[allow(unused_assignments)]
         let mut new_state_vec: Vec<Complex<f64>> = state.state_vector.clone();
-        // Calculate phase factor: exp(i * angle) = cos(angle) + i * sin(angle)
-        let phase_factor = Complex::new(self.angle.cos(), self.angle.sin());
+        let gpu_enabled: bool = cfg!(feature = "gpu");
 
-        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << num_qubits;
+                new_state_vec = execute_on_gpu(
+                    state,
+                    target_qubit,
+                    control_qubits,
+                    KernelType::PhaseShift,
+                    global_work_size,
+                    GpuKernelArgs::PhaseShift {
+                        cos_angle: self.angle.cos() as f32,
+                        sin_angle: self.angle.sin() as f32,
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            let phase_factor = Complex::new(self.angle.cos(), self.angle.sin());
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
             new_state_vec
                 .par_iter_mut()
                 .enumerate()
@@ -1088,6 +1209,9 @@ impl Operator for PhaseShift {
                     }
                 });
         } else {
+            let phase_factor = Complex::new(self.angle.cos(), self.angle.sin());
+            new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
+            let dim: usize = 1 << num_qubits;
             for i in 0..dim {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
@@ -1098,7 +1222,7 @@ impl Operator for PhaseShift {
 
         Ok(State {
             state_vector: new_state_vec,
-            num_qubits: state.num_qubits(),
+            num_qubits,
         })
     }
 
