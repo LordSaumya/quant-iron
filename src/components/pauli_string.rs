@@ -343,6 +343,19 @@ impl SumOp {
         self.terms.push(term);
     }
 
+    /// Adds a new term to the sum and returns a new `SumOp` instance.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `term` - The `PauliString` term to be added to the sum.
+    /// 
+    /// # Returns
+    /// * `Self` - A new `SumOp` instance with the added term.
+    pub fn with_term(mut self, term: PauliString) -> Self {
+        self.add_term(term);
+        self
+    }
+
     /// Applies the sum of Pauli strings to a given state.
     ///
     /// # Arguments
