@@ -1,6 +1,7 @@
 use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
 use rayon::prelude::*;
+use std::collections::HashSet;
 #[cfg(feature = "gpu")]
 use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 #[cfg(feature = "gpu")]
@@ -190,10 +191,21 @@ fn validate_qubits(
 
     // Special check for multiple target qubits to ensure no duplicates
     if expected_targets > 1 {
-        for i in 0..target_qubits.len() {
-            for j in i + 1..target_qubits.len() {
-                if target_qubits[i] == target_qubits[j] {
-                    return Err(Error::InvalidQubitIndex(target_qubits[i], num_qubits));
+        if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Use HashSet for efficient duplicate detection in larger systems
+            let mut seen_targets: HashSet<usize> = HashSet::with_capacity(target_qubits.len());
+            for &target_qubit in target_qubits {
+                if !seen_targets.insert(target_qubit) {
+                    return Err(Error::InvalidQubitIndex(target_qubit, num_qubits));
+                }
+            }
+        } else {
+            // Use nested loops for smaller systems
+            for i in 0..target_qubits.len() {
+                for j in i + 1..target_qubits.len() {
+                    if target_qubits[i] == target_qubits[j] {
+                        return Err(Error::InvalidQubitIndex(target_qubits[i], num_qubits));
+                    }
                 }
             }
         }
