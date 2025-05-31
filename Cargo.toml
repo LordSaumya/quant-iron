@@ -28,6 +28,12 @@ thiserror = "2.0.12"
 default = []
 gpu = ["ocl"]
 
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "quant_iron_benchmarks"
+harness = false
 
 # Optimise dependencies in release mode
 [profile.release]
