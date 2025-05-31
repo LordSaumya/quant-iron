@@ -212,8 +212,9 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `gate` - The gate to be added to the circuit builder.
-    pub fn add_gate(&mut self, gate: Gate) {
+    pub fn add_gate(&mut self, gate: Gate) -> &mut Self {
         self.gates.push(gate);
+        self
     }
 
     /// Adds multiple gates to the circuit builder.
@@ -221,26 +222,31 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `gates` - A vector of gates to be added to the circuit builder.
-    pub fn add_gates(&mut self, gates: Vec<Gate>) {
+    pub fn add_gates(&mut self, gates: Vec<Gate>) -> &mut Self {
         self.gates.extend(gates);
+        self
     }
 
     /// Builds the circuit from the gates in the circuit builder.
+    /// The builder's internal gate list is cleared, allowing the builder to be reused.
     ///
     /// # Returns
     ///
     /// * `Result<Circuit, Error>` - A new instance of the Circuit struct or an error if the circuit cannot be built.
-    pub fn build(self) -> Result<Circuit, Error> {
-        Circuit::with_gates(self.gates, self.num_qubits)
+    pub fn build(&mut self) -> Result<Circuit, Error> {
+        let gates = std::mem::take(&mut self.gates);
+        Circuit::with_gates(gates, self.num_qubits)
     }
 
     /// Builds a subroutine from the gates in the circuit builder.
+    /// The builder's internal gate list is cleared, allowing the builder to be reused.
     ///
     /// # Returns
     ///
     /// * `Subroutine` - A new instance of the Subroutine struct.
-    pub fn build_subroutine(self) -> Subroutine {
-        Subroutine::with_gates(self.gates, self.num_qubits)
+    pub fn build_subroutine(&mut self) -> Subroutine {
+        let gates = std::mem::take(&mut self.gates);
+        Subroutine::with_gates(gates, self.num_qubits)
     }
 
     /// Adds a subroutine to the circuit builder.
@@ -248,8 +254,9 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `subroutine` - The subroutine to be added to the circuit builder.
-    pub fn add_subroutine(&mut self, subroutine: Subroutine) {
+    pub fn add_subroutine(&mut self, subroutine: Subroutine) -> &mut Self {
         self.gates.extend(subroutine.gates);
+        self
     }
 
     // -- SINGLE QUBIT GATES --
@@ -259,9 +266,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Hadamard gate will be applied.
-    pub fn h_gate(&mut self, qubit: usize) {
+    pub fn h_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::h_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Hadamard gates to the circuit builder.
@@ -269,9 +277,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Hadamard gates will be applied.
-    pub fn h_gates(&mut self, qubits: Vec<usize>) {
+    pub fn h_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::h_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Hadamard gates to the circuit builder.
@@ -280,9 +289,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn ch_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn ch_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::h_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Pauli-X gate to the circuit builder.
@@ -290,9 +300,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Pauli-X gate will be applied.
-    pub fn x_gate(&mut self, qubit: usize) {
+    pub fn x_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::x_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Pauli-X gates to the circuit builder.
@@ -300,9 +311,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Pauli-X gates will be applied.
-    pub fn x_gates(&mut self, qubits: Vec<usize>) {
+    pub fn x_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::x_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Pauli-X gates to the circuit builder.
@@ -311,9 +323,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn cx_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn cx_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::x_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Pauli-Y gate to the circuit builder.
@@ -321,9 +334,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Pauli-Y gate will be applied.
-    pub fn y_gate(&mut self, qubit: usize) {
+    pub fn y_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::y_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Pauli-Y gates to the circuit builder.
@@ -331,9 +345,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Pauli-Y gates will be applied.
-    pub fn y_gates(&mut self, qubits: Vec<usize>) {
+    pub fn y_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::y_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Pauli-Y gates to the circuit builder.
@@ -342,9 +357,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn cy_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn cy_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::y_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Pauli-Z gate to the circuit builder.
@@ -352,9 +368,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Pauli-Z gate will be applied.
-    pub fn z_gate(&mut self, qubit: usize) {
+    pub fn z_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::z_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Pauli-Z gates to the circuit builder.
@@ -362,9 +379,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Pauli-Z gates will be applied.
-    pub fn z_gates(&mut self, qubits: Vec<usize>) {
+    pub fn z_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::z_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Pauli-Z gates to the circuit builder.
@@ -373,9 +391,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn cz_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn cz_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::z_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds an Identity gate to the circuit builder.
@@ -383,9 +402,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Identity gate will be applied.
-    pub fn id_gate(&mut self, qubit: usize) {
+    pub fn id_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::i_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Identity gates to the circuit builder.
@@ -393,9 +413,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Identity gates will be applied.
-    pub fn id_gates(&mut self, qubits: Vec<usize>) {
+    pub fn id_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::i_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Identity gates to the circuit builder.
@@ -404,9 +425,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn ci_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn ci_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::i_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Phase S gate to the circuit builder.
@@ -414,9 +436,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Phase S gate will be applied.
-    pub fn s_gate(&mut self, qubit: usize) {
+    pub fn s_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::s_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Phase S gates to the circuit builder.
@@ -424,9 +447,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Phase S gates will be applied.
-    pub fn s_gates(&mut self, qubits: Vec<usize>) {
+    pub fn s_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::s_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Phase S gates to the circuit builder.
@@ -435,9 +459,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn cs_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn cs_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::s_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Phase S Dagger gate to the circuit builder.
@@ -445,9 +470,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Phase S Dagger gate will be applied.
-    pub fn sdag_gate(&mut self, qubit: usize) {
+    pub fn sdag_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::s_dag_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Phase S Dagger gates to the circuit builder.
@@ -455,9 +481,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Phase S Dagger gates will be applied.
-    pub fn sdag_gates(&mut self, qubits: Vec<usize>) {
+    pub fn sdag_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::s_dag_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Phase S Dagger gates to the circuit builder.
@@ -466,9 +493,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn csdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn csdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::s_dag_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Phase T gate to the circuit builder.
@@ -476,9 +504,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Phase T gate will be applied.
-    pub fn t_gate(&mut self, qubit: usize) {
+    pub fn t_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::t_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Phase T gates to the circuit builder.
@@ -486,9 +515,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Phase T gates will be applied.
-    pub fn t_gates(&mut self, qubits: Vec<usize>) {
+    pub fn t_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::t_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Phase T gates to the circuit builder.
@@ -497,9 +527,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn ct_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn ct_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::t_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Phase T Dagger gate to the circuit builder.
@@ -507,9 +538,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to which the Phase T Dagger gate will be applied.
-    pub fn tdag_gate(&mut self, qubit: usize) {
+    pub fn tdag_gate(&mut self, qubit: usize) -> &mut Self {
         let gate: Gate = Gate::t_dag_gate(qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Phase T Dagger gates to the circuit builder.
@@ -517,9 +549,10 @@ impl CircuitBuilder {
     /// # Arguments
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Phase T Dagger gates will be applied.
-    pub fn tdag_gates(&mut self, qubits: Vec<usize>) {
+    pub fn tdag_gates(&mut self, qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::t_dag_multi_gate(qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Phase T Dagger gates to the circuit builder.
@@ -528,9 +561,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn ctdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) {
+    pub fn ctdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
         let gates: Vec<Gate> = Gate::t_dag_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Phase Shift gate to the circuit builder.
@@ -539,9 +573,10 @@ impl CircuitBuilder {
     ///
     /// * `qubit` - The index of the qubit to which the Phase Shift gate will be applied.
     /// * `angle` - The phase shift angle in radians.
-    pub fn p_gate(&mut self, qubit: usize, angle: f64) {
+    pub fn p_gate(&mut self, qubit: usize, angle: f64) -> &mut Self {
         let gate: Gate = Gate::p_gate(qubit, angle);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Phase Shift gates to the circuit builder.
@@ -550,9 +585,10 @@ impl CircuitBuilder {
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Phase Shift gates will be applied.
     /// * `angle` - The phase shift angle in radians for all gates.
-    pub fn p_gates(&mut self, qubits: Vec<usize>, angle: f64) {
+    pub fn p_gates(&mut self, qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::p_multi_gate(qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Phase Shift gates to the circuit builder.
@@ -562,9 +598,10 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The phase shift angle in radians for all gates.
-    pub fn cp_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) {
+    pub fn cp_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::p_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Rotate X gate to the circuit builder.
@@ -573,9 +610,10 @@ impl CircuitBuilder {
     ///
     /// * `qubit` - The index of the qubit to which the Rotate X gate will be applied.
     /// * `angle` - The rotation angle in radians.
-    pub fn rx_gate(&mut self, qubit: usize, angle: f64) {
+    pub fn rx_gate(&mut self, qubit: usize, angle: f64) -> &mut Self {
         let gate: Gate = Gate::rx_gate(qubit, angle);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Rotate X gates to the circuit builder.
@@ -584,9 +622,10 @@ impl CircuitBuilder {
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Rotate X gates will be applied.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn rx_gates(&mut self, qubits: Vec<usize>, angle: f64) {
+    pub fn rx_gates(&mut self, qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::rx_multi_gate(qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Rotate X gates to the circuit builder.
@@ -596,9 +635,10 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn crx_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) {
+    pub fn crx_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::rx_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Rotate Y gate to the circuit builder.
@@ -607,9 +647,10 @@ impl CircuitBuilder {
     ///
     /// * `qubit` - The index of the qubit to which the Rotate Y gate will be applied.
     /// * `angle` - The rotation angle in radians.
-    pub fn ry_gate(&mut self, qubit: usize, angle: f64) {
+    pub fn ry_gate(&mut self, qubit: usize, angle: f64) -> &mut Self {
         let gate: Gate = Gate::ry_gate(qubit, angle);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Rotate Y gates to the circuit builder.
@@ -618,9 +659,10 @@ impl CircuitBuilder {
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Rotate Y gates will be applied.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn ry_gates(&mut self, qubits: Vec<usize>, angle: f64) {
+    pub fn ry_gates(&mut self, qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::ry_multi_gate(qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Rotate Y gates to the circuit builder.
@@ -630,9 +672,10 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn cry_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) {
+    pub fn cry_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::ry_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds a Rotate Z gate to the circuit builder.
@@ -641,9 +684,10 @@ impl CircuitBuilder {
     ///
     /// * `qubit` - The index of the qubit to which the Rotate Z gate will be applied.
     /// * `angle` - The rotation angle in radians.
-    pub fn rz_gate(&mut self, qubit: usize, angle: f64) {
+    pub fn rz_gate(&mut self, qubit: usize, angle: f64) -> &mut Self {
         let gate: Gate = Gate::rz_gate(qubit, angle);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple Rotate Z gates to the circuit builder.
@@ -652,9 +696,10 @@ impl CircuitBuilder {
     ///
     /// * `qubits` - A vector of indices of the qubits to which the Rotate Z gates will be applied.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn rz_gates(&mut self, qubits: Vec<usize>, angle: f64) {
+    pub fn rz_gates(&mut self, qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::rz_multi_gate(qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled Rotate Z gates to the circuit builder.
@@ -664,9 +709,10 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn crz_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) {
+    pub fn crz_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::rz_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
+        self
     }
 
     /// Adds an arbitrary unitary operator gate to the circuit builder.
@@ -676,9 +722,10 @@ impl CircuitBuilder {
     /// * `qubit` - The index of the qubit to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    pub fn unitary_gate(&mut self, qubit: usize, unitary: [[Complex<f64>; 2]; 2]) {
+    pub fn unitary_gate(&mut self, qubit: usize, unitary: [[Complex<f64>; 2]; 2]) -> &mut Self {
         let gate: Gate = Gate::unitary2_gate(qubit, unitary);
         self.add_gate(gate);
+        self
     }
 
     /// Adds multiple arbitrary unitary operator gates to the circuit builder.
@@ -688,9 +735,10 @@ impl CircuitBuilder {
     /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) {
+    pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) -> &mut Self {
         let gates: Vec<Gate> = Gate::unitary2_multi_gate(qubits, unitary);
         self.add_gates(gates);
+        self
     }
 
     /// Adds controlled arbitrary unitary operator gates to the circuit builder.
@@ -707,10 +755,11 @@ impl CircuitBuilder {
         target_qubits: Vec<usize>,
         control_qubits: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
-    ) {
+    ) -> &mut Self {
         let gates: Vec<Gate> =
             Gate::unitary2_controlled_gates(target_qubits, control_qubits, unitary);
         self.add_gates(gates);
+        self
     }
 
     // -- MULTI-QUBIT GATES --
@@ -721,9 +770,10 @@ impl CircuitBuilder {
     ///
     /// * `target_qubit` - The index of the target qubit.
     /// * `control_qubit` - The index of the control qubit.
-    pub fn cnot_gate(&mut self, target_qubit: usize, control_qubit: usize) {
+    pub fn cnot_gate(&mut self, target_qubit: usize, control_qubit: usize) -> &mut Self {
         let gate: Gate = Gate::cnot_gate(target_qubit, control_qubit);
         self.add_gate(gate);
+        self
     }
 
     /// Adds a SWAP gate to the circuit builder.
@@ -732,9 +782,10 @@ impl CircuitBuilder {
     ///
     /// * `qubit1` - The index of the first qubit to swap.
     /// * `qubit2` - The index of the second qubit to swap.
-    pub fn swap_gate(&mut self, qubit1: usize, qubit2: usize) {
+    pub fn swap_gate(&mut self, qubit1: usize, qubit2: usize) -> &mut Self {
         let gate: Gate = Gate::swap_gate(qubit1, qubit2);
         self.add_gate(gate);
+        self
     }
 
     /// Adds a controlled SWAP gate to the circuit builder.
@@ -749,13 +800,14 @@ impl CircuitBuilder {
         target_qubit1: usize,
         target_qubit2: usize,
         control_qubits: Vec<usize>,
-    ) {
+    ) -> &mut Self {
         let gate: Gate = Gate::Operator(
             Box::new(crate::components::operator::SWAP),
             vec![target_qubit1, target_qubit2],
             control_qubits,
         );
         self.add_gate(gate);
+        self
     }
 
     /// Adds a Toffoli (CCNOT) gate to the circuit builder.
@@ -770,9 +822,10 @@ impl CircuitBuilder {
         control_qubit1: usize,
         control_qubit2: usize,
         target_qubit: usize,
-    ) {
+    ) -> &mut Self {
         let gate: Gate = Gate::toffoli_gate(target_qubit, vec![control_qubit1, control_qubit2]);
         self.add_gate(gate);
+        self
     }
 
     /// Adds a custom operator gate to the circuit builder.
@@ -789,9 +842,10 @@ impl CircuitBuilder {
         operator: Box<dyn Operator>,
         target_qubits: Vec<usize>,
         control_qubits: Vec<usize>,
-    ) {
+    ) -> &mut Self {
         let gate: Gate = Gate::Operator(operator, target_qubits, control_qubits);
         self.add_gate(gate);
+        self
     }
 
     /// Adds a measurement gate to the circuit builder.
@@ -801,8 +855,9 @@ impl CircuitBuilder {
     /// * `basis` - The measurement basis (e.g., computational).
     ///
     /// * `qubits` - A vector of indices of the qubits to be measured.
-    pub fn measure_gate(&mut self, basis: MeasurementBasis, qubits: Vec<usize>) {
+    pub fn measure_gate(&mut self, basis: MeasurementBasis, qubits: Vec<usize>) -> &mut Self {
         let gate: Gate = Gate::Measurement(basis, qubits);
         self.add_gate(gate);
+        self
     }
 }
