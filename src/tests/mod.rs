@@ -5,3 +5,4 @@ pub mod state_tests;
 pub mod pauli_string_tests;
 pub mod ising_tests;
 pub mod heisenberg_tests;
+pub mod time_evolution_tests;
