@@ -1,4 +1,4 @@
-# Quant-Iron
+# Quant-Iron v1.1.0
 
 A high-performance, hardware-accelerated modular quantum computing library with a focus on physical applications.
 
