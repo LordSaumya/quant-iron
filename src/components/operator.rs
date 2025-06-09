@@ -1,7 +1,7 @@
 use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
 use rayon::prelude::*;
-use std::collections::HashSet;
+use std::{any::Any, collections::HashSet};
 #[cfg(feature = "gpu")]
 use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 #[cfg(feature = "gpu")]
@@ -104,7 +104,7 @@ fn execute_on_gpu(
 }
 
 /// A trait defining the interface for all operators.
-pub trait Operator {
+pub trait Operator: Any + Send + Sync {
     /// Applies the operator to the given state's target qubits, using the control qubits if required.
     ///
     /// # Arguments:
