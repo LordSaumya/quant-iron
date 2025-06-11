@@ -1,6 +1,7 @@
 use crate::components::state::State;
 use num_complex::Complex;
 use std::ops::Deref;
+use crate::compiler::{compilable::Compilable, ir::InstructionIR};
 
 #[derive(Debug, Clone, PartialEq)]
 /// Represents the result of a measurement on a quantum state.
@@ -82,4 +83,22 @@ pub enum MeasurementBasis {
     Y,
     /// A custom measurement basis defined by a 2x2 unitary matrix.
     Custom([[Complex<f64>; 2]; 2]),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+/// Represents a measurement operation on a quantum circuit.
+/// 
+/// This is an internal struct strictly used for the IR representation of a measurement operation.
+pub(crate) struct MeasurementOperation {
+    /// The basis of measurement.
+    pub basis: MeasurementBasis,
+}
+
+impl Compilable for MeasurementOperation {
+    fn to_ir(&self, targets: Vec<usize>, _controls: Vec<usize>) -> Vec<InstructionIR> {
+        // No controls for measurement operations.
+        targets.iter()
+            .map(|&target| InstructionIR::Measurement(target, self.basis))
+            .collect()
+    }
 }
