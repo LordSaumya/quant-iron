@@ -69,6 +69,18 @@ pub enum Error {
     GpuContextLockError,
 }
 
+#[derive(Debug, thiserror::Error, Clone, PartialEq)]
+pub enum CompilerError {
+    #[error("I/O error: {0}")]
+    IOError(String),
+
+    #[error("An unsupported operation was encountered: {0}")]
+    UnsupportedOperator(String),
+
+    #[error("Invalid operands ({0}) for operator {1}")]
+    InvalidOperands(String, String),
+}
+
 #[cfg(feature = "gpu")]
 impl From<ocl::Error> for Error {
     fn from(err: ocl::Error) -> Self {
