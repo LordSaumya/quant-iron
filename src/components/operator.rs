@@ -1,7 +1,8 @@
 use crate::{components::state::State, errors::Error};
+use dyn_clone::DynClone;
 use num_complex::Complex;
 use rayon::prelude::*;
-use std::{any::Any, collections::HashSet};
+use std::{collections::HashSet, fmt::Debug};
 #[cfg(feature = "gpu")]
 use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 #[cfg(feature = "gpu")]
@@ -10,6 +11,7 @@ use ocl::prm::Float2;
 use std::f64::consts::PI;
 #[cfg(feature = "gpu")]
 use crate::components::gpu_context::GpuKernelArgs;
+use crate::compiler::compilable::Compilable;
 
 /// Threshold for using parallel CPU implementation
 const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
@@ -104,7 +106,7 @@ fn execute_on_gpu(
 }
 
 /// A trait defining the interface for all operators.
-pub trait Operator: Any + Send + Sync {
+pub trait Operator: Send + Sync + Debug + DynClone {
     /// Applies the operator to the given state's target qubits, using the control qubits if required.
     ///
     /// # Arguments:
@@ -131,7 +133,21 @@ pub trait Operator: Any + Send + Sync {
     ///
     /// * The number of qubits that the operator acts on.
     fn base_qubits(&self) -> usize;
+
+    /// Optionally returns an intermediate representation of the operator for compilation to OpenQASM.
+    /// 
+    /// If you are not planning to compile the operator to an IR, you can ignore this method.
+    /// If you want to compile the operator to QASM, you should implement this method.
+    /// 
+    /// # Returns:
+    ///  * An optional vector of `InstructionIR` representing the operator in an intermediate representation.
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        // Default implementation returns None, indicating no compilable representation
+        None
+    }
 }
+
+dyn_clone::clone_trait_object!(Operator);
 
 /// Helper function to check if all control qubits are in the |1> state for a given basis state index.
 fn check_controls(index: usize, control_qubits: &[usize]) -> bool {
@@ -362,6 +378,10 @@ impl Operator for Hadamard {
     fn base_qubits(&self) -> usize {
         1 // Hadamard acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines the Pauli operators: X, Y, Z.
@@ -534,6 +554,10 @@ impl Operator for Pauli {
     fn base_qubits(&self) -> usize {
         1 // Pauli operators act on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self) // Manual implementation for enum
+    }
 }
 
 impl std::fmt::Display for Pauli {
@@ -596,6 +620,10 @@ impl Operator for CNOT {
 
     fn base_qubits(&self) -> usize {
         2 // CNOT acts on 2 qubits (1 control, 1 target)
+    }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
     }
 }
 
@@ -718,6 +746,10 @@ impl Operator for SWAP {
     fn base_qubits(&self) -> usize {
         2 // SWAP acts on 2 qubits
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines a Toffoli operator.
@@ -773,6 +805,10 @@ impl Operator for Toffoli {
     fn base_qubits(&self) -> usize {
         3 // Toffoli acts on 3 qubits (2 control, 1 target)
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines an identity operator
@@ -810,6 +846,10 @@ impl Operator for Identity {
 
     fn base_qubits(&self) -> usize {
         1 // Identity acts on 1 qubit only
+    }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
     }
 }
 
@@ -895,11 +935,16 @@ impl Operator for PhaseS {
     fn base_qubits(&self) -> usize {
         1 // Phase S acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines a Phase T operator.
 ///
-/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T gate or π/8 gate.s
+/// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T gate or π/8 gate.
+#[derive(Debug, Clone, Copy)]
 pub struct PhaseT;
 
 impl Operator for PhaseT {
@@ -983,6 +1028,10 @@ impl Operator for PhaseT {
 
     fn base_qubits(&self) -> usize {
         1 // Phase T acts on 1 qubit only
+    }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
     }
 }
 
@@ -1068,11 +1117,16 @@ impl Operator for PhaseSdag {
     fn base_qubits(&self) -> usize {
         1 // Phase Sdag acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines a Phase Tdag operator.
 ///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the T† gate or π/8† gate. Inverse of T gate.
+#[derive(Debug, Clone, Copy)]
 pub struct PhaseTdag;
 
 impl Operator for PhaseTdag {
@@ -1157,6 +1211,10 @@ impl Operator for PhaseTdag {
     fn base_qubits(&self) -> usize {
         1 // Phase Tdag acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines the phase shift operator
@@ -1164,7 +1222,7 @@ impl Operator for PhaseTdag {
 /// A single-qubit operator that applies a phase shift of the provided angle to the |1> state. Also known as the phase shift gate.
 #[derive(Debug, Clone, Copy)]
 pub struct PhaseShift {
-    angle: f64,
+    pub(crate) angle: f64,
 }
 
 impl PhaseShift {
@@ -1265,6 +1323,10 @@ impl Operator for PhaseShift {
     fn base_qubits(&self) -> usize {
         1 // Phase shift acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines the rotate-X operator
@@ -1272,7 +1334,7 @@ impl Operator for PhaseShift {
 /// A single-qubit operator that applies a rotation around the X axis of the Bloch sphere by the given angle. Also known as the RX gate.
 #[derive(Debug, Clone, Copy)]
 pub struct RotateX {
-    angle: f64,
+    pub(crate) angle: f64,
 }
 
 impl RotateX {
@@ -1394,6 +1456,10 @@ impl Operator for RotateX {
     fn base_qubits(&self) -> usize {
         1 // RotateX acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines the rotate-Y operator
@@ -1401,7 +1467,7 @@ impl Operator for RotateX {
 /// A single-qubit operator that applies a rotation around the Y axis of the Bloch sphere by the given angle. Also known as the RY gate.
 #[derive(Debug, Clone, Copy)]
 pub struct RotateY {
-    angle: f64,
+    pub(crate) angle: f64,
 }
 
 impl RotateY {
@@ -1521,6 +1587,10 @@ impl Operator for RotateY {
     fn base_qubits(&self) -> usize {
         1 // RotateY acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// Defines the rotate-Z operator
@@ -1528,7 +1598,7 @@ impl Operator for RotateY {
 /// A single-qubit operator that applies a rotation around the Z axis of the Bloch sphere by the given angle. Also known as the RZ gate.
 #[derive(Debug, Clone, Copy)]
 pub struct RotateZ {
-    angle: f64,
+    pub(crate) angle: f64,
 }
 
 impl RotateZ {
@@ -1639,6 +1709,10 @@ impl Operator for RotateZ {
     fn base_qubits(&self) -> usize {
         1 // RotateZ acts on 1 qubit only
     }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
+    }
 }
 
 /// An arbitrary 2×2 unitary operator.
@@ -1647,7 +1721,7 @@ impl Operator for RotateZ {
 #[derive(Debug, Clone, Copy)]
 pub struct Unitary2 {
     /// The 2×2 unitary matrix representing the operator.
-    matrix: [[Complex<f64>; 2]; 2],
+    pub(crate) matrix: [[Complex<f64>; 2]; 2],
 }
 
 impl Unitary2 {
@@ -1768,5 +1842,9 @@ impl Operator for Unitary2 {
 
     fn base_qubits(&self) -> usize {
         1
+    }
+
+    fn to_compilable(&self) -> Option<&dyn Compilable> {
+        Some(self)
     }
 }
