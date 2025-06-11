@@ -13,6 +13,7 @@ use crate::{
 use num_complex::Complex;
 
 /// Represents a quantum gate as part of a quantum circuit.
+#[derive(Debug, Clone)]
 pub enum Gate {
     /// Represents an operator gate.
     ///
