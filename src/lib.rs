@@ -4,7 +4,7 @@ pub mod errors;
 pub mod subroutine;
 pub mod models;
 pub mod algorithms;
-pub(crate) mod compiler;
+pub mod compiler;
 
 // Re-export important types for easier imports
 pub use crate::components::measurement::{MeasurementBasis, MeasurementResult};
