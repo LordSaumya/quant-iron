@@ -2,6 +2,7 @@ use crate::{
     components::{gate::Gate, measurement::MeasurementBasis, operator::Operator, state::State},
     errors::Error,
     subroutine::Subroutine,
+    compiler::compilable::CompilableCircuit,
 };
 
 use num_complex::Complex;
@@ -12,6 +13,7 @@ use num_complex::Complex;
 ///
 /// * `gates` - A vector of gates in the circuit.
 /// * `num_qubits` - The number of qubits in the circuit.
+#[derive(Debug)]
 pub struct Circuit {
     /// A vector of gates in the circuit.
     pub gates: Vec<Gate>,
@@ -173,6 +175,11 @@ impl Circuit {
 
         Ok(states)
     }
+
+    /// Converts the circuit to its OpenQASM 3.0 (Quantum Assembly 3.0) representation.
+    pub fn to_qasm(&self) -> String {
+        unimplemented!("QASM conversion is not implemented yet");
+    }
 }
 
 /// A builder for creating a quantum circuit.
@@ -228,14 +235,30 @@ impl CircuitBuilder {
     }
 
     /// Builds the circuit from the gates in the circuit builder.
-    /// The builder's internal gate list is cleared, allowing the builder to be reused.
+    /// The builder's internal gate list is not cleared, allowing the builder to be reused.
+    /// If this is the final circuit, use `build_final` instead.
     ///
     /// # Returns
     ///
     /// * `Result<Circuit, Error>` - A new instance of the Circuit struct or an error if the circuit cannot be built.
     pub fn build(&mut self) -> Result<Circuit, Error> {
+        let gates_cloned = self.gates.clone();
+        Circuit::with_gates(gates_cloned, self.num_qubits)
+    }
+
+    /// Builds the circuit from the gates in the circuit builder.
+    /// The builder's internal gate list is cleared, allowing the builder to be reused.
+    /// If this is an intermediate circuit, use `build` instead to retain the gates for further modifications.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Circuit, Error>` - A new instance of the Circuit struct or an error if the circuit cannot be built.
+    pub fn build_final(&mut self) -> Circuit {
         let gates = std::mem::take(&mut self.gates);
-        Circuit::with_gates(gates, self.num_qubits)
+        Circuit {
+            gates,
+            num_qubits: self.num_qubits,
+        }
     }
 
     /// Builds a subroutine from the gates in the circuit builder.
