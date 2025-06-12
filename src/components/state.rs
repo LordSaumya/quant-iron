@@ -20,6 +20,10 @@ fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] 
 }
 
 #[derive(Clone)]
+/// Represents the state of a quantum register.
+/// 
+/// The state is represented as a complex vector, where each element corresponds to a probability amplitude for a particular basis state.
+/// The number of qubits in the system is also stored, which determines the length of the state vector (2^num_qubits).
 pub struct State {
     /// The state vector of the system, represented as a complex vector.
     /// Each element of the vector represents a probability amplitude for a particular state.
