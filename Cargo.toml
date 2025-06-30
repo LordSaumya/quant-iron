@@ -40,6 +40,8 @@ harness = false
 name = "qubits"
 [[example]]
 name = "circuits"
+[[example]]
+name = "hamiltonian"
 
 # Optimise dependencies in release mode
 [profile.release]
