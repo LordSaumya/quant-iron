@@ -2,7 +2,6 @@ use crate::{
     components::{gate::Gate, measurement::MeasurementBasis, operator::Operator, state::State},
     errors::Error,
     subroutine::Subroutine,
-    compiler::compilable::CompilableCircuit,
 };
 
 use num_complex::Complex;

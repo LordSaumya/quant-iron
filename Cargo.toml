@@ -30,11 +30,20 @@ default = []
 gpu = ["ocl"]
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.6.0"
 
 [[bench]]
 name = "quant_iron_benchmarks"
 harness = false
+
+[[example]]
+name = "qubits"
+[[example]]
+name = "circuits"
+[[example]]
+name = "hamiltonian"
+[[example]]
+name = "heisenberg"
 
 # Optimise dependencies in release mode
 [profile.release]

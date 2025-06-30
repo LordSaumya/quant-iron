@@ -7,7 +7,6 @@ use crate::{
         pauli_string::{PauliString, SumOp},
         state::State,
     },
-    errors::Error,
 };
 use num_complex::Complex;
 
