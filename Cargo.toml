@@ -36,6 +36,9 @@ criterion = "0.6.0"
 name = "quant_iron_benchmarks"
 harness = false
 
+[[example]]
+name = "qubits"
+
 # Optimise dependencies in release mode
 [profile.release]
 opt-level = 3
