@@ -72,6 +72,13 @@ Or via cargo:
 ```bash
 cargo add quant-iron
 ```
+### Examples
+The code samples shown below exist as rust examples in the [`examples`](./examples) folder in files named
+`{example-name}.rs`, they can be run using: 
+```shell
+cargo run --example {example-name}
+```
+* `cargo run --example qubits`
 
 ### Quickstart
 
