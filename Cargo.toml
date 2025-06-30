@@ -42,6 +42,8 @@ name = "qubits"
 name = "circuits"
 [[example]]
 name = "hamiltonian"
+[[example]]
+name = "heisenberg"
 
 # Optimise dependencies in release mode
 [profile.release]
