@@ -30,7 +30,7 @@ default = []
 gpu = ["ocl"]
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.6.0"
 
 [[bench]]
 name = "quant_iron_benchmarks"
