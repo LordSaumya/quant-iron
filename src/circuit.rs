@@ -1,9 +1,13 @@
 use crate::{
+    compiler::{compilable::CompilableCircuit, qasm::QasmCircuit},
     components::{gate::Gate, measurement::MeasurementBasis, operator::Operator, state::State},
-    errors::Error,
+    errors::{CompilerError, Error},
     subroutine::Subroutine,
-    compiler::compilable::CompilableCircuit,
 };
+
+use std::fs;
+use std::io::Write;
+use std::path::Path;
 
 use num_complex::Complex;
 
@@ -176,9 +180,59 @@ impl Circuit {
         Ok(states)
     }
 
+    /// Converts the circuit to its internal QASM circuit if the circuit is compilable, and return an error if it is not, or if the conversion fails.
+    pub(crate) fn to_qasm_circuit(&self) -> Result<QasmCircuit, CompilerError> {
+        let compilable_circuit = CompilableCircuit::try_from(self)?;
+        let qasm_instructions =
+            compilable_circuit
+                .to_ir()
+                .iter()
+                .try_fold(Vec::new(), |mut acc, instr| {
+                    acc.extend(instr.to_qasm()?);
+                    Ok(acc)
+                })?;
+
+        Ok(QasmCircuit::new(
+            qasm_instructions,
+            compilable_circuit.num_qubits,
+        ))
+    }
+
     /// Converts the circuit to its OpenQASM 3.0 (Quantum Assembly 3.0) representation.
-    pub fn to_qasm(&self) -> String {
-        unimplemented!("QASM conversion is not implemented yet");
+    pub fn to_qasm(&self, to_dir: Option<impl AsRef<Path>>) -> Result<String, CompilerError> {
+        let qasm_circuit: QasmCircuit = self.to_qasm_circuit()?;
+        let qasm_string = qasm_circuit.to_qasm_string();
+
+        if let Some(path) = to_dir {
+            let dir_path = path.as_ref();
+
+            if !dir_path.is_dir() {
+                return Err(CompilerError::IOError(format!(
+                    "Provided path is not a directory: {}",
+                    dir_path.display()
+                )));
+            }
+
+            let output_path = dir_path.join("circuit.qasm");
+
+            let mut file = fs::File::create(&output_path).map_err(|e| {
+                CompilerError::IOError(format!(
+                    "Error creating file '{}': {}",
+                    output_path.display(),
+                    e
+                ))
+            })?;
+            
+            file.write_all(qasm_string.as_bytes()).map_err(|e| {
+                CompilerError::IOError(format!(
+                    "Error writing to file '{}': {}",
+                    output_path.display(),
+                    e
+                ))
+            })?;
+        }
+
+        Ok(qasm_string)
     }
 }
 
