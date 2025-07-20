@@ -36,8 +36,8 @@ pub enum InstructionIR {
     Unitary([[Complex<f64>; 2]; 2], usize, Vec<usize>),
 
     // MEASUREMENT
-    /// IR representation for a measurement operation on qubit index with basis
-    Measurement(usize, MeasurementBasis),
+    /// IR representation for a measurement operation on a vector of qubits with a given basis
+    Measurement(Vec<usize>, MeasurementBasis),
 
     // Allow Raw QASM Strings (without validation) for custom instructions
     /// IR representation for a raw QASM string
@@ -49,6 +49,28 @@ pub enum InstructionIR {
 }
 
 impl InstructionIR {
+    /// Private method to generates QASM string and comment string for control qubits.
+    fn format_complex(c: Complex<f64>) -> String {
+        const EPSILON: f64 = 1e-9;
+        let r = c.re;
+        let i = c.im;
+
+        if r.abs() < EPSILON && i.abs() < EPSILON {
+            "0".to_string()
+        } else if i.abs() < EPSILON {
+            format!("{:.3}", r)
+        } else if r.abs() < EPSILON {
+            format!("{:.3}i", i)
+        } else {
+            format!(
+                "{:.3} {} {:.3}i",
+                r,
+                if i.is_sign_negative() { "-" } else { "+" },
+                i.abs()
+            )
+        }
+    }
+
     /// Private method to generates QASM string and comment string for control qubits.
     fn generate_control_qasm_strings(controls: &Vec<usize>) -> (String, String) {
         if controls.is_empty() {
@@ -65,7 +87,7 @@ impl InstructionIR {
             );
 
             let ctrl_comment_str = format!(
-                " with control qubits: {}",
+                "with control qubits: {}",
                 controls
                     .iter()
                     .map(|c| c.to_string())
@@ -97,7 +119,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} h q[{}] //{} {} {}",
+                    "{} h q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Hadamard gate on qubit", index, ctrl_comment_str
                 )));
             }
@@ -107,7 +129,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} x q[{}] //{} {} {}",
+                    "{} x q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Pauli-X gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -117,7 +139,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} y q[{}] //{} {} {}",
+                    "{} y q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Pauli-Y gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -127,7 +149,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} z q[{}] //{} {} {}",
+                    "{} z q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Pauli-Z gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -137,7 +159,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} s q[{}] //{} {} {}",
+                    "{} s q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Phase S gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -147,7 +169,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} t q[{}] //{} {} {}",
+                    "{} t q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Phase T gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -157,7 +179,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} sdg q[{}] //{} {} {}",
+                    "{} sdg q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Phase S-dagger gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -167,7 +189,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} tdg q[{}] //{} {} {}",
+                    "{} tdg q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Phase T-dagger gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -178,7 +200,7 @@ impl InstructionIR {
                 
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} p({}) q[{}] //{} {} {} {} {}",
+                    "{} p({}) q[{}] // {} {} {} {} {}",
                     ctrl_qasm_str, angle, index,
                     "Phase gate with angle", angle, "on qubit", index, ctrl_comment_str
                 )));
@@ -189,7 +211,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} rx({}) q[{}] //{} {} {} {} {}",
+                    "{} rx({}) q[{}] // {} {} {} {} {}",
                     ctrl_qasm_str, angle, index,
                     "Rotate-X gate with angle", angle, "on qubit", index, ctrl_comment_str
                 )));
@@ -200,7 +222,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} ry({}) q[{}] //{} {} {} {} {}",
+                    "{} ry({}) q[{}] // {} {} {} {} {}",
                     ctrl_qasm_str, angle, index,
                     "Rotate-Y gate with angle", angle, "on qubit", index, ctrl_comment_str
                 )));
@@ -211,7 +233,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} rz({}) q[{}] //{} {} {} {} {}",
+                    "{} rz({}) q[{}] // {} {} {} {} {}",
                     ctrl_qasm_str, angle, index,
                     "Rotate-Z gate with angle", angle, "on qubit", index, ctrl_comment_str
                 )));
@@ -222,7 +244,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} id q[{}] //{} {} {}",
+                    "{} id q[{}] // {} {} {}",
                     ctrl_qasm_str, index, "Identity gate on qubit", index, ctrl_comment_str
                 )));
             },
@@ -232,7 +254,7 @@ impl InstructionIR {
                     Self::generate_control_qasm_strings(controls);
                 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} swap q[{}], q[{}] //{} {} {} {} {}",
+                    "{} swap q[{}], q[{}] // {} {} {} {} {}",
                     ctrl_qasm_str, index1, index2,
                     "SWAP gate between qubits", index1, "and", index2, ctrl_comment_str
                 )));
@@ -253,7 +275,6 @@ impl InstructionIR {
                 let alpha: f64;
 
                 const EPSILON: f64 = 1e-9; // For norm comparisons
-                const PHASE_EPSILON: f64 = 1e-9; // For phase comparisons
 
                 if (1.0 - a.norm()).abs() < EPSILON { // Case 1: |a| ~ 1 (matrix is almost diagonal)
                     theta = 0.0;
@@ -278,8 +299,12 @@ impl InstructionIR {
                 }
                 
                 let base_comment = format!(
-                    "Custom Unitary U({:.4},{:.4},{:.4}, {:.4}) on qubit {}",
-                    a, b, c, d, target_idx
+                    "Custom Unitary U({}, {}, {}, {}) on qubit {}",
+                    Self::format_complex(a),
+                    Self::format_complex(b),
+                    Self::format_complex(c),
+                    Self::format_complex(d),
+                    target_idx
                 );
                 let full_comment = if controls_vec.is_empty() {
                     base_comment
@@ -288,43 +313,54 @@ impl InstructionIR {
                 };
 
                 qasm_instructions.push(QasmInstruction::GateDeclaration(format!(
-                    "{} U({:.8},{:.8},{:.8}) q[{}] // {}",
+                    "{} U({:.3},{:.3},{:.3}) q[{}] // {}",
                     ctrl_qasm_str, theta, phi, lambda, target_idx, full_comment
                 )));
             }
 
             // Handle measurements
-            InstructionIR::Measurement(target_qubit_idx, basis_enum) => {
-                // 1. Indicate that a 1-bit classical register is needed for this measurement's result.
-                qasm_instructions.push(QasmInstruction::BitRegisterDeclaration(1));
+            InstructionIR::Measurement(target_qubit_indices, basis_enum) => {
+                // Indicate that a classical register is needed for this measurement's result.
+                qasm_instructions.push(QasmInstruction::BitRegisterDeclaration(
+                    target_qubit_indices.len(),
+                ));
+                qasm_instructions.push(QasmInstruction::StartMeasurementGroup);
 
-                match basis_enum {
-                    MeasurementBasis::Computational => {
-                        let core_qasm_command = format!("measure q[{}]", target_qubit_idx);
-                        qasm_instructions.push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
-                    }
-                    MeasurementBasis::X => {
-                        let core_qasm_command = format!("xmeasure q[{}]", target_qubit_idx);
-                        qasm_instructions.push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
-                    }
-                    MeasurementBasis::Y => {
-                        let core_qasm_command = format!("ymeasure q[{}]", target_qubit_idx);
-                        qasm_instructions.push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
-                    }
-                    MeasurementBasis::Custom(custom_matrix) => {
-                        // For custom basis, apply U_inverse, then measure in Z basis.
-                        let u_inv = [
-                            [custom_matrix[0][0].conj(), custom_matrix[1][0].conj()],
-                            [custom_matrix[0][1].conj(), custom_matrix[1][1].conj()],
-                        ];
+                // Generate QASM instructions for measurement in the specified basis.
+                for &target_qubit_idx in target_qubit_indices {
+                    match basis_enum {
+                        MeasurementBasis::Computational => {
+                            let core_qasm_command = format!("measure q[{}]", target_qubit_idx);
+                            qasm_instructions
+                                .push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
+                        }
+                        MeasurementBasis::X => {
+                            let core_qasm_command = format!("xmeasure q[{}]", target_qubit_idx);
+                            qasm_instructions
+                                .push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
+                        }
+                        MeasurementBasis::Y => {
+                            let core_qasm_command = format!("ymeasure q[{}]", target_qubit_idx);
+                            qasm_instructions
+                                .push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
+                        }
+                        MeasurementBasis::Custom(custom_matrix) => {
+                            // For custom basis, apply U_inverse, then measure in Z basis.
+                            let u_inv = [
+                                [custom_matrix[0][0].conj(), custom_matrix[1][0].conj()],
+                                [custom_matrix[0][1].conj(), custom_matrix[1][1].conj()],
+                            ];
 
-                        // Create uncontrolled Unitary IR instruction for inverse operation.
-                        let unitary_op_ir = InstructionIR::Unitary(u_inv, *target_qubit_idx, vec![]);
-                        qasm_instructions.extend(unitary_op_ir.to_qasm()?);
+                            // Create uncontrolled Unitary IR instruction for inverse operation.
+                            let unitary_op_ir =
+                                InstructionIR::Unitary(u_inv, target_qubit_idx, vec![]);
+                            qasm_instructions.extend(unitary_op_ir.to_qasm()?);
 
-                        // Measure in the Z-basis.
-                        let core_qasm_command = format!("measure q[{}]", target_qubit_idx);
-                        qasm_instructions.push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
+                            // Measure in the Z-basis.
+                            let core_qasm_command = format!("measure q[{}]", target_qubit_idx);
+                            qasm_instructions
+                                .push(QasmInstruction::MeasurementDeclaration(core_qasm_command));
+                        }
                     }
                 }
             }
