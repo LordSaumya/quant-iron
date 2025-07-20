@@ -97,8 +97,6 @@ pub(crate) struct MeasurementOperation {
 impl Compilable for MeasurementOperation {
     fn to_ir(&self, targets: Vec<usize>, _controls: Vec<usize>) -> Vec<InstructionIR> {
         // No controls for measurement operations.
-        targets.iter()
-            .map(|&target| InstructionIR::Measurement(target, self.basis))
-            .collect()
+        vec![InstructionIR::Measurement(targets, self.basis)]
     }
 }
