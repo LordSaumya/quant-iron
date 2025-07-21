@@ -1,7 +1,7 @@
 use quant_iron::heisenberg::heisenberg_1d;
 use quant_iron::State;
 
-/// Create a Hamiltonian for the 1D Heisenberg model and execute it on a state:**
+/// Create a Hamiltonian for the 1D Heisenberg model and execute it on a state
 fn main() {
     // Define a Hamiltonian for the 1D Heisenberg model
     let number_of_spins = 3;
