@@ -14,9 +14,9 @@ fn main() {
         .expect("Could not build Circuit");                         // Build the circuit
 
     let state = State::new_plus(3).expect("Could not create state");
-    println!("Initial state: {:?}", state);            // Print the new state after execution
+    println!("Initial state:\n{:?}", state);            // Print the new state after execution
 
     let new_state = circuit.execute(&state)
         .expect("Could not execute circuit");          // Execute the circuit on the |++> state
-    println!("New state: {:?}", new_state);            // Print the new state after execution
+    println!("New state:\n{:?}", new_state);            // Print the new state after execution
 }

@@ -16,9 +16,9 @@ fn main() {
         .expect("Could not get heisenberg constant value");
 
     // Initialise a |+++> state
-    let state = State::new_plus(3).expect("Could not initialize state");
+    let state = State::new_plus(3).expect("Could not initialise state");
     // Apply the Hamiltonian to the state
     let modified_state = hamiltonian.apply(&state).expect("Could not apply hamiltonian");
     // Print the modified state
-    println!("Modified state: {:?}", modified_state);
+    println!("Modified state:\n{:?}", modified_state);
 }
