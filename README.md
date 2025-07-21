@@ -1,4 +1,4 @@
-# Quant-Iron v1.1.0
+# Quant-Iron v1.2.0
 
 A high-performance, hardware-accelerated modular quantum computing library with a focus on physical applications.
 
@@ -48,7 +48,7 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
   - **Quantum Fourier Transform (QFT)**: Efficiently compute the QFT for a given number of qubits.
   - **Inverse Quantum Fourier Transform (IQFT)**: Efficiently compute the inverse QFT for a given number of qubits.
 
-- **OpenQASM 3.0 Support**: Convert circuits to OpenQASM 3.0 format for interoperability with other quantum computing platforms.
+- **OpenQASM 3.0 Support**: Convert circuits to OpenQASM 3.0 for interoperability with other quantum computing platforms.
 
 - **Extensibility**: Easily extensible for custom gates and measurement bases.
 
@@ -155,6 +155,8 @@ fn heisenberg() {
 **Create a circuit and convert it to OpenQASM 3.0:**
 
 ```rust
+use std::f64::consts::PI;
+
 fn qasm() {
     // Create a circuit
     let circuit = CircuitBuilder::new(5)
@@ -173,7 +175,7 @@ fn qasm() {
 }
 ```
 
-The code examples above demonstrate common use cases of QuantIron, and can be run using the `cargo run --example {example-name}` command.
+The code examples above demonstrate common use cases of Quant-Iron, and can be run using the `cargo run --example {example-name}` command.
 
 ## License
 
