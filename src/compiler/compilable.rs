@@ -12,6 +12,7 @@ use crate::{
     errors::CompilerError,
 };
 use dyn_clone::DynClone;
+use rayon::prelude::*;
 use std::convert::TryFrom;
 
 /// Trait for operators or measurements that can be compiled into an IR representation
@@ -49,14 +50,13 @@ impl CompilableCircuit {
     /// # Returns
     /// A vector of `InstructionIR` representing the circuit in IR format.
     pub(crate) fn to_ir(&self) -> Vec<InstructionIR> {
-        let mut ir_instructions = Vec::new();
-        for gate in &self.gates {
-            let instructions = gate
-                .operator
-                .to_ir(gate.targets.clone(), gate.controls.clone());
-            ir_instructions.extend(instructions);
-        }
-        ir_instructions
+        self.gates
+            .par_iter()
+            .flat_map(|gate| {
+                gate.operator
+                    .to_ir(gate.targets.clone(), gate.controls.clone())
+            })
+            .collect()
     }
 }
 
@@ -135,7 +135,7 @@ impl TryFrom<&Circuit> for CompilableCircuit {
 impl Compilable for Hadamard {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Hadamard(target, controls.clone()))
             .collect()
     }
@@ -144,7 +144,7 @@ impl Compilable for Hadamard {
 impl Compilable for Pauli {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| match self {
                 Pauli::X => InstructionIR::PauliX(target, controls.clone()),
                 Pauli::Y => InstructionIR::PauliY(target, controls.clone()),
@@ -157,7 +157,7 @@ impl Compilable for Pauli {
 impl Compilable for CNOT {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| {
                 if controls.is_empty() {
                     // If no controls specified, treat as unconditional X gate
@@ -177,7 +177,7 @@ impl Compilable for SWAP {
         if targets.len() >= 2 {
             // Create SWAP instructions for pairs of qubits
             targets
-                .chunks(2)
+                .par_chunks(2)
                 .filter_map(|chunk| {
                     if chunk.len() == 2 {
                         Some(InstructionIR::Swap(chunk[0], chunk[1], controls.clone()))
@@ -195,7 +195,7 @@ impl Compilable for SWAP {
 impl Compilable for Toffoli {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| {
                 // Toffoli is a controlled X gate with additional controls
                 InstructionIR::PauliX(target, controls.clone())
@@ -207,7 +207,7 @@ impl Compilable for Toffoli {
 impl Compilable for Identity {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Id(target, controls.clone()))
             .collect()
     }
@@ -216,7 +216,7 @@ impl Compilable for Identity {
 impl Compilable for PhaseS {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::S(target, controls.clone()))
             .collect()
     }
@@ -225,7 +225,7 @@ impl Compilable for PhaseS {
 impl Compilable for PhaseT {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::T(target, controls.clone()))
             .collect()
     }
@@ -234,7 +234,7 @@ impl Compilable for PhaseT {
 impl Compilable for PhaseSdag {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Sdg(target, controls.clone()))
             .collect()
     }
@@ -243,7 +243,7 @@ impl Compilable for PhaseSdag {
 impl Compilable for PhaseTdag {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Tdg(target, controls.clone()))
             .collect()
     }
@@ -252,7 +252,7 @@ impl Compilable for PhaseTdag {
 impl Compilable for PhaseShift {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Phase(self.angle, target, controls.clone()))
             .collect()
     }
@@ -261,7 +261,7 @@ impl Compilable for PhaseShift {
 impl Compilable for RotateX {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Rx(self.angle, target, controls.clone()))
             .collect()
     }
@@ -270,7 +270,7 @@ impl Compilable for RotateX {
 impl Compilable for RotateY {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Ry(self.angle, target, controls.clone()))
             .collect()
     }
@@ -279,7 +279,7 @@ impl Compilable for RotateY {
 impl Compilable for RotateZ {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Rz(self.angle, target, controls.clone()))
             .collect()
     }
@@ -288,7 +288,7 @@ impl Compilable for RotateZ {
 impl Compilable for Unitary2 {
     fn to_ir(&self, targets: Vec<usize>, controls: Vec<usize>) -> Vec<InstructionIR> {
         targets
-            .iter()
+            .par_iter()
             .map(|&target| InstructionIR::Unitary(self.matrix, target, controls.clone()))
             .collect()
     }

@@ -76,24 +76,21 @@ impl InstructionIR {
         if controls.is_empty() {
             (String::new(), String::new())
         } else {
-            let ctrl_qasm_str = format!(
-                "ctrl({}) @ {}",
-                controls.len(),
-                controls
-                    .iter()
-                    .map(|c| format!("q[{}]", c))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
+            let mut ctrl_qasm_str = format!("ctrl({}) @ ", controls.len());
+            for (i, c) in controls.iter().enumerate() {
+                if i > 0 {
+                    ctrl_qasm_str.push_str(", ");
+                }
+                ctrl_qasm_str.push_str(&format!("q[{}]", c));
+            }
 
-            let ctrl_comment_str = format!(
-                "with control qubits: {}",
-                controls
-                    .iter()
-                    .map(|c| c.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
+            let mut ctrl_comment_str = "with control qubits: ".to_string();
+            for (i, c) in controls.iter().enumerate() {
+                if i > 0 {
+                    ctrl_comment_str.push_str(", ");
+                }
+                ctrl_comment_str.push_str(&c.to_string());
+            }
 
             (ctrl_qasm_str, ctrl_comment_str)
         }
