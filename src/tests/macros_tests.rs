@@ -258,3 +258,23 @@ fn test_circuit_macro_unitary_cunitary_gates_failure() {
     assert!(circuit.is_err());
     assert_eq!(circuit.err().unwrap(), Error::InvalidQubitIndex(6, 4));
 }
+
+#[test]
+fn test_circuit_macro_measurement_success() {
+    let unitary_matrix = [[0.0.into(), 1.0.into()], [1.0.into(), 0.0.into()]];
+    let circuit = circuit! {
+        qubits: 3,
+        measurex(0),
+        measurex([1, 2]),
+        measurey(0),
+        measurey([1, 2]),
+        measurez(0),
+        measurez([1, 2]),
+        measure_custom(0, unitary_matrix),
+        measure_custom([1, 2], unitary_matrix)
+    }
+    .expect("Failed to create circuit with measurement gates");
+
+    assert_eq!(circuit.num_qubits, 3);
+    assert_eq!(circuit.gates.len(), 8);
+}

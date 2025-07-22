@@ -115,6 +115,16 @@ macro_rules! circuit_internal {
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
 
+    // --- Measurement rules ---
+    ($builder:ident, measurex([$($qubits:expr),*]), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measurex($qubit:expr), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$qubit]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measurey([$($qubits:expr),*]), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Y, vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measurey($qubit:expr), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Y, vec![$qubit]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measurez([$($qubits:expr),*]), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Computational, vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measurez($qubit:expr), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Computational, vec![$qubit]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measure_custom([$($qubits:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Custom($matrix), vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, measure_custom($qubit:expr, $matrix:expr), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Custom($matrix), vec![$qubit]); $crate::circuit_internal!($builder, $($rest)*); };
+
     // --- Terminating Rules (no trailing comma) ---
 
     // Multi-qubit gates
@@ -213,6 +223,16 @@ macro_rules! circuit_internal {
     ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr)) => { $builder.toffoli_gate($target, $control1, $control2); };
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*])) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr)) => { $builder.cswap_gate($target1, $target2, vec![$control]); };
+
+    // Measurement gates
+    ($builder:ident, measurex([$($qubits:expr),*])) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$($qubits),*]); };
+    ($builder:ident, measurex($qubit:expr)) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$qubit]); };
+    ($builder:ident, measurey([$($qubits:expr),*])) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Y, vec![$($qubits),*]); };
+    ($builder:ident, measurey($qubit:expr)) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Y, vec![$qubit]); };
+    ($builder:ident, measurez([$($qubits:expr),*])) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Computational, vec![$($qubits),*]); };
+    ($builder:ident, measurez($qubit:expr)) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Computational, vec![$qubit]); };
+    ($builder:ident, measure_custom([$($qubits:expr),*], $matrix:expr)) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Custom($matrix), vec![$($qubits),*]); };
+    ($builder:ident, measure_custom($qubit:expr, $matrix:expr)) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::Custom($matrix), vec![$qubit]); };
 
     // --- Error Handling ---
     // This is a compile-time error, as it indicates a failure to match any known gate pattern.
