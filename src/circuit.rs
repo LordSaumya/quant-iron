@@ -307,12 +307,9 @@ impl CircuitBuilder {
     /// # Returns
     ///
     /// * `Result<Circuit, Error>` - A new instance of the Circuit struct or an error if the circuit cannot be built.
-    pub fn build_final(&mut self) -> Circuit {
+    pub fn build_final(&mut self) -> Result<Circuit, Error> {
         let gates = std::mem::take(&mut self.gates);
-        Circuit {
-            gates,
-            num_qubits: self.num_qubits,
-        }
+        Circuit::with_gates(gates, self.num_qubits)
     }
 
     /// Builds a subroutine from the gates in the circuit builder.
