@@ -917,8 +917,6 @@ impl CircuitBuilder {
     /// * `operator` - The operator to be added to the circuit builder.
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - An vector of indices of the control qubits.
-    ///
-    /// # Returns
     pub fn add_operator_gate(
         &mut self,
         operator: Box<dyn Operator>,
