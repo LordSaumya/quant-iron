@@ -98,7 +98,7 @@ pub fn ising_1d_uniform(n: usize, h: f64, j: f64, mu: f64) -> Result<SumOp, Erro
     }
 
     // Pre-compute coefficients
-    let coeff_1: Complex<f64> = Complex::new(j as f64, 0.0) * -1.0;
+    let coeff_1: Complex<f64> = Complex::new(j, 0.0) * -1.0;
     let coeff_2: Complex<f64> = -1.0 * mu * Complex::new(h, 0.0);
     let include_j: bool = j != 0.0;
     let include_h: bool = h != 0.0;

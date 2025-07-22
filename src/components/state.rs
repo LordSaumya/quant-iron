@@ -92,7 +92,7 @@ impl State {
     /// * Returns an error if the number of qubits is 0.
     pub fn new_zero(num_qubits: usize) -> Result<Self, Error> {
         if num_qubits == 0 {
-            return Err(Error::InvalidNumberOfQubits(num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(num_qubits));
         }
         let dim: usize = 1 << num_qubits;
         let mut state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
@@ -124,7 +124,7 @@ impl State {
             return Err(Error::InvalidQubitIndex(n, num_qubits));
         }
         if num_qubits == 0 {
-            return Err(Error::InvalidNumberOfQubits(num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(num_qubits));
         }
 
         let mut state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
@@ -151,7 +151,7 @@ impl State {
     /// * Returns an error if the number of qubits is 0.
     pub fn new_plus(num_qubits: usize) -> Result<Self, Error> {
         if num_qubits == 0 {
-            return Err(Error::InvalidNumberOfQubits(num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(num_qubits));
         }
         let dim: usize = 1 << num_qubits;
         let amplitude = Complex::new(1.0 / (dim as f64).sqrt(), 0.0);
@@ -178,7 +178,7 @@ impl State {
     /// * Returns an error if the number of qubits is 0.
     pub fn new_minus(num_qubits: usize) -> Result<Self, Error> {
         if num_qubits == 0 {
-            return Err(Error::InvalidNumberOfQubits(num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(num_qubits));
         }
         let dim: usize = 1 << num_qubits;
         let amplitude: Complex<f64> = Complex::new(1.0 / (dim as f64).sqrt(), 0.0);
@@ -271,7 +271,7 @@ impl State {
         &self,
         measured_qubits: &[usize],
     ) -> Result<MeasurementResult, Error> {
-        return self.measure(MeasurementBasis::Computational, measured_qubits);
+        self.measure(MeasurementBasis::Computational, measured_qubits)
     }
 
     /// Measures the state vector in the specified basis and returns the measurement result.
@@ -311,7 +311,7 @@ impl State {
         // Check for valid indices
         let num_measured: usize = actual_measured_qubits.len();
         if num_measured > self.num_qubits {
-            return Err(Error::InvalidNumberOfQubits(self.num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(self.num_qubits));
         }
         for &index in actual_measured_qubits {
             if index >= self.num_qubits {
@@ -423,8 +423,8 @@ impl State {
 
                 // Convert the sampled integer outcome to a Vec<u8>
                 let mut outcome_binary_vec: Vec<u8> = vec![0; num_measured];
-                for i in 0..num_measured {
-                    outcome_binary_vec[i] = ((sampled_outcome_int >> i) & 1) as u8;
+                for (i, qubit_pos) in outcome_binary_vec.iter_mut().enumerate() {
+                    *qubit_pos = ((sampled_outcome_int >> i) & 1) as u8;
                 }
 
                 // Create the measurement result
@@ -527,7 +527,7 @@ impl State {
         // Check for valid indices
         let num_measured: usize = actual_measured_qubits.len();
         if num_measured > self.num_qubits {
-            return Err(Error::InvalidNumberOfQubits(self.num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(self.num_qubits));
         }
         for &index in actual_measured_qubits {
             if index >= self.num_qubits {
@@ -591,7 +591,7 @@ impl State {
             temp_state_vector
         };
 
-        Ok(Self::new(new_state_vector)?) // For normalisation check
+        Self::new(new_state_vector) // For normalisation check
     }
 
     /// Performs a tensor product of two state vectors without checking for validity.
@@ -653,7 +653,7 @@ impl State {
 
         if self.state_vector.len() != other.state_vector.len() {
             return Err(Error::InvalidNumberOfQubits(
-                self.state_vector.len() as usize,
+                self.state_vector.len(),
             ));
         }
 
@@ -711,11 +711,11 @@ impl State {
         let num_control: usize = control_qubits.len();
 
         if unitary.base_qubits() != (num_target + num_control) {
-            return Err(Error::InvalidNumberOfQubits(unitary.base_qubits() as usize));
+            return Err(Error::InvalidNumberOfQubits(unitary.base_qubits()));
         }
 
         if num_target > self.num_qubits {
-            return Err(Error::InvalidNumberOfQubits(self.num_qubits as usize));
+            return Err(Error::InvalidNumberOfQubits(self.num_qubits));
         }
 
         for &index in target_qubits {
@@ -731,7 +731,7 @@ impl State {
         }
 
         // Apply the unitary operation to the state vector and return the new state
-        unitary.apply(&self, target_qubits, control_qubits)
+        unitary.apply(self, target_qubits, control_qubits)
     }
 
     // -- SINGLE-QUBIT GATES --
@@ -1688,7 +1688,7 @@ impl State {
     /// * Returns an error if the unitary matrix is not unitary.
     pub fn unitary(&self, index: usize, unitary: [[Complex<f64>; 2]; 2]) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let unitary_gate: Unitary2 = Unitary2::new(unitary.clone())?;
+        let unitary_gate: Unitary2 = Unitary2::new(unitary)?;
         new_state = unitary_gate.apply(&new_state, &[index], &[])?;
         Ok(new_state)
     }
@@ -1718,7 +1718,7 @@ impl State {
         unitary: [[Complex<f64>; 2]; 2],
     ) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let unitary_gate: Unitary2 = Unitary2::new(unitary.clone())?;
+        let unitary_gate: Unitary2 = Unitary2::new(unitary)?;
         for &qubit in qubits {
             new_state = unitary_gate.apply(&new_state, &[qubit], &[])?;
         }
@@ -1755,7 +1755,7 @@ impl State {
         unitary: [[Complex<f64>; 2]; 2],
     ) -> Result<Self, Error> {
         let mut new_state: State = self.clone();
-        let unitary_gate: Unitary2 = Unitary2::new(unitary.clone())?;
+        let unitary_gate: Unitary2 = Unitary2::new(unitary)?;
         for &qubit in target_qubits {
             new_state = unitary_gate.apply(&new_state, &[qubit], control_qubits)?;
         }
@@ -2325,7 +2325,7 @@ impl std::fmt::Debug for State {
         }
         state_str.pop(); // Remove the last comma
         state_str.pop(); // Remove the last space
-        state_str.push_str("]");
+        state_str.push(']');
         write!(f, "{}", state_str)
     }
 }

@@ -106,7 +106,7 @@ impl PauliString {
         // Apply the Pauli string to the state
         let mut new_state: State = state.clone();
         for (qubit, op) in &self.ops {
-            new_state = op.apply(&mut new_state, &[*qubit], &[])?; // Assumes op.apply can take &mut State and modify it or returns a new one
+            new_state = op.apply(&new_state, &[*qubit], &[])?; // Assumes op.apply can take &mut State and modify it or returns a new one
         }
         Ok(new_state * self.coefficient)
     }
@@ -122,7 +122,7 @@ impl PauliString {
 
         let mut current_state = state.clone();
         for (qubit_idx, pauli_op) in &self.ops {
-            current_state = pauli_op.apply(&mut current_state, &[*qubit_idx], &[])?;
+            current_state = pauli_op.apply(&current_state, &[*qubit_idx], &[])?;
         }
         Ok(current_state)
     }

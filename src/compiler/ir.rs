@@ -72,7 +72,7 @@ impl InstructionIR {
     }
 
     /// Private method to generates QASM string and comment string for control qubits.
-    fn generate_control_qasm_strings(controls: &Vec<usize>) -> (String, String) {
+    fn generate_control_qasm_strings(controls: &[usize]) -> (String, String) {
         if controls.is_empty() {
             (String::new(), String::new())
         } else {

@@ -725,13 +725,11 @@ impl Operator for SWAP {
 
                 if target_bit_1 != target_bit_2 {
                     let j = i ^ (1 << target_qubit_1) ^ (1 << target_qubit_2);
-                    if i < j {
-                        if check_controls(i, control_qubits) {
-                            let amp_i = state.state_vector[i];
-                            let amp_j = state.state_vector[j];
-                            new_state_vec[i] = amp_j;
-                            new_state_vec[j] = amp_i;
-                        }
+                    if i < j && check_controls(i, control_qubits) {
+                        let amp_i = state.state_vector[i];
+                        let amp_j = state.state_vector[j];
+                        new_state_vec[i] = amp_j;
+                        new_state_vec[j] = amp_i;
                     }
                 }
             }
@@ -917,11 +915,10 @@ impl Operator for PhaseS {
         } else {
             let phase_factor = Complex::new(0.0, 1.0); // Phase shift of pi/2 (i)
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
-            let dim: usize = 1 << num_qubits;
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
-                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                    *current_amp_ref = state.state_vector[i] * phase_factor;
                 }
             }
         }
@@ -1011,11 +1008,10 @@ impl Operator for PhaseT {
             let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
             let phase_factor = Complex::new(invsqrt2, invsqrt2); // Phase shift of pi/4 (exp(i*pi/4))
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
-            let dim: usize = 1 << num_qubits;
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
-                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                    *current_amp_ref = state.state_vector[i] * phase_factor;
                 }
             }
         }
@@ -1099,11 +1095,10 @@ impl Operator for PhaseSdag {
         } else {
             let phase_factor = Complex::new(0.0, -1.0); // Phase shift of -pi/2 (-i)
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
-            let dim: usize = 1 << num_qubits;
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
-                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                    *current_amp_ref = state.state_vector[i] * phase_factor;
                 }
             }
         }
@@ -1193,11 +1188,10 @@ impl Operator for PhaseTdag {
             let invsqrt2: f64 = 1.0 / (2.0f64).sqrt();
             let phase_factor = Complex::new(invsqrt2, -invsqrt2);
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
-            let dim: usize = 1 << num_qubits;
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
-                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                    *current_amp_ref = state.state_vector[i] * phase_factor;
                 }
             }
         }
@@ -1305,11 +1299,10 @@ impl Operator for PhaseShift {
         } else {
             let phase_factor = Complex::new(self.angle.cos(), self.angle.sin());
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
-            let dim: usize = 1 << num_qubits;
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                 if target_bit_is_one && check_controls(i, control_qubits) {
-                    new_state_vec[i] = state.state_vector[i] * phase_factor;
+                    *current_amp_ref = state.state_vector[i] * phase_factor;
                 }
             }
         }
@@ -1685,16 +1678,15 @@ impl Operator for RotateZ {
             let half_angle = self.angle / 2.0;
             let phase_0 = Complex::new(half_angle.cos(), -half_angle.sin());
             let phase_1 = Complex::new(half_angle.cos(), half_angle.sin());
-            let dim: usize = 1 << num_qubits;
             new_state_vec = state.state_vector.clone(); // Ensure cloned for CPU path
 
-            for i in 0..dim {
+            for (i, current_amp_ref) in new_state_vec.iter_mut().enumerate() {
                 if check_controls(i, control_qubits) {
                     let target_bit_is_one = (i >> target_qubit) & 1 == 1;
                     if target_bit_is_one {
-                        new_state_vec[i] = state.state_vector[i] * phase_1;
+                        *current_amp_ref = state.state_vector[i] * phase_1;
                     } else {
-                        new_state_vec[i] = state.state_vector[i] * phase_0;
+                        *current_amp_ref = state.state_vector[i] * phase_0;
                     }
                 }
             }

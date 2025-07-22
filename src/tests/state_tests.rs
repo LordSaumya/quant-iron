@@ -115,7 +115,7 @@ fn test_state_probability_success() {
     let expected_probability: f64 = 0.5;
 
     let probability: f64 = state.probability(0).unwrap();
-    assert!(probability - expected_probability < f64::EPSILON);
+    assert!((probability - expected_probability).abs() < f64::EPSILON);
 }
 
 #[test]

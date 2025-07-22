@@ -115,22 +115,34 @@ fn benchmark_readme_examples(c: &mut Criterion) {
 
     // Qubits example (original size implied by ops on 0,1)
     group.bench_function(BenchmarkId::new("qubits_logic", "2_qubits"), |b| {
-        b.iter(|| black_box(run_qubits_logic(2).unwrap()))
+        b.iter(|| {
+            run_qubits_logic(2).unwrap();
+            black_box(())
+        })
     });
 
     // Circuits example (original size 3 qubits)
     group.bench_function(BenchmarkId::new("circuits_logic", "3_qubits"), |b| {
-        b.iter(|| black_box(run_circuits_logic(3).unwrap()))
+        b.iter(|| {
+            run_circuits_logic(3).unwrap();
+            black_box(())
+        })
     });
 
     // Hamiltonian example (original size 2 qubits)
     group.bench_function(BenchmarkId::new("hamiltonian_logic", "2_qubits"), |b| {
-        b.iter(|| black_box(run_hamiltonian_logic(2).unwrap()))
+        b.iter(|| {
+            run_hamiltonian_logic(2).unwrap();
+            black_box(())
+        })
     });
     
     // Heisenberg example (original size 3 spins)
     group.bench_function(BenchmarkId::new("heisenberg_logic", "3_spins"), |b| {
-        b.iter(|| black_box(run_heisenberg_logic(3).unwrap()))
+        b.iter(|| {
+            run_heisenberg_logic(3).unwrap();
+            black_box(())
+        })
     });
 
     group.finish();
@@ -148,23 +160,35 @@ fn benchmark_scaled_examples(c: &mut Criterion) {
         }
 
         bench_group.bench_function(BenchmarkId::new("qubits_logic_scaled", n_qubits), |b| {
-            b.iter(|| black_box(run_qubits_logic(n_qubits).unwrap()))
+            b.iter(|| {
+                run_qubits_logic(n_qubits).unwrap();
+                black_box(())
+            })
         });
 
         // For now, we scale the number of qubits for the state and adapt circuit construction.
         bench_group.bench_function(BenchmarkId::new("circuits_logic_scaled", n_qubits), |b| {
-            b.iter(|| black_box(run_circuits_logic(n_qubits).unwrap()))
+            b.iter(|| {
+                run_circuits_logic(n_qubits).unwrap();
+                black_box(())
+            })
         });
         
         // Hamiltonian example scales with the state, PauliStrings still on 0,1
         bench_group.bench_function(BenchmarkId::new("hamiltonian_logic_scaled", n_qubits), |b| {
-            b.iter(|| black_box(run_hamiltonian_logic(n_qubits).unwrap()))
+            b.iter(|| {
+                run_hamiltonian_logic(n_qubits).unwrap();
+                black_box(())
+            })
         });
 
         // Heisenberg model scales directly with number of spins
         if n_qubits >= 2 { // heisenberg_1d requires at least 2 spins
             bench_group.bench_function(BenchmarkId::new("heisenberg_logic_scaled", n_qubits), |b| {
-                b.iter(|| black_box(run_heisenberg_logic(n_qubits).unwrap()))
+                b.iter(|| {
+                    run_heisenberg_logic(n_qubits).unwrap();
+                    black_box(())
+                })
             });
         }
     }

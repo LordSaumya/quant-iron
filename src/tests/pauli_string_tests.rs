@@ -14,7 +14,7 @@ use std::collections::HashMap;
 fn test_pauli_string_new() {
     // Test creating a new PauliString with a coefficient
     let coefficient = Complex::new(1.0, 0.0);
-    let pauli_string = PauliString::new(coefficient.clone());
+    let pauli_string = PauliString::new(coefficient);
 
     assert_eq!(pauli_string.coefficient(), coefficient);
     assert_eq!(pauli_string.ops().len(), 0);
@@ -28,7 +28,7 @@ fn test_pauli_string_with_ops() {
     ops.insert(0, Pauli::X);
     ops.insert(1, Pauli::Y);
 
-    let pauli_string: PauliString = PauliString::with_ops(coefficient.clone(), ops.clone());
+    let pauli_string: PauliString = PauliString::with_ops(coefficient, ops.clone());
 
     assert_eq!(pauli_string.coefficient(), coefficient);
     assert_eq!(pauli_string.ops().len(), 2);
@@ -39,7 +39,7 @@ fn test_pauli_string_with_ops() {
 fn test_pauli_string_add_op() {
     // Test adding a Pauli operator to the PauliString
     let coefficient: Complex<f64> = Complex::new(1.0, 0.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
 
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
@@ -65,7 +65,7 @@ fn test_pauli_string_with_op() {
 #[test]
 fn test_pauli_string_apply_success_non_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -79,7 +79,7 @@ fn test_pauli_string_apply_success_non_empty() {
 #[test]
 fn test_pauli_string_apply_success_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let pauli_string: PauliString = PauliString::new(coefficient);
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
     let result: State = pauli_string.apply(&state).unwrap();
@@ -91,7 +91,7 @@ fn test_pauli_string_apply_success_empty() {
 #[test]
 fn test_pauli_string_apply_error() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -104,7 +104,7 @@ fn test_pauli_string_apply_error() {
 #[test]
 fn test_pauli_string_apply_exp_success_non_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -123,7 +123,7 @@ fn test_pauli_string_apply_exp_success_non_empty() {
 #[test]
 fn test_pauli_string_apply_exp_success_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let pauli_string: PauliString = PauliString::new(coefficient);
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
     let result: State = pauli_string.apply_exp(&state).unwrap();
@@ -135,7 +135,7 @@ fn test_pauli_string_apply_exp_success_empty() {
 #[test]
 fn test_pauli_string_apply_exp_error() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -148,7 +148,7 @@ fn test_pauli_string_apply_exp_error() {
 #[test]
 fn test_pauli_string_apply_exp_factor_success_non_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -169,7 +169,7 @@ fn test_pauli_string_apply_exp_factor_success_non_empty() {
 #[test]
 fn test_pauli_string_apply_exp_factor_success_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let pauli_string: PauliString = PauliString::new(coefficient);
 
     let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
     let result: State = pauli_string
@@ -183,7 +183,7 @@ fn test_pauli_string_apply_exp_factor_success_empty() {
 #[test]
 fn test_pauli_string_apply_exp_factor_error() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 
@@ -198,7 +198,7 @@ fn test_pauli_string_apply_exp_factor_error() {
 fn test_pauli_string_hermitian_conjugate() {
     // Test the hermitian_conjugate method
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
-    let mut pauli_string: PauliString = PauliString::new(coefficient.clone());
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
     pauli_string.add_op(0, Pauli::X);
     pauli_string.add_op(1, Pauli::Y);
 

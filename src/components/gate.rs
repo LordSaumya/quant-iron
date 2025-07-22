@@ -142,7 +142,7 @@ impl Gate {
     pub fn h_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::h_gate(qubit_index))
+            .map(Gate::h_gate)
             .collect()
     }
 
@@ -195,7 +195,7 @@ impl Gate {
     pub fn x_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::x_gate(qubit_index))
+            .map(Gate::x_gate)
             .collect()
     }
 
@@ -249,7 +249,7 @@ impl Gate {
     pub fn y_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::y_gate(qubit_index))
+            .map(Gate::y_gate)
             .collect()
     }
 
@@ -303,7 +303,7 @@ impl Gate {
     pub fn z_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::z_gate(qubit_index))
+            .map(Gate::z_gate)
             .collect()
     }
 
@@ -357,7 +357,7 @@ impl Gate {
     pub fn i_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::i_gate(qubit_index))
+            .map(Gate::i_gate)
             .collect()
     }
 
@@ -411,7 +411,7 @@ impl Gate {
     pub fn s_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::s_gate(qubit_index))
+            .map(Gate::s_gate)
             .collect()
     }
 
@@ -465,7 +465,7 @@ impl Gate {
     pub fn s_dag_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::s_dag_gate(qubit_index))
+            .map(Gate::s_dag_gate)
             .collect()
     }
 
@@ -519,7 +519,7 @@ impl Gate {
     pub fn t_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::t_gate(qubit_index))
+            .map(Gate::t_gate)
             .collect()
     }
 
@@ -573,7 +573,7 @@ impl Gate {
     pub fn t_dag_multi_gate(qubit_indices: Vec<usize>) -> Vec<Self> {
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::t_dag_gate(qubit_index))
+            .map(Gate::t_dag_gate)
             .collect()
     }
 
@@ -630,7 +630,7 @@ impl Gate {
         let op_template = PhaseShift::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -654,7 +654,7 @@ impl Gate {
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(op_template.clone()),
+                Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -689,7 +689,7 @@ impl Gate {
         let op_template = RotateX::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -713,7 +713,7 @@ impl Gate {
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(op_template.clone()),
+                Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -748,7 +748,7 @@ impl Gate {
         let op_template = RotateY::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -772,7 +772,7 @@ impl Gate {
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(op_template.clone()),
+                Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -807,7 +807,7 @@ impl Gate {
         let op_template = RotateZ::new(angle);
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -831,7 +831,7 @@ impl Gate {
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(op_template.clone()),
+                Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
@@ -874,7 +874,7 @@ impl Gate {
         let op_template = Unitary2::new(unitary).unwrap();
         qubit_indices
             .into_iter()
-            .map(|qubit_index| Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![]))
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
             .collect()
     }
 
@@ -900,7 +900,7 @@ impl Gate {
         target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
-                Box::new(op_template.clone()),
+                Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
