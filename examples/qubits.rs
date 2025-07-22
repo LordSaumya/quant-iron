@@ -13,6 +13,5 @@ fn main() {
     let measurement = state.measure_n(MeasurementBasis::Computational, &[0, 1], 100)
         .expect("Could not measure computation");
 
-    println!("Measurement results:\n{:?}", measurement);    // Print the outcomes
-    println!("New state:\n{:?}", measurement );             // Print the new state after measurement
+    println!("Measurement results:\n{:?}", measurement);    // Print the results of the measurement
 }
