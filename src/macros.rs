@@ -217,6 +217,6 @@ macro_rules! circuit_internal {
     // --- Error Handling ---
     // This is a compile-time error, as it indicates a failure to match any known gate pattern.
     ($builder:ident, $bad_token:tt, $($rest:tt)*) => {
-        compile_error!(concat!("Unrecognized gate or syntax: `", stringify!($bad_token), "`"));
+        compile_error!(concat!("Unrecognised gate or syntax: `", stringify!($bad_token), "`"));
     };
 }
