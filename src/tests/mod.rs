@@ -6,3 +6,5 @@ pub mod pauli_string_tests;
 pub mod ising_tests;
 pub mod heisenberg_tests;
 pub mod time_evolution_tests;
+pub mod circuit_tests;
+pub mod macros_tests;
