@@ -67,6 +67,10 @@ pub enum Error {
     /// Failed to lock the global GPU context
     #[error("Failed to lock GPU context")]
     GpuContextLockError,
+
+    /// Failed to create circuit from macro
+    #[error("Failed to create circuit from macro: {0}")]
+    CircuitMacroError(String),
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
