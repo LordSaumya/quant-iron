@@ -1,3 +1,88 @@
+/// Creates a `Circuit` object using a domain-specific language.
+///
+/// The macro provides a concise, intuitive way to define a quantum circuit.
+///
+/// # Syntax
+///
+/// The basic structure is:
+/// ```ignore
+/// circuit! {
+///     qubits: <number_of_qubits>,
+///     <operation_1>,
+///     <operation_2>,
+///     ...
+/// }
+/// ```
+///
+/// Where `<operation>` can be one of the following:
+///
+/// ## Single-Qubit Gates
+///
+/// Apply a gate to a single qubit or multiple qubits individually.
+/// - `h(qubit)` or `h([qubit1, qubit2, ...])`
+/// - `x(qubit)` or `x([qubit1, qubit2, ...])`
+/// - `y(qubit)` or `y([qubit1, qubit2, ...])`
+/// - `z(qubit)` or `z([qubit1, qubit2, ...])`
+/// - `s(qubit)` or `s([qubit1, qubit2, ...])`
+/// - `t(qubit)` or `t([qubit1, qubit2, ...])`
+/// - `sdag(qubit)` or `sdag([qubit1, qubit2, ...])`
+/// - `tdag(qubit)` or `tdag([qubit1, qubit2, ...])`
+/// - `id(qubit)` or `id([qubit1, qubit2, ...])`
+///
+/// ## Two-Qubit Gates
+///
+/// - `cnot(control, target)`
+/// - `swap(qubit1, qubit2)`
+///
+/// ## Controlled Gates
+///
+/// Controlled gates can have single or multiple targets and controls.
+/// - `ch(target, control)` or `ch([targets], [controls])`
+/// - `cx(target, control)` or `cx([targets], [controls])`
+/// - `cy(target, control)` or `cy([targets], [controls])`
+/// - `cz(target, control)` or `cz([targets], [controls])`
+/// - `cs(target, control)` or `cs([targets], [controls])`
+/// - `csdag(target, control)` or `csdag([targets], [controls])`
+/// - `ct(target, control)` or `ct([targets], [controls])`
+/// - `ctdag(target, control)` or `ctdag([targets], [controls])`
+///
+/// ## Gates with Angles
+///
+/// Angles are `f64` values.
+/// - `rx(qubit, angle)`
+/// - `ry(qubit, angle)`
+/// - `rz(qubit, angle)`
+/// - `p(qubit, angle)`
+///
+/// ## Controlled Gates with Angles
+///
+/// - `crx(target, control, angle)` or `crx([targets], [controls], angle)`
+/// - `cry(target, control, angle)` or `cry([targets], [controls], angle)`
+/// - `crz(target, control, angle)` or `crz([targets], [controls], angle)`
+/// - `cp(target, control, angle)` or `cp([targets], [controls], angle)`
+///
+/// ## Special Gates
+///
+/// - `toffoli(target, control1, control2)`
+/// - `cswap(target1, target2, control)` or `cswap(target1, target2, [controls])`
+///
+/// ## Unitary Gates
+///
+/// Apply a custom unitary matrix.
+/// - `unitary(qubit, matrix)`
+/// - `unitary([qubits], matrix)`
+/// - `cunitary(target, control, matrix)` or `cunitary([targets], [controls], matrix)`
+///
+/// ## Measurement Gates
+///
+/// - `measurex(qubit)` or `measurex([qubits])`
+/// - `measurey(qubit)` or `measurey([qubits])`
+/// - `measurez(qubit)` or `measurez([qubits])`
+/// - `measure_custom(qubit, matrix)` or `measure_custom([qubits], matrix)`
+/// 
+/// # Returns
+/// 
+/// * `Result<Circuit, Error>` - A result containing the constructed `Circuit` or an error if the circuit cannot be built.
 #[macro_export]
 macro_rules! circuit {
     (qubits: $num_qubits:expr, $($rest:tt)*) => {
