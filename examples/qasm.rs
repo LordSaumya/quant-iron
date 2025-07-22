@@ -15,5 +15,5 @@ fn main() {
     .build_final();
 
     // Convert circuit to OpenQASM 3.0
-    println!("{}", circuit.to_qasm(None::<&str>).expect("Could not convert circuit to QASM"));
+    println!("{}", circuit.expect("Could not build circuit").to_qasm(None::<&str>).expect("Could not convert circuit to QASM"));
 }
