@@ -1,3 +1,5 @@
+#[macro_use]
+mod macros;
 pub mod circuit;
 pub mod components;
 pub mod errors;

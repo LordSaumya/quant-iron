@@ -1,0 +1,222 @@
+#[macro_export]
+macro_rules! circuit {
+    (qubits: $num_qubits:expr, $($rest:tt)*) => {
+        {
+            let mut builder = $crate::circuit::CircuitBuilder::new($num_qubits);
+            $crate::circuit_internal!(builder, $($rest)*);
+            builder.build_final()
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! circuit_internal {
+    // Base case: No more tokens to process.
+    ($builder:ident,) => {};
+
+    // --- Gate Overloading rules (with trailing comma) ---
+    // For each gate, most specific form (arrays) -> least specific form (single qubits) for disambiguation.
+
+    // Multi-qubit gates
+    ($builder:ident, h([$($qubits:expr),*]), $($rest:tt)*) => { $builder.h_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, x([$($qubits:expr),*]), $($rest:tt)*) => { $builder.x_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, y([$($qubits:expr),*]), $($rest:tt)*) => { $builder.y_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, z([$($qubits:expr),*]), $($rest:tt)*) => { $builder.z_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, s([$($qubits:expr),*]), $($rest:tt)*) => { $builder.s_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, t([$($qubits:expr),*]), $($rest:tt)*) => { $builder.t_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, id([$($qubits:expr),*]), $($rest:tt)*) => { $builder.id_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, sdag([$($qubits:expr),*]), $($rest:tt)*) => { $builder.sdag_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, tdag([$($qubits:expr),*]), $($rest:tt)*) => { $builder.tdag_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // Single-qubit gates
+    ($builder:ident, h($qubit:expr), $($rest:tt)*) => { $builder.h_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, x($qubit:expr), $($rest:tt)*) => { $builder.x_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, y($qubit:expr), $($rest:tt)*) => { $builder.y_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, z($qubit:expr), $($rest:tt)*) => { $builder.z_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, s($qubit:expr), $($rest:tt)*) => { $builder.s_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, t($qubit:expr), $($rest:tt)*) => { $builder.t_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, id($qubit:expr), $($rest:tt)*) => { $builder.id_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, sdag($qubit:expr), $($rest:tt)*) => { $builder.sdag_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, tdag($qubit:expr), $($rest:tt)*) => { $builder.tdag_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // Two-argument gates
+    ($builder:ident, cnot($arg1:expr, $arg2:expr), $($rest:tt)*) => { $builder.cnot_gate($arg1, $arg2); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, swap($arg1:expr, $arg2:expr), $($rest:tt)*) => { $builder.swap_gate($arg1, $arg2); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // --- Controlled gate overloading ---
+    ($builder:ident, ch([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.ch_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ch([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.ch_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ch($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.ch_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ch($target:expr, $control:expr), $($rest:tt)*) => { $builder.ch_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cx([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.cx_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cx([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.cx_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cx($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cx_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cx($target:expr, $control:expr), $($rest:tt)*) => { $builder.cx_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cy([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.cy_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cy([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.cy_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cy($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cy_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cy($target:expr, $control:expr), $($rest:tt)*) => { $builder.cy_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cz([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.cz_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cz([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.cz_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cz($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cz_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cz($target:expr, $control:expr), $($rest:tt)*) => { $builder.cz_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cs([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.cs_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cs([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.cs_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cs($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cs_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cs($target:expr, $control:expr), $($rest:tt)*) => { $builder.cs_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, csdag([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.csdag_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, csdag([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.csdag_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, csdag($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.csdag_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, csdag($target:expr, $control:expr), $($rest:tt)*) => { $builder.csdag_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ct([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.ct_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ct([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.ct_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ct($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.ct_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ct($target:expr, $control:expr), $($rest:tt)*) => { $builder.ct_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ctdag([$($targets:expr),*], [$($controls:expr),*]), $($rest:tt)*) => { $builder.ctdag_gates(vec![$($targets),*], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ctdag([$($targets:expr),*], $control:expr), $($rest:tt)*) => { $builder.ctdag_gates(vec![$($targets),*], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ctdag($target:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.ctdag_gates(vec![$target], vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ctdag($target:expr, $control:expr), $($rest:tt)*) => { $builder.ctdag_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // Gates with angles
+    ($builder:ident, rx($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rx_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ry($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.ry_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, rz($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rz_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, p($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.p_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // --- Controlled angle gate overloading ---
+    ($builder:ident, crx([$($targets:expr),*], [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.crx_gates(vec![$($targets),*], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crx([$($targets:expr),*], $control:expr, $angle:expr), $($rest:tt)*) => { $builder.crx_gates(vec![$($targets),*], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crx($target:expr, [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.crx_gates(vec![$target], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crx($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.crx_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry([$($targets:expr),*], [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.cry_gates(vec![$($targets),*], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry([$($targets:expr),*], $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cry_gates(vec![$($targets),*], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry($target:expr, [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.cry_gates(vec![$target], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cry_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crz([$($targets:expr),*], [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.crz_gates(vec![$($targets),*], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crz([$($targets:expr),*], $control:expr, $angle:expr), $($rest:tt)*) => { $builder.crz_gates(vec![$($targets),*], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crz($target:expr, [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.crz_gates(vec![$target], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, crz($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.crz_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cp([$($targets:expr),*], [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$($targets),*], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cp([$($targets:expr),*], $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$($targets),*], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cp($target:expr, [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$target], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cp($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // --- Unitary and controlled unitary gates ---
+    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.unitary_gates(vec![$($qubits),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, unitary($qubit:expr, $matrix:expr), $($rest:tt)*) => { $builder.unitary_gate($qubit, $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // --- Special gates ---
+    ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr), $($rest:tt)*) => { $builder.toffoli_gate($target, $control1, $control2); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
+
+    // --- Terminating Rules (no trailing comma) ---
+
+    // Multi-qubit gates
+    ($builder:ident, h([$($qubits:expr),*])) => { $builder.h_gates(vec![$($qubits),*]); };
+    ($builder:ident, x([$($qubits:expr),*])) => { $builder.x_gates(vec![$($qubits),*]); };
+    ($builder:ident, y([$($qubits:expr),*])) => { $builder.y_gates(vec![$($qubits),*]); };
+    ($builder:ident, z([$($qubits:expr),*])) => { $builder.z_gates(vec![$($qubits),*]); };
+    ($builder:ident, s([$($qubits:expr),*])) => { $builder.s_gates(vec![$($qubits),*]); };
+    ($builder:ident, t([$($qubits:expr),*])) => { $builder.t_gates(vec![$($qubits),*]); };
+    ($builder:ident, id([$($qubits:expr),*])) => { $builder.id_gates(vec![$($qubits),*]); };
+    ($builder:ident, sdag([$($qubits:expr),*])) => { $builder.sdag_gates(vec![$($qubits),*]); };
+    ($builder:ident, tdag([$($qubits:expr),*])) => { $builder.tdag_gates(vec![$($qubits),*]); };
+
+    // Single-qubit gates
+    ($builder:ident, h($qubit:expr)) => { $builder.h_gate($qubit); };
+    ($builder:ident, x($qubit:expr)) => { $builder.x_gate($qubit); };
+    ($builder:ident, y($qubit:expr)) => { $builder.y_gate($qubit); };
+    ($builder:ident, z($qubit:expr)) => { $builder.z_gate($qubit); };
+    ($builder:ident, s($qubit:expr)) => { $builder.s_gate($qubit); };
+    ($builder:ident, t($qubit:expr)) => { $builder.t_gate($qubit); };
+    ($builder:ident, id($qubit:expr)) => { $builder.id_gate($qubit); };
+    ($builder:ident, sdag($qubit:expr)) => { $builder.sdag_gate($qubit); };
+    ($builder:ident, tdag($qubit:expr)) => { $builder.tdag_gate($qubit); };
+
+    // Two-argument gates
+    ($builder:ident, cnot($arg1:expr, $arg2:expr)) => { $builder.cnot_gate($arg1, $arg2); };
+    ($builder:ident, swap($arg1:expr, $arg2:expr)) => { $builder.swap_gate($arg1, $arg2); };
+
+    // Controlled gates
+    ($builder:ident, ch([$($targets:expr),*], [$($controls:expr),*])) => { $builder.ch_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, ch([$($targets:expr),*], $control:expr)) => { $builder.ch_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, ch($target:expr, [$($controls:expr),*])) => { $builder.ch_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, ch($target:expr, $control:expr)) => { $builder.ch_gates(vec![$target], vec![$control]); };
+    ($builder:ident, cx([$($targets:expr),*], [$($controls:expr),*])) => { $builder.cx_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, cx([$($targets:expr),*], $control:expr)) => { $builder.cx_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, cx($target:expr, [$($controls:expr),*])) => { $builder.cx_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, cx($target:expr, $control:expr)) => { $builder.cx_gates(vec![$target], vec![$control]); };
+    ($builder:ident, cy([$($targets:expr),*], [$($controls:expr),*])) => { $builder.cy_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, cy([$($targets:expr),*], $control:expr)) => { $builder.cy_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, cy($target:expr, [$($controls:expr),*])) => { $builder.cy_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, cy($target:expr, $control:expr)) => { $builder.cy_gates(vec![$target], vec![$control]); };
+    ($builder:ident, cz([$($targets:expr),*], [$($controls:expr),*])) => { $builder.cz_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, cz([$($targets:expr),*], $control:expr)) => { $builder.cz_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, cz($target:expr, [$($controls:expr),*])) => { $builder.cz_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, cz($target:expr, $control:expr)) => { $builder.cz_gates(vec![$target], vec![$control]); };
+    ($builder:ident, cs([$($targets:expr),*], [$($controls:expr),*])) => { $builder.cs_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, cs([$($targets:expr),*], $control:expr)) => { $builder.cs_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, cs($target:expr, [$($controls:expr),*])) => { $builder.cs_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, cs($target:expr, $control:expr)) => { $builder.cs_gates(vec![$target], vec![$control]); };
+    ($builder:ident, csdag([$($targets:expr),*], [$($controls:expr),*])) => { $builder.csdag_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, csdag([$($targets:expr),*], $control:expr)) => { $builder.csdag_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, csdag($target:expr, [$($controls:expr),*])) => { $builder.csdag_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, csdag($target:expr, $control:expr)) => { $builder.csdag_gates(vec![$target], vec![$control]); };
+    ($builder:ident, ct([$($targets:expr),*], [$($controls:expr),*])) => { $builder.ct_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, ct([$($targets:expr),*], $control:expr)) => { $builder.ct_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, ct($target:expr, [$($controls:expr),*])) => { $builder.ct_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, ct($target:expr, $control:expr)) => { $builder.ct_gates(vec![$target], vec![$control]); };
+    ($builder:ident, ctdag([$($targets:expr),*], [$($controls:expr),*])) => { $builder.ctdag_gates(vec![$($targets),*], vec![$($controls),*]); };
+    ($builder:ident, ctdag([$($targets:expr),*], $control:expr)) => { $builder.ctdag_gates(vec![$($targets),*], vec![$control]); };
+    ($builder:ident, ctdag($target:expr, [$($controls:expr),*])) => { $builder.ctdag_gates(vec![$target], vec![$($controls),*]); };
+    ($builder:ident, ctdag($target:expr, $control:expr)) => { $builder.ctdag_gates(vec![$target], vec![$control]); };
+
+    // Gates with angles
+    ($builder:ident, rx($qubit:expr, $angle:expr)) => { $builder.rx_gate($qubit, $angle); };
+    ($builder:ident, ry($qubit:expr, $angle:expr)) => { $builder.ry_gate($qubit, $angle); };
+    ($builder:ident, rz($qubit:expr, $angle:expr)) => { $builder.rz_gate($qubit, $angle); };
+    ($builder:ident, p($qubit:expr, $angle:expr)) => { $builder.p_gate($qubit, $angle); };
+
+    // Controlled angle gates
+    ($builder:ident, crx([$($targets:expr),*], [$($controls:expr),*], $angle:expr)) => { $builder.crx_gates(vec![$($targets),*], vec![$($controls),*], $angle); };
+    ($builder:ident, crx([$($targets:expr),*], $control:expr, $angle:expr)) => { $builder.crx_gates(vec![$($targets),*], vec![$control], $angle); };
+    ($builder:ident, crx($target:expr, [$($controls:expr),*], $angle:expr)) => { $builder.crx_gates(vec![$target], vec![$($controls),*], $angle); };
+    ($builder:ident, crx($target:expr, $control:expr, $angle:expr)) => { $builder.crx_gates(vec![$target], vec![$control], $angle); };
+    ($builder:ident, cry([$($targets:expr),*], [$($controls:expr),*], $angle:expr)) => { $builder.cry_gates(vec![$($targets),*], vec![$($controls),*], $angle); };
+    ($builder:ident, cry([$($targets:expr),*], $control:expr, $angle:expr)) => { $builder.cry_gates(vec![$($targets),*], vec![$control], $angle); };
+    ($builder:ident, cry($target:expr, [$($controls:expr),*], $angle:expr)) => { $builder.cry_gates(vec![$target], vec![$($controls),*], $angle); };
+    ($builder:ident, cry($target:expr, $control:expr, $angle:expr)) => { $builder.cry_gates(vec![$target], vec![$control], $angle); };
+    ($builder:ident, crz([$($targets:expr),*], [$($controls:expr),*], $angle:expr)) => { $builder.crz_gates(vec![$($targets),*], vec![$($controls),*], $angle); };
+    ($builder:ident, crz([$($targets:expr),*], $control:expr, $angle:expr)) => { $builder.crz_gates(vec![$($targets),*], vec![$control], $angle); };
+    ($builder:ident, crz($target:expr, [$($controls:expr),*], $angle:expr)) => { $builder.crz_gates(vec![$target], vec![$($controls),*], $angle); };
+    ($builder:ident, crz($target:expr, $control:expr, $angle:expr)) => { $builder.crz_gates(vec![$target], vec![$control], $angle); };
+    ($builder:ident, cp([$($targets:expr),*], [$($controls:expr),*], $angle:expr)) => { $builder.cp_gates(vec![$($targets),*], vec![$($controls),*], $angle); };
+    ($builder:ident, cp([$($targets:expr),*], $control:expr, $angle:expr)) => { $builder.cp_gates(vec![$($targets),*], vec![$control], $angle); };
+    ($builder:ident, cp($target:expr, [$($controls:expr),*], $angle:expr)) => { $builder.cp_gates(vec![$target], vec![$($controls),*], $angle); };
+    ($builder:ident, cp($target:expr, $control:expr, $angle:expr)) => { $builder.cp_gates(vec![$target], vec![$control], $angle); };
+
+    // Unitary and Controlled Unitary Gates
+    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr)) => { $builder.unitary_gates(vec![$($qubits),*], $matrix); };
+    ($builder:ident, unitary($qubit:expr, $matrix:expr)) => { $builder.unitary_gate($qubit, $matrix); };
+    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix); };
+    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix); };
+    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix); };
+    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix); };
+
+    // Special Gates
+    ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr)) => { $builder.toffoli_gate($target, $control1, $control2); };
+    ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*])) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); };
+    ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr)) => { $builder.cswap_gate($target1, $target2, vec![$control]); };
+
+    // --- Error Handling ---
+    // This is a compile-time error, as it indicates a failure to match any known gate pattern.
+    ($builder:ident, $bad_token:tt, $($rest:tt)*) => {
+        compile_error!(concat!("Unrecognized gate or syntax: `", stringify!($bad_token), "`"));
+    };
+}
