@@ -24,8 +24,7 @@ Quant-Iron provides tools to represent quantum states, apply standard quantum ga
 - **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, Phase shifts, Rotations, and custom unitary operations.
 
 - **Hardware Acceleration**: Optimised for parallel execution (CPU and GPU) and low memory overhead, with OpenCL-accelerated operations for enhanced performance on compatible hardware. (Requires `gpu` feature flag).
-
-- **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and support for subroutines.
+- **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and the `circuit!` macro with support for subroutines.
 
 - **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements in the `Computational`, `X`, `Y`, and custom bases.
 
@@ -90,8 +89,7 @@ fn qubits() {
         .cnot(0, 1)         // CNOT with control=0, target=1
         .measure_n(MeasurementBasis::Computational, &[0, 1], 100)?; // Measure both qubits 100 times
 
-    println!("Measurement results: {:?}", measurement.outcomes);    // Print the outcomes
-    println!("New state: {:?}", measurement.new_state);             // Print the new state after measurement
+    println!("Measurement results:\n{:?}", measurement);            // Print the results of the measurement
 }
 ```
 
@@ -110,7 +108,25 @@ fn circuits() {
 
   let result = circuit.execute(State::new_plus(3)?);        // Execute the circuit on the |++> state
   println!("Circuit result: {:?}", result);                 // Print the result of the circuit execution
-  println!("New state: {:?}", result.new_state);            // Print the new state after execution
+}
+```
+
+**Use the `circuit!` macro to build a circuit:**
+
+```rust
+fn circuit_macro() {
+    // Use the `circuit!` macro to build a circuit
+    let circuit = circuit! {
+        qubits: 3,           // Define a circuit with 3 qubits
+        h(0),                // Hadamard on qubit 0
+        x([1, 2]),           // Pauli-X on qubits 1 and 2
+        cnot(0, 1),          // CNOT with target = 1 and control = 0
+        crx([1, 2], 0, 1.0), // Controlled RX rotation with control = 1, target = 2, angle = 1.0
+        measurex([0, 1]),    // Measure qubits 0 and 1 in the X basis
+        measurez(2)          // Measure qubit 2 in the Z basis
+    }.expect("Failed to create circuit");
+
+    println!("{:?}", circuit); // Print the created circuit
 }
 ```
 
