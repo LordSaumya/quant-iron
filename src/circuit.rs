@@ -100,8 +100,16 @@ impl Circuit {
     /// # Arguments
     ///
     /// * `gates` - A vector of gates to be added to the circuit.
-    pub fn add_gates(&mut self, gates: Vec<Gate>) {
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<(), Error>` - An empty result if the gates are added successfully, or an error if any gate cannot be added.
+    pub fn add_gates(&mut self, gates: Vec<Gate>) -> Result<(), Error> {
+        for gate in &gates {
+            Self::_validate_gate_qubits(gate, self.num_qubits)?;
+        }
         self.gates.extend(gates);
+        Ok(())
     }
 
     /// Gets the number of qubits in the circuit.
