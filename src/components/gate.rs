@@ -847,13 +847,13 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * `Gate` - A new instance of the Gate struct representing a Unitary2 gate.
-    pub fn unitary2_gate(qubit_index: usize, unitary: [[Complex<f64>; 2]; 2]) -> Self {
-        Gate::Operator(
-            Box::new(Unitary2::new(unitary).unwrap()),
+    /// * `Result<Gate, Error>` - A Gate struct representing a Unitary2 gate if the unitary is valid, else an error.
+    pub fn unitary2_gate(qubit_index: usize, unitary: [[Complex<f64>; 2]; 2]) -> Result<Self, Error> {
+        Ok(Gate::Operator(
+            Box::new(Unitary2::new(unitary)?),
             vec![qubit_index],
             vec![],
-        )
+        ))
     }
 
     /// Creates new Unitary2 gates for the specified qubit indices and unitary matrix.
@@ -866,16 +866,17 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * `Vec<Gate>` - A vector of Gate structs representing Unitary2 gates for each qubit index.
+    /// * `Result<Vec<Gate>, Error>` - A vector of Gate structs representing Unitary2 gates for each qubit index if the unitary is valid,, else an error.
     pub fn unitary2_multi_gate(
         qubit_indices: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
-    ) -> Vec<Self> {
-        let op_template = Unitary2::new(unitary).unwrap();
-        qubit_indices
+    ) -> Result<Vec<Self>, Error> {
+        let op_template = Unitary2::new(unitary)?;
+        let gates = qubit_indices
             .into_iter()
             .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
-            .collect()
+            .collect();
+        Ok(gates)
     }
 
     /// Creates new controlled Unitary2 gates for the specified qubit indices and unitary matrix.
@@ -890,21 +891,22 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * `Gates` - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
+    /// * Result<Vec<Gate>, Error> - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index if the unitary is valid, else an error.
     pub fn unitary2_controlled_gates(
         target_indices: Vec<usize>,
         control_indices: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
-    ) -> Vec<Self> {
-        let op_template = Unitary2::new(unitary).unwrap();
-        target_indices
+    ) -> Result<Vec<Self>, Error> {
+        let op_template = Unitary2::new(unitary)?;
+        let gates = target_indices
             .into_iter()
             .map(|target_index| Gate::Operator(
                 Box::new(op_template),
                 vec![target_index],
                 control_indices.clone(),
             ))
-            .collect()
+            .collect();
+        Ok(gates)
     }
 
     // -- MULTI-QUBIT GATES --

@@ -804,10 +804,16 @@ impl CircuitBuilder {
     /// * `qubit` - The index of the qubit to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    pub fn unitary_gate(&mut self, qubit: usize, unitary: [[Complex<f64>; 2]; 2]) -> &mut Self {
-        let gate: Gate = Gate::unitary2_gate(qubit, unitary);
+    /// 
+    /// # Warning
+    /// 
+    /// This method is fallible due to the potential for invalid unitary matrices.
+    /// If the unitary matrix is not valid, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn unitary_gate(&mut self, qubit: usize, unitary: [[Complex<f64>; 2]; 2]) -> Result<&mut Self, Error> {
+        let gate: Gate = Gate::unitary2_gate(qubit, unitary)?;
         self.add_gate(gate);
-        self
+        Ok(self)
     }
 
     /// Adds multiple arbitrary unitary operator gates to the circuit builder.
@@ -817,10 +823,16 @@ impl CircuitBuilder {
     /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) -> &mut Self {
-        let gates: Vec<Gate> = Gate::unitary2_multi_gate(qubits, unitary);
+    /// 
+    /// # Warning
+    /// 
+    /// This method is fallible due to the potential for invalid unitary matrices.
+    /// If the unitary matrix is not valid, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) -> Result<&mut Self, Error> {
+        let gates: Vec<Gate> = Gate::unitary2_multi_gate(qubits, unitary)?;
         self.add_gates(gates);
-        self
+        Ok(self)
     }
 
     /// Adds controlled arbitrary unitary operator gates to the circuit builder.
@@ -832,16 +844,21 @@ impl CircuitBuilder {
     /// * `control_qubits` - A vector of indices of the control qubits.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
+    /// 
+    /// # Warning
+    /// 
+    /// This method is fallible due to the potential for invalid unitary matrices.
+    /// If the unitary matrix is not valid, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
     pub fn cunitary_gates(
         &mut self,
         target_qubits: Vec<usize>,
         control_qubits: Vec<usize>,
         unitary: [[Complex<f64>; 2]; 2],
-    ) -> &mut Self {
-        let gates: Vec<Gate> =
-            Gate::unitary2_controlled_gates(target_qubits, control_qubits, unitary);
+    ) -> Result<&mut Self, Error> {
+        let gates = Gate::unitary2_controlled_gates(target_qubits, control_qubits, unitary)?;
         self.add_gates(gates);
-        self
+        Ok(self)
     }
 
     // -- MULTI-QUBIT GATES --
