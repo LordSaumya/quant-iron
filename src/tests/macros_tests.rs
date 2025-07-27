@@ -1,6 +1,4 @@
 use crate::{
-    circuit::{Circuit, CircuitBuilder},
-    components::{gate::Gate, measurement::MeasurementBasis, state::State},
     errors::Error,
 };
 
