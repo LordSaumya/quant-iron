@@ -49,10 +49,10 @@
 /// ## Gates with Angles
 ///
 /// Angles are `f64` values.
-/// - `rx(qubit, angle)`
-/// - `ry(qubit, angle)`
-/// - `rz(qubit, angle)`
-/// - `p(qubit, angle)`
+/// - `rx(qubit, angle)` or `rx([qubits], angle)`
+/// - `ry(qubit, angle)` or `ry([qubits], angle)`
+/// - `rz(qubit, angle)` or `rz([qubits], angle)`
+/// - `p(qubit, angle)` or `p([qubits], angle)`
 ///
 /// ## Controlled Gates with Angles
 ///
@@ -168,6 +168,10 @@ macro_rules! circuit_internal {
     ($builder:ident, ctdag($target:expr, $control:expr), $($rest:tt)*) => { $builder.ctdag_gates(vec![$target], vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
 
     // Gates with angles
+    ($builder:ident, rx([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.rx_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ry([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.ry_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, rz([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.rz_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, p([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.p_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, rx($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rx_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, ry($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.ry_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, rz($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rz_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
@@ -277,6 +281,10 @@ macro_rules! circuit_internal {
     ($builder:ident, ctdag($target:expr, $control:expr)) => { $builder.ctdag_gates(vec![$target], vec![$control]); };
 
     // Gates with angles
+    ($builder:ident, rx([$($qubits:expr),*], $angle:expr)) => { $builder.rx_gates(vec![$($qubits),*], $angle); };
+    ($builder:ident, ry([$($qubits:expr),*], $angle:expr)) => { $builder.ry_gates(vec![$($qubits),*], $angle); };
+    ($builder:ident, rz([$($qubits:expr),*], $angle:expr)) => { $builder.rz_gates(vec![$($qubits),*], $angle); };
+    ($builder:ident, p([$($qubits:expr),*], $angle:expr)) => { $builder.p_gates(vec![$($qubits),*], $angle); };
     ($builder:ident, rx($qubit:expr, $angle:expr)) => { $builder.rx_gate($qubit, $angle); };
     ($builder:ident, ry($qubit:expr, $angle:expr)) => { $builder.ry_gate($qubit, $angle); };
     ($builder:ident, rz($qubit:expr, $angle:expr)) => { $builder.rz_gate($qubit, $angle); };

@@ -276,3 +276,22 @@ fn test_circuit_macro_measurement_success() {
     assert_eq!(circuit.num_qubits, 3);
     assert_eq!(circuit.gates.len(), 8);
 }
+
+#[test]
+fn test_circuit_macro_angle_gates_success() {
+    let circuit = circuit! {
+        qubits: 3,
+        rx(0, PI / 2.0),
+        ry(1, PI / 2.0),
+        rz(2, PI / 2.0),
+        p(0, PI / 2.0),
+        rx([0, 1], PI / 2.0),
+        ry([1, 2], PI / 2.0),
+        rz([0, 2], PI / 2.0),
+        p([0, 1, 2], PI / 2.0)
+    }
+    .expect("Failed to create circuit with angle gates");
+
+    assert_eq!(circuit.num_qubits, 3);
+    assert_eq!(circuit.gates.len(), 4 + 2 + 2 + 2 + 3);
+}
