@@ -72,6 +72,10 @@
 /// - `unitary(qubit, matrix)`
 /// - `unitary([qubits], matrix)`
 /// - `cunitary(target, control, matrix)` or `cunitary([targets], [controls], matrix)`
+/// 
+/// ### Warning
+/// 
+/// * The `matrix` must be a valid unitary matrix. if the matrix is not unitary, the macro will panic.
 ///
 /// ## Measurement Gates
 ///
@@ -188,12 +192,12 @@ macro_rules! circuit_internal {
     ($builder:ident, cp($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
 
     // --- Unitary and controlled unitary gates ---
-    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.unitary_gates(vec![$($qubits),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, unitary($qubit:expr, $matrix:expr), $($rest:tt)*) => { $builder.unitary_gate($qubit, $matrix); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.unitary_gates(vec![$($qubits),*], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, unitary($qubit:expr, $matrix:expr), $($rest:tt)*) => { $builder.unitary_gate($qubit, $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr), $($rest:tt)*) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
 
     // --- Special gates ---
     ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr), $($rest:tt)*) => { $builder.toffoli_gate($target, $control1, $control2); $crate::circuit_internal!($builder, $($rest)*); };
@@ -297,12 +301,12 @@ macro_rules! circuit_internal {
     ($builder:ident, cp($target:expr, $control:expr, $angle:expr)) => { $builder.cp_gates(vec![$target], vec![$control], $angle); };
 
     // Unitary and Controlled Unitary Gates
-    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr)) => { $builder.unitary_gates(vec![$($qubits),*], $matrix); };
-    ($builder:ident, unitary($qubit:expr, $matrix:expr)) => { $builder.unitary_gate($qubit, $matrix); };
-    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix); };
-    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix); };
-    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix); };
-    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix); };
+    ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr)) => { $builder.unitary_gates(vec![$($qubits),*], $matrix).unwrap(); };
+    ($builder:ident, unitary($qubit:expr, $matrix:expr)) => { $builder.unitary_gate($qubit, $matrix).unwrap(); };
+    ($builder:ident, cunitary([$($targets:expr),*], [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$($controls),*], $matrix).unwrap(); };
+    ($builder:ident, cunitary([$($targets:expr),*], $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$($targets),*], vec![$control], $matrix).unwrap(); };
+    ($builder:ident, cunitary($target:expr, [$($controls:expr),*], $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$($controls),*], $matrix).unwrap(); };
+    ($builder:ident, cunitary($target:expr, $control:expr, $matrix:expr)) => { $builder.cunitary_gates(vec![$target], vec![$control], $matrix).unwrap(); };
 
     // Special Gates
     ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr)) => { $builder.toffoli_gate($target, $control1, $control2); };
