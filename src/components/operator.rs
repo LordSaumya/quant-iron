@@ -1,22 +1,22 @@
+use crate::compiler::compilable::Compilable;
+#[cfg(feature = "gpu")]
+use crate::components::gpu_context::GpuKernelArgs;
+#[cfg(feature = "gpu")]
+use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 use crate::{components::state::State, errors::Error};
 use dyn_clone::DynClone;
 use num_complex::Complex;
-use rayon::prelude::*;
-use std::{collections::HashSet, fmt::Debug};
-#[cfg(feature = "gpu")]
-use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
 #[cfg(feature = "gpu")]
 use ocl::prm::Float2;
+use rayon::prelude::*;
 #[cfg(feature = "gpu")]
 use std::f64::consts::PI;
-#[cfg(feature = "gpu")]
-use crate::components::gpu_context::GpuKernelArgs;
-use crate::compiler::compilable::Compilable;
+use std::{collections::HashSet, fmt::Debug};
 
 /// Threshold for using parallel CPU implementation
 const PARALLEL_THRESHOLD_NUM_QUBITS: usize = 10;
 
- /// Threshold for using OpenCL (GPU acceleration)
+/// Threshold for using OpenCL (GPU acceleration)
 const OPENCL_THRESHOLD_NUM_QUBITS: usize = 15;
 
 #[cfg(feature = "gpu")]
@@ -39,31 +39,42 @@ fn execute_on_gpu(
 
     // Ensure buffers are ready and get mutable references
     let state_buffer_cloned = context.ensure_state_buffer(num_state_elements)?.clone();
-    
+
     let control_qubits_i32: Vec<i32> = control_qubits.iter().map(|&q| q as i32).collect();
     let control_buffer_len = control_qubits_i32.len();
     let control_buffer_cloned = context.ensure_control_buffer(control_buffer_len)?.clone();
-    
-    let state_vector_f32: Vec<Float2> = state.state_vector.iter()
+
+    let state_vector_f32: Vec<Float2> = state
+        .state_vector
+        .iter()
         .map(|c| Float2::new(c.re as f32, c.im as f32))
         .collect();
-    
+
     // Copy data to GPU buffers
-    state_buffer_cloned.write(&state_vector_f32).enq()
+    state_buffer_cloned
+        .write(&state_vector_f32)
+        .enq()
         .map_err(|e| Error::OpenCLError(format!("Failed to write to state buffer: {}", e)))?;
 
     if !control_qubits_i32.is_empty() {
-        control_buffer_cloned.write(&control_qubits_i32).enq()
+        control_buffer_cloned
+            .write(&control_qubits_i32)
+            .enq()
             .map_err(|e| Error::OpenCLError(format!("Failed to write to control buffer: {}", e)))?;
     } else {
         // Write dummy data if no control qubits
         let dummy_control_data = vec![0; 1]; // Dummy data for control buffer
-         control_buffer_cloned.write(&dummy_control_data).enq()
-            .map_err(|e| Error::OpenCLError(format!("Failed to write to dummy control buffer: {}", e)))?;
+        control_buffer_cloned
+            .write(&dummy_control_data)
+            .enq()
+            .map_err(|e| {
+                Error::OpenCLError(format!("Failed to write to dummy control buffer: {}", e))
+            })?;
     }
 
     let mut kernel_builder = context.pro_que.kernel_builder(kernel_type.name());
-    kernel_builder.global_work_size(global_work_size)
+    kernel_builder
+        .global_work_size(global_work_size)
         .arg(&state_buffer_cloned) // Pass by reference
         .arg(num_qubits as i32)
         .arg(target_qubit as i32)
@@ -77,30 +88,60 @@ fn execute_on_gpu(
         GpuKernelArgs::SOrSdag { sign } => {
             kernel_builder.arg(sign);
         }
-        GpuKernelArgs::PhaseShift { cos_angle, sin_angle } => {
+        GpuKernelArgs::PhaseShift {
+            cos_angle,
+            sin_angle,
+        } => {
             kernel_builder.arg(cos_angle).arg(sin_angle);
         }
         GpuKernelArgs::SwapTarget { q1 } => {
             kernel_builder.arg(q1);
         }
-        GpuKernelArgs::RotationGate { cos_half_angle, sin_half_angle } => {
+        GpuKernelArgs::RotationGate {
+            cos_half_angle,
+            sin_half_angle,
+        } => {
             kernel_builder.arg(cos_half_angle).arg(sin_half_angle);
+        }
+        GpuKernelArgs::Matchgate {
+            q1,
+            cos_theta_half,
+            sin_theta_half,
+            exp_i_phi1,
+            exp_i_phi2,
+        } => {
+            kernel_builder
+                .arg(q1)
+                .arg(cos_theta_half)
+                .arg(sin_theta_half)
+                .arg(exp_i_phi1)
+                .arg(exp_i_phi2);
         }
     }
 
-    let kernel = kernel_builder.build()
-        .map_err(|e| Error::OpenCLError(format!("Failed to build kernel '{}': {}", kernel_type.name(), e)))?;
+    let kernel = kernel_builder.build().map_err(|e| {
+        Error::OpenCLError(format!(
+            "Failed to build kernel '{}': {}",
+            kernel_type.name(),
+            e
+        ))
+    })?;
 
     unsafe {
-        kernel.enq().map_err(|e| Error::OpenCLError(format!("Failed to enqueue kernel: {}", e)))?;
+        kernel
+            .enq()
+            .map_err(|e| Error::OpenCLError(format!("Failed to enqueue kernel: {}", e)))?;
     }
 
     let mut state_vector_ocl_result = vec![Float2::new(0.0, 0.0); num_state_elements];
     // Read data back from state_buffer
-    state_buffer_cloned.read(&mut state_vector_ocl_result).enq()
+    state_buffer_cloned
+        .read(&mut state_vector_ocl_result)
+        .enq()
         .map_err(|e| Error::OpenCLError(format!("Failed to read state buffer: {}", e)))?;
 
-    Ok(state_vector_ocl_result.iter()
+    Ok(state_vector_ocl_result
+        .iter()
         .map(|f2| Complex::new(f2[0] as f64, f2[1] as f64))
         .collect())
 }
@@ -135,10 +176,10 @@ pub trait Operator: Send + Sync + Debug + DynClone {
     fn base_qubits(&self) -> usize;
 
     /// Optionally returns an intermediate representation of the operator for compilation to OpenQASM.
-    /// 
+    ///
     /// If you are not planning to compile the operator to an IR, you can ignore this method.
     /// If you want to compile the operator to QASM, you should implement this method.
-    /// 
+    ///
     /// # Returns:
     ///  * An optional vector of `InstructionIR` representing the operator in an intermediate representation.
     fn to_compilable(&self) -> Option<&dyn Compilable> {
@@ -167,7 +208,7 @@ fn check_controls(index: usize, control_qubits: &[usize]) -> bool {
 ///
 /// # Returns:
 ///
-/// * `Ok(())` if all validations pass.
+/// * `Ok(())` if all validations pass, ie. the target qubits are valid indices, the control qubits are valid indices, and there are no overlaps between control and target qubits.
 /// * `Err(Error)` if any validation fails.
 fn validate_qubits(
     state: &State,
@@ -253,7 +294,7 @@ impl Operator for Hadamard {
     ///
     /// # Errors:
     ///
-    /// * `Error::InvalidNumberOfQubits` - If the target qubits is not 1.
+    /// * `Error::InvalidNumberOfQubits` - If the number of target qubits is not 1.
     ///
     /// * `Error::InvalidQubitIndex` - If the target qubit or control qubit index is invalid for the number of qubits in the state.
     ///
@@ -280,7 +321,11 @@ impl Operator for Hadamard {
         if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
             #[cfg(feature = "gpu")]
             {
-                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
+                let global_work_size = if num_qubits > 0 {
+                    1 << (num_qubits - 1)
+                } else {
+                    1
+                };
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit,
@@ -317,9 +362,11 @@ impl Operator for Hadamard {
                 let updates: Vec<(usize, Complex<f64>)> = (0..dim)
                     .into_par_iter()
                     .filter_map(|i| {
-                        if (i >> target_qubit) & 1 == 0 { // Process pairs (i, j) where i has 0 at target_qubit
+                        if (i >> target_qubit) & 1 == 0 {
+                            // Process pairs (i, j) where i has 0 at target_qubit
                             let j = i | (1 << target_qubit); // j has 1 at target_qubit
-                            if check_controls(i, control_qubits) { // Check controls based on i
+                            if check_controls(i, control_qubits) {
+                                // Check controls based on i
                                 let amp_i = state.state_vector[i];
                                 let amp_j = state.state_vector[j];
                                 Some(vec![
@@ -412,7 +459,7 @@ impl Operator for Pauli {
     ///
     /// # Errors:
     ///
-    /// * `Error::InvalidNumberOfQubits` - If the target qubits is not 1.
+    /// * `Error::InvalidNumberOfQubits` - If the number of target qubits is not 1.
     ///
     /// * `Error::InvalidQubitIndex` - If the target qubit index is invalid for the number of qubits in the state.
     ///
@@ -448,7 +495,7 @@ impl Operator for Pauli {
                 } else {
                     match self {
                         Pauli::Z => 1 << num_qubits, // N work items for Pauli Z
-                        _ => 1 << (num_qubits - 1),   // N/2 work items for Pauli X, Y
+                        _ => 1 << (num_qubits - 1),  // N/2 work items for Pauli X, Y
                     }
                 };
                 new_state_vec = execute_on_gpu(
@@ -681,14 +728,20 @@ impl Operator for SWAP {
                 // For SWAP, global_work_size is 2^(N-2) because each work item handles
                 // a pair of states differing at target_qubit_1 and target_qubit_2.
                 // The kernel iterates over the 2^(N-2) combinations of other qubits.
-                let global_work_size = if num_qubits >= 2 { 1 << (num_qubits - 2) } else { 1 }; // Handle N=0,1 edge cases for work size
+                let global_work_size = if num_qubits >= 2 {
+                    1 << (num_qubits - 2)
+                } else {
+                    1
+                }; // Handle N=0,1 edge cases for work size
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit_1, // target_a in kernel
                     control_qubits,
                     KernelType::Swap,
                     global_work_size,
-                    GpuKernelArgs::SwapTarget { q1: target_qubit_2 as i32 }, // target_b in kernel
+                    GpuKernelArgs::SwapTarget {
+                        q1: target_qubit_2 as i32,
+                    }, // target_b in kernel
                 )?;
             }
         } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
@@ -747,6 +800,186 @@ impl Operator for SWAP {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+/// Defines a matchgate operator.
+///
+/// A two-qubit operator that applies a matchgate transformation to the adjacent target qubits.
+/// This gate can be decomposed into a two-qubit rotation and phase shifts.
+/// It is designed to simulate nearest-neighbor interactions in fermionic systems.
+///
+/// It resembles the matrix operator:
+/// ```
+/// [1 0 0 0; 0 cos(theta/2) -e^(i*phi1)sin(theta/2) 0; 0 sin(theta/2) e^(i*phi2)cos(theta/2) 0; 0 0 0 e^(i*phi2)]
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct Matchgate {
+    pub(crate) theta: f64,
+    pub(crate) phi1: f64,
+    pub(crate) phi2: f64,
+}
+
+impl Matchgate {
+    /// Creates a new Matchgate operator with the specified parameters.
+    ///
+    /// # Arguments:
+    ///
+    /// * `theta` - The angle of rotation in radians.
+    /// * `phi1` - The first phase shift in radians.
+    /// * `phi2` - The second phase shift in radians.
+    pub fn new(theta: f64, phi1: f64, phi2: f64) -> Self {
+        Matchgate { theta, phi1, phi2 }
+    }
+}
+
+impl Operator for Matchgate {
+    /// Applies the matchgate operator to the given state's target qubit and its adjacent qubit.
+    ///
+    /// # Arguments:
+    ///
+    /// * `state` - The state to apply the operator to.
+    ///
+    /// * `target_qubit` - The target qubit to apply the operator to. The adjacent is automatically determined as the next qubit.
+    ///
+    /// * `control_qubits` - The control qubits for the operator. If not empty, the operator will be applied conditionally based on the control qubits. Otherwise, it will be applied unconditionally.
+    ///
+    /// # Returns:
+    ///
+    /// * The new state after applying the matchgate operator.
+    ///
+    /// # Errors:
+    ///
+    /// * `Error::InvalidNumberOfQubits` - If the number of target qubits is not 1.
+    ///
+    /// * `Error::InvalidQubitIndex` - If the target qubit indices are invalid for the number of qubits in the state, or if the target qubit is the last qubit.
+    ///
+    /// * `Error::OverlappingControlAndTargetQubits` - If the control qubit and target qubit indices overlap.
+    fn apply(
+        &self,
+        state: &State,
+        target_qubit: &[usize],
+        control_qubits: &[usize],
+    ) -> Result<State, Error> {
+        validate_qubits(state, target_qubit, control_qubits, 1)?;
+
+        let q1 = target_qubit[0];
+        // If q1 is the last qubit, return error
+        if q1 == state.num_qubits() - 1 {
+            return Err(Error::InvalidQubitIndex(q1, state.num_qubits()));
+        }
+
+        let q2 = q1 + 1; // q2 is always the next adjacent qubit.
+
+        let num_qubits = state.num_qubits();
+        let mut new_state_vec = state.state_vector.clone();
+        let gpu_enabled: bool = cfg!(feature = "gpu");
+
+        if num_qubits >= OPENCL_THRESHOLD_NUM_QUBITS && gpu_enabled {
+            #[cfg(feature = "gpu")]
+            {
+                let global_work_size = 1 << (num_qubits - 2);
+                let cos_theta_half = (self.theta / 2.0).cos() as f32;
+                let sin_theta_half = (self.theta / 2.0).sin() as f32;
+                let exp_i_phi1 = Complex::new(0.0, self.phi1).exp();
+                let exp_i_phi2 = Complex::new(0.0, self.phi2).exp();
+
+                new_state_vec = execute_on_gpu(
+                    state,
+                    q1,
+                    control_qubits,
+                    KernelType::Matchgate,
+                    global_work_size,
+                    GpuKernelArgs::Matchgate {
+                        q1: q2 as i32,
+                        cos_theta_half,
+                        sin_theta_half,
+                        exp_i_phi1: Float2::new(exp_i_phi1.re as f32, exp_i_phi1.im as f32),
+                        exp_i_phi2: Float2::new(exp_i_phi2.re as f32, exp_i_phi2.im as f32),
+                    },
+                )?;
+            }
+        } else if num_qubits >= PARALLEL_THRESHOLD_NUM_QUBITS {
+            // Parallel implementation
+            let cos_theta_half = (self.theta / 2.0).cos();
+            let sin_theta_half = (self.theta / 2.0).sin();
+            let exp_i_phi1 = Complex::new(0.0, self.phi1).exp();
+            let exp_i_phi2 = Complex::new(0.0, self.phi2).exp();
+
+            let updates: Vec<(usize, Complex<f64>)> = (0..(1 << (num_qubits - 2)))
+                .into_par_iter()
+                .flat_map(|i| {
+                    let k = ((i >> q1) << (q1 + 1)) | (i & ((1 << q1) - 1));
+                    let l = ((k >> (q2 - 1)) << q2) | (k & ((1 << (q2 - 1)) - 1));
+
+                    let i01 = l | (1 << q1);
+                    let i10 = l | (1 << q2);
+                    let i11 = l | (1 << q1) | (1 << q2);
+
+                    let mut updates = Vec::new();
+
+                    if check_controls(i01, control_qubits) {
+                        let amp01 = state.state_vector[i01];
+                        let amp10 = state.state_vector[i10];
+
+                        let new_amp01 =
+                            cos_theta_half * amp01 - exp_i_phi1 * sin_theta_half * amp10;
+                        let new_amp10 =
+                            sin_theta_half * amp01 + exp_i_phi1 * cos_theta_half * amp10;
+
+                        updates.push((i01, new_amp01));
+                        updates.push((i10, new_amp10));
+                    }
+
+                    if check_controls(i11, control_qubits) {
+                        let new_amp11 = state.state_vector[i11] * exp_i_phi2;
+                        updates.push((i11, new_amp11));
+                    }
+                    updates
+                })
+                .collect();
+
+            for (idx, val) in updates {
+                new_state_vec[idx] = val;
+            }
+        } else {
+            // Sequential implementation
+            let cos_theta_half = (self.theta / 2.0).cos();
+            let sin_theta_half = (self.theta / 2.0).sin();
+            let exp_i_phi1 = Complex::new(0.0, self.phi1).exp();
+            let exp_i_phi2 = Complex::new(0.0, self.phi2).exp();
+
+            for i in 0..(1 << (num_qubits - 2)) {
+                let k = ((i >> q1) << (q1 + 1)) | (i & ((1 << q1) - 1));
+                let l = ((k >> (q2 - 1)) << q2) | (k & ((1 << (q2 - 1)) - 1));
+
+                let i01 = l | (1 << q1);
+                let i10 = l | (1 << q2);
+                let i11 = l | (1 << q1) | (1 << q2);
+
+                if check_controls(i01, control_qubits) {
+                    let amp01 = state.state_vector[i01];
+                    let amp10 = state.state_vector[i10];
+
+                    new_state_vec[i01] =
+                        cos_theta_half * amp01 - exp_i_phi1 * sin_theta_half * amp10;
+                    new_state_vec[i10] =
+                        sin_theta_half * amp01 + exp_i_phi1 * cos_theta_half * amp10;
+                }
+                if check_controls(i11, control_qubits) {
+                    new_state_vec[i11] = state.state_vector[i11] * exp_i_phi2;
+                }
+            }
+        }
+
+        Ok(State {
+            state_vector: new_state_vec,
+            num_qubits,
+        })
+    }
+
+    fn base_qubits(&self) -> usize {
+        2
     }
 }
 
@@ -1247,7 +1480,7 @@ impl Operator for PhaseShift {
     ///
     /// # Errors:
     ///
-    /// * `Error::InvalidNumberOfQubits` - If the target qubits is not 1.
+    /// * `Error::InvalidNumberOfQubits` - If the number of target qubits is not 1.
     ///
     /// * `Error::InvalidQubitIndex` - If the target qubit index or control qubit index is invalid for the number of qubits in the state.
     ///
@@ -1376,7 +1609,11 @@ impl Operator for RotateX {
             #[cfg(feature = "gpu")]
             {
                 let half_angle = self.angle / 2.0;
-                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
+                let global_work_size = if num_qubits > 0 {
+                    1 << (num_qubits - 1)
+                } else {
+                    1
+                };
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit,
@@ -1509,7 +1746,11 @@ impl Operator for RotateY {
             #[cfg(feature = "gpu")]
             {
                 let half_angle = self.angle / 2.0;
-                let global_work_size = if num_qubits > 0 { 1 << (num_qubits - 1) } else { 1 };
+                let global_work_size = if num_qubits > 0 {
+                    1 << (num_qubits - 1)
+                } else {
+                    1
+                };
                 new_state_vec = execute_on_gpu(
                     state,
                     target_qubit,
