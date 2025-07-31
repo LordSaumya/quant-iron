@@ -3,7 +3,7 @@ use crate::{
         ChainableState,
         operator::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2
+            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
         },
         state::State,
     },
@@ -2033,6 +2033,183 @@ fn test_operator_swap_success() {
 }
 
 #[test]
+fn test_operator_matchgate_success() {
+
+    // Matchgate with targets 1 and 2, theta = Pi, Phi1 = Pi, Phi2 = 0 (equivalent to SWAP)
+    // |101> -> |011>
+    let state: State = State::new_basis_n(3, 5).unwrap(); // |101>
+    let new_state: State = state.matchgate(1, PI, PI, 0.0).expect("Matchgate failed");
+    let expected_state: State = State::new_basis_n(3, 3).unwrap(); // |011>
+    assert_eq!(new_state, expected_state);
+
+    // |101> -> |011> -> |101> (applying matchgate twice with swap config should return to original state)
+    let state: State = State::new_basis_n(3, 5).unwrap(); // |101>
+    let new_state: State = state.matchgate(1, PI, PI, 0.0).expect("Matchgate failed");
+    let new_state_again: State = new_state.matchgate(1, PI, PI, 0.0).expect("Matchgate failed");
+    assert_eq!(new_state_again, state, "Matchgate should return to original state after two applications");
+
+    // Matchgate with targets 0 and 1, theta = Pi, Phi1 = Pi/2, Phi2 = Pi/3
+    let state_00: State = State::new_basis_n(2, 0).unwrap(); // M|00> = |00>
+    let state_01: State = State::new_basis_n(2, 1).unwrap(); // M|01> = |10>
+    let state_10: State = State::new_basis_n(2, 2).unwrap(); // M|10> = -i|01>
+    let state_11: State = State::new_basis_n(2, 3).unwrap(); // M|11> = e^(i pi/3) |11>
+
+    let theta: f64 = PI;
+    let phi1: f64 = PI / 2.0;
+    let phi2: f64 = PI / 3.0;
+
+    let new_state_00: State = state_00.matchgate(0, theta, phi1, phi2).expect("Matchgate failed");
+    let expected_state_00: State = State::new_basis_n(2, 0).unwrap(); // |00>
+
+    assert_eq!(new_state_00, expected_state_00, "Matchgate on |00> failed");
+
+    let new_state_01: State = state_01.matchgate(0, theta, phi1, phi2).expect("Matchgate failed");
+    let expected_state_01: State = State::new_basis_n(2, 2).unwrap(); // |10>
+
+    assert_eq!(new_state_01, expected_state_01, "Matchgate on |01> failed");
+
+    let new_state_10: State = state_10.matchgate(0, theta, phi1, phi2).expect("Matchgate failed");
+    let expected_state_10: State = State::new_basis_n(2, 1).unwrap() * Complex::new(0.0, -1.0); // -i|01>
+
+    assert_eq!(new_state_10, expected_state_10, "M|10> = -i|01> failed");
+
+    let new_state_11: State = state_11.matchgate(0, theta, phi1, phi2).expect("Matchgate failed");
+    let expected_state_11: State = State::new_basis_n(2, 3).unwrap() * Complex::exp(Complex::new(0.0, PI / 3.0)); // e^(i pi/3) |11>
+
+    assert_eq!(new_state_11, expected_state_11, "M|11> = e^(i pi/3) |11> failed");
+
+    assert_eq!(Matchgate{theta: 1.0, phi1: 2.0, phi2: 3.0}.base_qubits(), 2, "Matchgate base qubits should be 2");
+
+    // Controlled Matchgate (Matchgate with control qubit)
+    // Matchgate with control qubit 0, targets 1 and 2, theta = Pi, Phi1 = Pi/2, Phi2 = Pi/3 (control qubit is 1)
+    let state_control: State = State::new_basis_n(3, 3).unwrap(); // |011>
+    let new_state_control: State = state_control.cmatchgate(1, PI, PI / 2.0, PI / 3.0, &[0]).expect("Controlled Matchgate failed");
+    let expected_state_control: State = State::new_basis_n(3, 5).unwrap(); // |101>
+    assert_eq!(new_state_control, expected_state_control, "Controlled Matchgate failed");
+
+    // Matchgate with control qubit 0, targets 1 and 2, theta = Pi, Phi1 = Pi/2, Phi2 = Pi/3 (control qubit is 0)
+    let state_control_0: State = State::new_basis_n(3, 4).unwrap(); // |100>
+    let new_state_control_0: State = state_control_0.cmatchgate(1, PI, PI / 2.0, PI / 3.0, &[0]).expect("Controlled Matchgate failed");
+    let expected_state_control_0: State = State::new_basis_n(3, 4).unwrap(); // |100>
+    assert_eq!(new_state_control_0, expected_state_control_0, "Controlled Matchgate with control 0 failed");
+
+    // Matchgate on 11 qubits (parallel method)
+    let num_test_qubits_matchgate_par = 11;
+    let theta_matchgate_par = PI;
+    let phi1_matchgate_par = PI / 2.0;
+    let phi2_matchgate_par = PI / 3.0;
+
+    // Targets 0 and 1
+    let state_matchgate_par_01: State = State::new_basis_n(num_test_qubits_matchgate_par, 1).unwrap(); // M(0, 1)|00000000001> = |000000000>M|10> = |00000000010>
+    let new_state_matchgate_par_01: State = state_matchgate_par_01.matchgate(0, theta_matchgate_par, phi1_matchgate_par, phi2_matchgate_par).expect("Matchgate parallel (targets 0 and 1) failed");
+    let expected_state_matchgate_par_01: State = State::new_basis_n(num_test_qubits_matchgate_par, 2).unwrap(); // |00000000010>
+    assert_eq!(new_state_matchgate_par_01, expected_state_matchgate_par_01, "Matchgate parallel (targets 0 and 1) failed");
+
+    let state_matchgate_par_10: State = State::new_basis_n(num_test_qubits_matchgate_par, 2).unwrap(); // M(0, 1)|00000000010> = |000000000>M|01> = -i|00000000001>
+    let new_state_matchgate_par_10: State = state_matchgate_par_10.matchgate(0, theta_matchgate_par, phi1_matchgate_par, phi2_matchgate_par).expect("Matchgate parallel (targets 0 and 1) failed");
+    let expected_state_matchgate_par_10: State = State::new_basis_n(num_test_qubits_matchgate_par, 1).unwrap() * Complex::new(0.0, -1.0); // -i * |00000000001>
+    assert_eq!(new_state_matchgate_par_10, expected_state_matchgate_par_10, "Matchgate parallel (targets 0 and 1) failed");
+    
+    // Controlled matchgate on 11 qubits (parallel method)
+    let control_matchgate_par = &[num_test_qubits_matchgate_par - 1]; // Control qubit is q10
+    let controls_matchgate_par = &[num_test_qubits_matchgate_par - 1, num_test_qubits_matchgate_par - 2]; // Controls are q10 and q9
+    let num_test_qubits_cmatchgate_par = 11;
+    let theta_cmatchgate_par = PI;
+    let phi1_cmatchgate_par = PI / 2.0;
+    let phi2_cmatchgate_par = PI / 3.0;
+
+    // Targets 0 and 1, control is 0
+    let state_cmatchgate_par_01_c0: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1).unwrap(); // |00000000001>
+    let new_state_cmatchgate_par_01_c0: State = state_cmatchgate_par_01_c0.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, control_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, control 0) failed");
+    assert_eq!(new_state_cmatchgate_par_01_c0, state_cmatchgate_par_01_c0, "Controlled Matchgate parallel (targets 0 and 1, control 0) failed"); // No change
+
+    let state_cmatchgate_par_10_c0: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 2).unwrap(); // |00000000010>
+    let new_state_cmatchgate_par_10_c0: State = state_cmatchgate_par_10_c0.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, control_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, control 0) failed");
+    assert_eq!(new_state_cmatchgate_par_10_c0, state_cmatchgate_par_10_c0);
+
+    // Targets 0 and 1, control is 1
+    let state_cmatchgate_par_01_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 1).unwrap(); // |10000000001>
+    let new_state_cmatchgate_par_01_c1: State = state_cmatchgate_par_01_c1.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, control_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, control 1) failed");
+    let expected_state_cmatchgate_par_01_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 2).unwrap(); // |10000000010>
+    assert_eq!(new_state_cmatchgate_par_01_c1, expected_state_cmatchgate_par_01_c1, "Controlled Matchgate parallel (targets 0 and 1, control 1) failed");
+
+    let state_cmatchgate_par_10_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 2).unwrap(); // |10000000010>
+    let new_state_cmatchgate_par_10_c1: State = state_cmatchgate_par_10_c1.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, control_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, control 1) failed");
+    let expected_state_cmatchgate_par_10_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 1).unwrap() * Complex::new(0.0, -1.0); // -i * |10000000001>
+    assert_eq!(new_state_cmatchgate_par_10_c1, expected_state_cmatchgate_par_10_c1, "Controlled Matchgate parallel (targets 0 and 1, control 1) failed");
+
+    // Targets 0 and 1, controls are 0, 1
+    let state_cmatchgate_par_01_c01: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 1).unwrap(); // |10000000001>
+    let new_state_cmatchgate_par_01_c01: State = state_cmatchgate_par_01_c01.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, controls_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, controls 0 and 1) failed");
+    assert_eq!(new_state_cmatchgate_par_01_c01, state_cmatchgate_par_01_c01, "Controlled Matchgate parallel (targets 0 and 1, controls 0 and 1) failed"); // No change
+
+    // Targets 0 and 1, controls are 1, 1
+    let state_cmatchgate_par_10_c11: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 512 + 2).unwrap(); // |11000000010>
+    let new_state_cmatchgate_par_10_c11: State = state_cmatchgate_par_10_c11.cmatchgate(0, theta_cmatchgate_par, phi1_cmatchgate_par, phi2_cmatchgate_par, controls_matchgate_par).expect("Controlled Matchgate parallel (targets 0 and 1, controls 1 and 1) failed");
+    let expected_state_cmatchgate_par_10_c11: State = State::new_basis_n(num_test_qubits_cmatchgate_par, 1024 + 512 + 1).unwrap() * Complex::new(0.0, -1.0); // -i * |11000000001>
+    assert_eq!(new_state_cmatchgate_par_10_c11, expected_state_cmatchgate_par_10_c11, "Controlled Matchgate parallel (targets 0 and 1, controls 1 and 1) failed");
+    
+    #[cfg(feature = "gpu")]
+    {
+        // GPU Matchgate on 15 qubits
+        let num_test_qubits_matchgate_gpu = 15;
+        let theta_matchgate_gpu = PI;
+        let phi1_matchgate_gpu = PI / 2.0;
+        let phi2_matchgate_gpu = PI / 3.0;
+
+        // Targets 0 and 1
+        let state_matchgate_gpu_01: State = State::new_basis_n(num_test_qubits_matchgate_gpu, 1).unwrap(); // M(0, 1)|000000000000001> = |000000000000000>M|10> = |000000000000010>
+        let new_state_matchgate_gpu_01: State = state_matchgate_gpu_01.matchgate(0, theta_matchgate_gpu, phi1_matchgate_gpu, phi2_matchgate_gpu).expect("Matchgate GPU (targets 0 and 1) failed");
+        let expected_state_matchgate_gpu_01: State = State::new_basis_n(num_test_qubits_matchgate_gpu, 2).unwrap(); // |000000000000010>
+        assert_eq!(new_state_matchgate_gpu_01, expected_state_matchgate_gpu_01, "Matchgate GPU (targets 0 and 1) failed");
+
+        let state_matchgate_gpu_10: State = State::new_basis_n(num_test_qubits_matchgate_gpu, 2).unwrap(); // M(0, 1)|000000000000010> = |000000000000000>M|01> = -i|000000000000001>
+        let new_state_matchgate_gpu_10: State = state_matchgate_gpu_10.matchgate(0, theta_matchgate_gpu, phi1_matchgate_gpu, phi2_matchgate_gpu).expect("Matchgate GPU (targets 0 and 1) failed");
+        let expected_state_matchgate_gpu_10: State = State::new_basis_n(num_test_qubits_matchgate_gpu, 1).unwrap() * Complex::new(0.0, -1.0); // -i * |000000000000001>
+        assert_eq!(new_state_matchgate_gpu_10, expected_state_matchgate_gpu_10, "Matchgate GPU (targets 0 and 1) failed");
+
+        // Controlled Matchgate on 15 qubits (parallel method)
+        let control_matchgate_gpu = &[num_test_qubits_matchgate_gpu - 1]; // Control qubit is q14
+        let controls_matchgate_gpu = &[num_test_qubits_matchgate_gpu - 1, num_test_qubits_matchgate_gpu - 2]; // Controls are q14 and q13
+        let num_test_qubits_cmatchgate_gpu = 15;
+        let theta_cmatchgate_gpu = PI;
+        let phi1_cmatchgate_gpu = PI / 2.0;
+        let phi2_cmatchgate_gpu = PI / 3.0;
+
+        // Targets 0 and 1, control is 0
+        let state_cmatchgate_gpu_01_c0: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 1).unwrap(); // |000000000000001>
+        let new_state_cmatchgate_gpu_01_c0: State = state_cmatchgate_gpu_01_c0.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, control_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, control 0) failed");
+        assert_eq!(new_state_cmatchgate_gpu_01_c0, state_cmatchgate_gpu_01_c0, "Controlled Matchgate GPU (targets 0 and 1, control 0) failed"); // No change
+
+        let state_cmatchgate_gpu_10_c0: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 2).unwrap(); // |000000000000010>
+        let new_state_cmatchgate_gpu_10_c0: State = state_cmatchgate_gpu_10_c0.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, control_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, control 0) failed");
+        assert_eq!(new_state_cmatchgate_gpu_10_c0, state_cmatchgate_gpu_10_c0);
+
+        // Targets 0 and 1, control is 1
+        let state_cmatchgate_gpu_01_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 1).unwrap(); // |100000000000001>
+        let new_state_cmatchgate_gpu_01_c1: State = state_cmatchgate_gpu_01_c1.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, control_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, control 1) failed");
+        let expected_state_cmatchgate_gpu_01_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 2).unwrap(); // |100000000000010>
+        assert_eq!(new_state_cmatchgate_gpu_01_c1, expected_state_cmatchgate_gpu_01_c1, "Controlled Matchgate GPU (targets 0 and 1, control 1) failed");
+
+        let state_cmatchgate_gpu_10_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 2).unwrap(); // |100000000000010>
+        let new_state_cmatchgate_gpu_10_c1: State = state_cmatchgate_gpu_10_c1.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, control_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, control 1) failed");
+        let expected_state_cmatchgate_gpu_10_c1: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 1).unwrap() * Complex::new(0.0, -1.0); // -i * |100000000000001>
+        assert_eq!(new_state_cmatchgate_gpu_10_c1, expected_state_cmatchgate_gpu_10_c1, "Controlled Matchgate GPU (targets 0 and 1, control 1) failed");
+
+        // Targets 0 and 1, controls are 0, 1
+        let state_cmatchgate_gpu_01_c01: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 1).unwrap(); // |100000000000001>
+        let new_state_cmatchgate_gpu_01_c01: State = state_cmatchgate_gpu_01_c01.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, controls_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, controls 0 and 1) failed");
+        assert_eq!(new_state_cmatchgate_gpu_01_c01, state_cmatchgate_gpu_01_c01, "Controlled Matchgate GPU (targets 0 and 1, controls 0 and 1) failed"); // No change
+
+        // Targets 0 and 1, controls are 1, 1
+        let state_cmatchgate_gpu_10_c11: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 8192 + 2).unwrap(); // |110000000000010>
+        let new_state_cmatchgate_gpu_10_c11: State = state_cmatchgate_gpu_10_c11.cmatchgate(0, theta_cmatchgate_gpu, phi1_cmatchgate_gpu, phi2_cmatchgate_gpu, controls_matchgate_gpu).expect("Controlled Matchgate GPU (targets 0 and 1, controls 1 and 1) failed");
+        let expected_state_cmatchgate_gpu_10_c11: State = State::new_basis_n(num_test_qubits_cmatchgate_gpu, 16384 + 8192 + 1).unwrap() * Complex::new(0.0, -1.0); // -i * |110000000000001>
+        assert_eq!(new_state_cmatchgate_gpu_10_c11, expected_state_cmatchgate_gpu_10_c11, "Controlled Matchgate GPU (targets 0 and 1, controls 1 and 1) failed");
+    }
+}
+
+#[test]
 fn test_operator_toffoli_success() {
     // Toffoli gate (CCNOT) with control qubits 0 and 1, target qubit 2
     // |000> -> |000>
@@ -2304,5 +2481,45 @@ fn test_multi_qubit_gate_errors() {
         invalid_index,
         num_qubits,
         toffoli_invalid_target
+    );
+
+    // --- Matchgate Gate Index Errors ---
+    let num_qubits = state.num_qubits();
+    let invalid_index = num_qubits;
+    let last_index = num_qubits - 1;
+
+    // Invalid first target index (out of bounds)
+    let matchgate_invalid_q1 = state.matchgate(invalid_index, PI, 0.0, 0.0);
+    assert!(
+        matches!(
+            matchgate_invalid_q1,
+            Err(Error::InvalidQubitIndex(idx, nq)) if idx == invalid_index && nq == num_qubits
+        ),
+        "Matchgate failed (invalid q1): Expected InvalidQubitIndex({}, {}), got {:?}",
+        invalid_index, num_qubits, matchgate_invalid_q1
+    );
+
+    // Invalid first target index (last index)
+    let matchgate_invalid_q1_last = state.matchgate(last_index, PI, 0.0, 0.0);
+    assert!(
+        matches!(
+            matchgate_invalid_q1_last,
+            Err(Error::InvalidQubitIndex(idx, nq)) if idx == last_index && nq == num_qubits
+        ),
+        "Matchgate failed (invalid q1 last): Expected InvalidQubitIndex({}, {}), got {:?}",
+        last_index, num_qubits, matchgate_invalid_q1_last
+    );
+
+    // Overlapping control and target qubit
+    let matchgate_overlapping_control = state.cmatchgate(
+        0, PI, 0.0, 0.0, &[0]
+    );
+    assert!(
+        matches!(
+            matchgate_overlapping_control,
+            Err(Error::OverlappingControlAndTargetQubits(c, t)) if c == 0 && t == 0
+        ),
+        "Matchgate failed (overlapping control): Expected OverlappingControlAndTargetQubits(0, 0), got {:?}",
+        matchgate_overlapping_control
     );
 }
