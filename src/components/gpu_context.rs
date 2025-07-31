@@ -19,6 +19,7 @@ pub(crate) enum KernelType {
     RotateX,
     RotateY,
     RotateZ,
+    Matchgate,
 }
 
 impl std::fmt::Display for KernelType {
@@ -34,6 +35,7 @@ impl std::fmt::Display for KernelType {
             KernelType::RotateX => write!(f, "RotateX"),
             KernelType::RotateY => write!(f, "RotateY"),
             KernelType::RotateZ => write!(f, "RotateZ"),
+            KernelType::Matchgate => write!(f, "Matchgate"),
         }
     }
 }
@@ -52,6 +54,7 @@ impl KernelType {
             KernelType::RotateX => include_str!("kernels/rotate_x.cl"),
             KernelType::RotateY => include_str!("kernels/rotate_y.cl"),
             KernelType::RotateZ => include_str!("kernels/rotate_z.cl"),
+            KernelType::Matchgate => include_str!("kernels/match_gate.cl"),
         }
     }
 
@@ -67,6 +70,7 @@ impl KernelType {
             KernelType::RotateX => "rotate_x_kernel",
             KernelType::RotateY => "rotate_y_kernel",
             KernelType::RotateZ => "rotate_z_kernel",
+            KernelType::Matchgate => "match_gate_kernel",
         }
     }
 }
@@ -78,6 +82,13 @@ pub(crate) enum GpuKernelArgs {
     PhaseShift { cos_angle: f32, sin_angle: f32 },
     SwapTarget { q1: i32 }, // For SWAP gate, q0 is the standard target_qubit
     RotationGate { cos_half_angle: f32, sin_half_angle: f32 },
+    Matchgate {
+        q1: i32,
+        cos_theta_half: f32,
+        sin_theta_half: f32,
+        exp_i_phi1: Float2,
+        exp_i_phi2: Float2,
+    },
 }
 
 pub(crate) struct GpuContext {
@@ -91,7 +102,7 @@ pub(crate) struct GpuContext {
 impl GpuContext {
     fn new() -> Result<Self, Error> {
         let all_kernels_src = format!(
-            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
+            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
             KernelType::Hadamard.src(),
             KernelType::PauliX.src(),
             KernelType::PauliY.src(),
@@ -101,7 +112,8 @@ impl GpuContext {
             KernelType::Swap.src(),
             KernelType::RotateX.src(),
             KernelType::RotateY.src(),
-            KernelType::RotateZ.src()
+            KernelType::RotateZ.src(),
+            KernelType::Matchgate.src()
         );
 
         let pro_que = ProQue::builder()
