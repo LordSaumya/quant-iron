@@ -3,7 +3,7 @@ use crate::{
         measurement::MeasurementBasis,
         operator::{
             CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2
+            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
         },
         state::State,
     },
@@ -974,5 +974,57 @@ impl Gate {
     /// * `Gate` - A new instance of the Gate struct representing a Toffoli gate.
     pub fn toffoli_gate(target_index: usize, control_indices: Vec<usize>) -> Self {
         Gate::Operator(Box::new(Toffoli), vec![target_index], control_indices)
+    }
+
+    /// Creates a new Matchgate with the specified qubit index and its adjacent as targets.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the first target qubit. The second target qubit is assumed to be the next qubit.
+    /// * `theta` - The angle of rotation in radians.
+    /// * `phi1` - The first phase shift in radians.
+    /// * `phi2` - The second phase shift in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a Matchgate.
+    pub fn matchgate(
+        target_index: usize,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+    ) -> Self {
+        Gate::Operator(
+            Box::new(Matchgate::new(theta, phi1, phi2)),
+            vec![target_index],
+            vec![],
+        )
+    }
+
+    /// Creates a new controlled Matchgate with the specified qubit index and its adjacent as target qubits.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the first target qubit. The second target qubit is assumed to be the next qubit.
+    /// * `control_indices` - The indices of the control qubits.
+    /// * `theta` - The angle of rotation in radians.
+    /// * `phi1` - The first phase shift in radians.
+    /// * `phi2` - The second phase shift in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a controlled Matchgate.
+    pub fn controlled_matchgate(
+        target_index: usize,
+        control_indices: Vec<usize>,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+    ) -> Self {
+        Gate::Operator(
+            Box::new(Matchgate::new(theta, phi1, phi2)),
+            vec![target_index],
+            control_indices,
+        )
     }
 }
