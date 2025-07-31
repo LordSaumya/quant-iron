@@ -209,7 +209,7 @@ macro_rules! circuit_internal {
     ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr), $($rest:tt)*) => { $builder.toffoli_gate($target, $control1, $control2); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr), $($rest:tt)*) => { $builder.match_gate($target1, $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr), $($rest:tt)*) => { $builder.matchgate($target1, $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, $control:expr), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
 
@@ -325,7 +325,7 @@ macro_rules! circuit_internal {
     ($builder:ident, toffoli($target:expr, $control1:expr, $control2:expr)) => { $builder.toffoli_gate($target, $control1, $control2); };
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*])) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr)) => { $builder.cswap_gate($target1, $target2, vec![$control]); };
-    ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr)) => { $builder.match_gate($target1, $theta, $phi1, $phi2); };
+    ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr)) => { $builder.matchgate($target1, $theta, $phi1, $phi2); };
     ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, [$($controls:expr),*])) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); };
     ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, $control:expr)) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); };
 
