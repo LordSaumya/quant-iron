@@ -927,6 +927,49 @@ impl CircuitBuilder {
         self
     }
 
+    /// Adds a Matchgate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubit` - The index of the first target qubit. The second target qubit is assumed to be the next qubit.
+    /// * `theta` - The angle of rotation in radians.
+    /// * `phi1` - The first phase shift in radians.
+    /// * `phi2` - The second phase shift in radians.
+    pub fn match_gate(
+        &mut self,
+        target_qubit: usize,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+    ) -> &mut Self {
+        let gate: Gate = Gate::matchgate(target_qubit, theta, phi1, phi2);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds a controlled Matchgate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubit` - The index of the first target qubit. The second target qubit is assumed to be the next qubit.
+    /// * `control_qubits` - A vector of indices of the control qubits.
+    /// * `theta` - The angle of rotation in radians.
+    /// * `phi1` - The first phase shift in radians.
+    /// * `phi2` - The second phase shift in radians.
+    pub fn cmatchgate(
+        &mut self,
+        target_qubit: usize,
+        control_qubits: Vec<usize>,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+    ) -> &mut Self {
+        let gate: Gate =
+            Gate::controlled_matchgate(target_qubit, control_qubits, theta, phi1, phi2);
+        self.add_gate(gate);
+        self
+    }
+
     /// Adds a custom operator gate to the circuit builder.
     ///
     /// # Arguments
