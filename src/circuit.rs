@@ -861,6 +861,94 @@ impl CircuitBuilder {
         Ok(self)
     }
 
+    /// Creates and adds a new Unitary2 operator gate from a rotation angle theta and phase shift angle phi.
+    /// 
+    /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
+    /// The enclosed unitary matrix is guaranteed to be unitary.
+    /// 
+    /// Special cases include:
+    /// 
+    /// * U(theta, 0) = RY(theta)
+    /// * U(0, phi) = PhaseShift(phi)
+    /// * U(Pi/2, Pi) = Hadamard
+    /// * U(Pi, Pi) = Pauli-X
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubit` - The index of the qubit to which the operator will be applied.
+    /// 
+    /// * `theta` - The rotation angle in radians.
+    /// 
+    /// * `phi` - The phase shift angle in radians.
+    pub fn ry_phase_gate(
+        &mut self,
+        qubit: usize,
+        theta: f64,
+        phi: f64,
+    ) -> &mut Self{
+        let gate: Gate = Gate::ry_phase_gate(qubit, theta, phi);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Creates and adds multiple new Unitary2 operator gates from a rotation angle theta and phase shift angle phi.
+    /// 
+    /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
+    /// The enclosed unitary matrix is guaranteed to be unitary.
+    /// 
+    /// Special cases include:
+    /// * U(theta, 0) = RY(theta)
+    /// * U(0, phi) = PhaseShift(phi)
+    /// * U(Pi/2, Pi) = Hadamard
+    /// * U(Pi, Pi) = Pauli-X
+    ///
+    /// # Arguments
+    /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
+    /// * `theta` - The rotation angle in radians for all gates.
+    /// * `phi` - The phase shift angle in radians for all gates.
+    pub fn ry_phase_gates(
+        &mut self,
+        qubits: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> &mut Self {
+        let gates: Vec<Gate> = Gate::ry_phase_multi_gate(qubits, theta, phi);
+        self.add_gates(gates);
+        self
+    }
+
+    /// Creates and adds controlled Unitary2 operator gates from a rotation angle theta and phase shift angle phi.
+    /// 
+    /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
+    /// The enclosed unitary matrix is guaranteed to be unitary.
+    /// 
+    /// Special cases include:
+    /// * U(theta, 0) = RY(theta)
+    /// * U(0, phi) = PhaseShift(phi)
+    /// * U(Pi/2, Pi) = Hadamard
+    /// * U(Pi, Pi) = Pauli-X
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target_qubits` - A vector of indices of the target qubits.
+    /// 
+    /// * `control_qubits` - A vector of indices of the control qubits.
+    /// 
+    /// * `theta` - The rotation angle in radians for all gates.
+    /// 
+    /// * `phi` - The phase shift angle in radians for all gates.
+    pub fn cry_phase_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> &mut Self {
+        let gates: Vec<Gate> = Gate::ry_phase_controlled_gates(target_qubits, control_qubits, theta, phi);
+        self.add_gates(gates);
+        self
+    }
+    
     // -- MULTI-QUBIT GATES --
 
     /// Adds a CNOT gate to the circuit builder.

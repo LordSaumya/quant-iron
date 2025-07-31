@@ -909,6 +909,92 @@ impl Gate {
         Ok(gates)
     }
 
+    /// Creates a new Unitary2 gate for the specified qubit index and unitary matrix using a rotation angle and phase shift.
+    /// Unlike custom Unitary2 gates, the generated unitary matrix is guaranteed to be valid.
+    /// Therefore, this method does not return an error.
+    /// 
+    /// # Arguments
+    /// 
+    /// * qubit_index - The index of the qubit on which the Unitary2 gate acts.
+    /// 
+    /// * theta - The rotation angle in radians.
+    /// 
+    /// * phi - The phase shift in radians.
+    /// 
+    /// # Returns
+    /// 
+    /// * Gate - A new instance of the Gate struct representing a Unitary2 gate.
+    pub fn ry_phase_gate(
+        qubit_index: usize,
+        theta: f64,
+        phi: f64,
+    ) -> Self {
+        Gate::Operator(
+            Box::new(Unitary2::from_ry_phase(theta, phi)),
+            vec![qubit_index],
+            vec![],
+        )
+    }
+
+    /// Creates new Unitary2 gates for the specified qubit indices and unitary matrix using a rotation angle and phase shift.
+    /// Unlike custom Unitary2 gates, the generated unitary matrix is guaranteed to be valid.
+    /// Therefore, this method does not return an error.
+    /// 
+    /// # Arguments
+    /// 
+    /// * qubit_indices - The indices of the qubits on which the Unitary2 gates act.
+    /// 
+    /// * theta - The rotation angle in radians for all gates.
+    /// 
+    /// * phi - The phase shift in radians for all gates.
+    /// 
+    /// # Returns
+    /// 
+    /// * Vec<Gate> - A vector of Gate structs representing Unitary2 gates for each qubit index.
+    pub fn ry_phase_multi_gate(
+        qubit_indices: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> Vec<Self> {
+        let op_template = Unitary2::from_ry_phase(theta, phi);
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| Gate::Operator(Box::new(op_template), vec![qubit_index], vec![]))
+            .collect()
+    }
+
+    /// Creates new controlled Unitary2 gates for the specified qubit indices and unitary matrix using a rotation angle and phase shift.
+    /// 
+    /// # Arguments
+    /// 
+    /// * target_indices - The indices of the target qubits.
+    /// 
+    /// * control_indices - The indices of the control qubits.
+    /// 
+    /// * theta - The rotation angle in radians for all gates.
+    /// 
+    /// * phi - The phase shift in radians for all gates.
+    /// 
+    /// # Returns
+    /// 
+    /// * Vec<Gate> - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
+    pub fn ry_phase_controlled_gates(
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> Vec<Self> {
+        let op_template = Unitary2::from_ry_phase(theta, phi);
+        target_indices
+            .into_iter()
+            .map(|target_index| Gate::Operator(
+                Box::new(op_template),
+                vec![target_index],
+                control_indices.clone(),
+            ))
+            .collect()
+    }
+
     // -- MULTI-QUBIT GATES --
 
     /// Creates a CNOT gate for the specified target and control qubit indices.

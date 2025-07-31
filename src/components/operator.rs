@@ -1951,6 +1951,8 @@ impl Operator for RotateZ {
 /// An arbitrary 2×2 unitary operator.
 ///
 /// This operator can be applied to a single qubit in a quantum state. It is represented by a 2×2 unitary matrix.
+/// The matrix must be unitary.
+/// The operator can be constructed fallibly from a 2 x 2 unitary matrix, or infallibly from a rotation angle and phase shift angle.
 #[derive(Debug, Clone, Copy)]
 pub struct Unitary2 {
     /// The 2×2 unitary matrix representing the operator.
@@ -1997,6 +1999,44 @@ impl Unitary2 {
         }
 
         Ok(Unitary2 { matrix })
+    }
+
+    /// Creates a new Unitary2 operator from a rotation angle theta and phase shift angle phi.
+    /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
+    /// The enclosed unitary matrix is guaranteed to be unitary.
+    /// 
+    /// Special cases include:
+    /// 
+    /// * U(theta, 0) = RY(theta)
+    /// * U(0, phi) = PhaseShift(phi)
+    /// * U(Pi/2, Pi) = Hadamard
+    /// * U(Pi, Pi) = Pauli-X
+    ///
+    /// # Arguments:
+    ///
+    /// * `theta` - The rotation angle in radians.
+    ///
+    /// * `phi` - The phase shift angle in radians
+    ///
+    /// # Returns:
+    ///
+    /// * `Self` - A new Unitary2 operator representing the rotation and phase shift.
+    pub fn from_ry_phase(theta: f64, phi: f64) -> Self {
+        let cos_half_theta = (theta / 2.0).cos();
+        let sin_half_theta = (theta / 2.0).sin();
+        let expi_phi = Complex::new(0.0, phi).exp();
+
+        // Construct the unitary matrix
+        let matrix = [
+            [
+                Complex::new(cos_half_theta, 0.0),
+                -expi_phi * sin_half_theta,
+            ],
+            [Complex::new(sin_half_theta, 0.0), expi_phi * cos_half_theta],
+        ];
+
+        // Create Unitary2 operator unchecked
+        Unitary2 { matrix }
     }
 }
 

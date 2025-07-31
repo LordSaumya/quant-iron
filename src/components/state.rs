@@ -1,8 +1,8 @@
 use crate::components::{
     measurement::{MeasurementBasis, MeasurementResult},
     operator::{
-        CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-        PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
+        CNOT, Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift,
+        PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2,
     },
 };
 use crate::errors::Error;
@@ -21,7 +21,7 @@ fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] 
 
 #[derive(Clone)]
 /// Represents the state of a quantum register.
-/// 
+///
 /// The state is represented as a complex vector, where each element corresponds to a probability amplitude for a particular basis state.
 /// The number of qubits in the system is also stored, which determines the length of the state vector (2^num_qubits).
 pub struct State {
@@ -59,7 +59,9 @@ impl State {
         // Check if the length of the state vector is a power of 2
         if !len.is_power_of_two() {
             // For error reporting, num_qubits can be approximated or a specific error used.
-            return Err(Error::InvalidNumberOfQubits( (len as f64).log2().floor() as usize ));
+            return Err(Error::InvalidNumberOfQubits(
+                (len as f64).log2().floor() as usize
+            ));
         }
         // num_qubits can be safely calculated as len is non-zero and a power of two.
         let num_qubits = len.trailing_zeros() as usize;
@@ -324,7 +326,8 @@ impl State {
                 let num_outcomes: usize = 1 << num_measured;
 
                 // Calculate probabilities for each outcome (outcome as a single integer 0..num_outcomes-1)
-                let probabilities: Vec<f64> = self.state_vector
+                let probabilities: Vec<f64> = self
+                    .state_vector
                     .par_iter()
                     .enumerate()
                     .fold(
@@ -339,7 +342,7 @@ impl State {
                             }
                             // Ensure outcome_val_for_this_state is within bounds (0 to num_outcomes-1)
                             if outcome_val_for_this_state < num_outcomes {
-                                 acc_probs[outcome_val_for_this_state] += amplitude.norm_sqr();
+                                acc_probs[outcome_val_for_this_state] += amplitude.norm_sqr();
                             }
                             acc_probs
                         },
@@ -380,16 +383,15 @@ impl State {
                         break; // Found the outcome, exit loop
                     }
                 }
-                 // If, due to floating point issues, no outcome was selected, select the last one.
+                // If, due to floating point issues, no outcome was selected, select the last one.
                 if random_value >= cumulative_probability && !normalised_probabilities.is_empty() {
                     sampled_outcome_int = normalised_probabilities.len() - 1;
                 }
 
-
                 // Collapse the state vector into a new vector
                 let mut collapsed_state_data: Vec<Complex<f64>> =
                     vec![Complex::new(0.0, 0.0); self.state_vector.len()];
-                
+
                 let normalisation_sq: f64 = collapsed_state_data
                     .par_iter_mut()
                     .enumerate()
@@ -439,9 +441,12 @@ impl State {
                 // Apply Hadamard to measured qubits
                 let transformed_state = self.h_multi(actual_measured_qubits)?;
                 // Measure in computational basis
-                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+                let computational_measurement_result =
+                    transformed_state._measure_computational(actual_measured_qubits)?;
                 // Transform the new state back by applying Hadamard again
-                let final_state = computational_measurement_result.new_state.h_multi(actual_measured_qubits)?;
+                let final_state = computational_measurement_result
+                    .new_state
+                    .h_multi(actual_measured_qubits)?;
                 Ok(MeasurementResult {
                     basis: MeasurementBasis::X,
                     indices: computational_measurement_result.indices,
@@ -454,9 +459,12 @@ impl State {
                 let state_after_sdag = self.s_dag_multi(actual_measured_qubits)?;
                 let transformed_state = state_after_sdag.h_multi(actual_measured_qubits)?;
                 // Measure in computational basis
-                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+                let computational_measurement_result =
+                    transformed_state._measure_computational(actual_measured_qubits)?;
                 // Transform the new state back by applying H then S
-                let state_after_h = computational_measurement_result.new_state.h_multi(actual_measured_qubits)?;
+                let state_after_h = computational_measurement_result
+                    .new_state
+                    .h_multi(actual_measured_qubits)?;
                 let final_state = state_after_h.s_multi(actual_measured_qubits)?;
                 Ok(MeasurementResult {
                     basis: MeasurementBasis::Y,
@@ -470,13 +478,16 @@ impl State {
                 let transformed_state = self.unitary_multi(actual_measured_qubits, u_matrix)?;
 
                 // Measure in computational basis
-                let computational_measurement_result = transformed_state._measure_computational(actual_measured_qubits)?;
+                let computational_measurement_result =
+                    transformed_state._measure_computational(actual_measured_qubits)?;
 
                 // Calculate U_dagger (adjoint of u_matrix)
                 let u_dagger_matrix = calculate_adjoint(&u_matrix);
 
                 // Transform the new state back by applying U_dagger
-                let final_state = computational_measurement_result.new_state.unitary_multi(actual_measured_qubits, u_dagger_matrix)?;
+                let final_state = computational_measurement_result
+                    .new_state
+                    .unitary_multi(actual_measured_qubits, u_dagger_matrix)?;
 
                 Ok(MeasurementResult {
                     basis: MeasurementBasis::Custom(u_matrix),
@@ -633,17 +644,17 @@ impl State {
     }
 
     /// Performs an inner product of two state vectors and returns the resulting complex number.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `other` - The other state vector to perform the inner product with.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `result` - A result containing the inner product as a complex number if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if either state vector is empty.
     /// * Returns an error if the state vectors have different dimensions.
     pub fn inner_product(&self, other: &Self) -> Result<Complex<f64>, Error> {
@@ -652,9 +663,7 @@ impl State {
         }
 
         if self.state_vector.len() != other.state_vector.len() {
-            return Err(Error::InvalidNumberOfQubits(
-                self.state_vector.len(),
-            ));
+            return Err(Error::InvalidNumberOfQubits(self.state_vector.len()));
         }
 
         const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelisation
@@ -1762,6 +1771,93 @@ impl State {
         Ok(new_state)
     }
 
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubit in the state vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the qubit to apply the Unitary gate to.
+    ///
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// * `phase` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the index is out of bounds for the state vector.
+    pub fn ry_phase(&self, index: usize, angle: f64, phase: f64) -> Result<Self, Error> {
+        Unitary2::from_ry_phase(angle, phase).apply(self, &[index], &[])
+    }
+
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubits` - The indices of the qubits to apply the Unitary gate to.
+    ///
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// * `phase` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    ///
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    pub fn ry_phase_multi(&self, qubits: &[usize], angle: f64, phase: f64) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let unitary_gate: Unitary2 = Unitary2::from_ry_phase(angle, phase);
+        for &qubit in qubits {
+            new_state = unitary_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The indices of the target qubits to apply the controlled Unitary gate to.
+    ///
+    /// * `control_qubits` - The indices of the control qubits for the controlled Unitary gate.
+    ///
+    /// * `angle` - The rotation angle in radians.
+    ///
+    /// * * `phase` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    ///
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    ///
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cry_phase_gates(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+        phase: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let unitary_gate: Unitary2 = Unitary2::from_ry_phase(angle, phase);
+        for &qubit in target_qubits {
+            new_state = unitary_gate.apply(&new_state, &[qubit], control_qubits)?;
+        }
+        Ok(new_state)
+    }
+
     // -- MULTI-QUBIT GATES --
 
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
@@ -1821,24 +1917,30 @@ impl State {
     }
 
     /// Applies the Matchgate to the state vector
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `target` - The index of the first target qubit. The second target qubit is automatically determined to be the next qubit.
     /// * `theta` - The rotation angle in radians
     /// * `phi1` - The first phase angle in radians
     /// * `phi2` - The second phase angle in radians
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
     ///
     /// # Errors
     ///
     /// * Returns an error if any index is out of bounds for the state vector.
     /// * Returns an error if target or control qubits overlap.
-    pub fn matchgate(&self, target: usize, theta: f64, phi1: f64, phi2: f64) -> Result<State, Error> {
-        Matchgate {theta, phi1, phi2}.apply(self, &[target], &[])
+    pub fn matchgate(
+        &self,
+        target: usize,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+    ) -> Result<State, Error> {
+        Matchgate { theta, phi1, phi2 }.apply(self, &[target], &[])
     }
 
     /// Applies the controlled Matchgate to the state vector
@@ -1859,8 +1961,15 @@ impl State {
     ///
     /// * Returns an error if any index is out of bounds for the state vector.
     /// * Returns an error if target or control qubits overlap.
-    pub fn cmatchgate(&self, target: usize, theta: f64, phi1: f64, phi2: f64, controls: &[usize]) -> Result<State, Error> {
-        Matchgate {theta, phi1, phi2}.apply(self, &[target], controls)
+    pub fn cmatchgate(
+        &self,
+        target: usize,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+        controls: &[usize],
+    ) -> Result<State, Error> {
+        Matchgate { theta, phi1, phi2 }.apply(self, &[target], controls)
     }
 
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
@@ -2068,6 +2177,19 @@ pub trait ChainableState {
         unitary: [[Complex<f64>; 2]; 2],
     ) -> Result<State, Error>;
 
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubit in the state vector.
+    fn ry_phase(self, index: usize, angle: f64, phase: f64) -> Result<State, Error>;
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    fn ry_phase_multi(self, qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
+    /// Applies the controlled Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    fn cry_phase_gates(
+        self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+        phase: f64,
+    ) -> Result<State, Error>;
+
     // -- MULTI-QUBIT GATES --
 
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
@@ -2177,6 +2299,9 @@ impl_chainable_state! {
     unitary(index: usize, unitary: [[Complex<f64>; 2]; 2]) -> Result<State, Error>;
     unitary_multi(qubits: &[usize], unitary: [[Complex<f64>; 2]; 2]) -> Result<State, Error>;
     cunitary_multi(target_qubits: &[usize], control_qubits: &[usize], unitary: [[Complex<f64>; 2]; 2]) -> Result<State, Error>;
+    ry_phase(index: usize, angle: f64, phase: f64) -> Result<State, Error>;
+    ry_phase_multi(qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
+    cry_phase_gates(target_qubits: &[usize], control_qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
     cnot(control: usize, target: usize) -> Result<State, Error>;
@@ -2316,7 +2441,9 @@ impl std::iter::Sum for State {
         let mut accumulator = match iter.next() {
             Some(first_state) => first_state,
             None => {
-                panic!("Cannot sum an empty iterator of State objects: num_qubits for the sum is undefined.");
+                panic!(
+                    "Cannot sum an empty iterator of State objects: num_qubits for the sum is undefined."
+                );
             }
         };
 
