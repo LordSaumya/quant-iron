@@ -1802,6 +1802,116 @@ fn test_operator_unitary2_success() {
     assert_eq!(new_state_cu_c1, expected_state_cu_c1, "Controlled Unitary2 (X) (c=1) parallel failed");
 }
 
+#[test]
+fn test_operator_ry_phase_success() {
+    // Testing is truncated for this function because it is only a special case of the unitary operator
+
+    // Test general case (U(theta, phi) = Ry(theta), p(phi))
+    let theta: f64 = PI / 2.5; // Example angle
+    let phi: f64 = PI / 4.0; // Example phase
+
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    let new_zero_state = zero_state.ry_phase(0, theta, phi).unwrap();
+    let expected_zero_state = zero_state.p(0, phi).ry(0, theta).unwrap();
+    let new_one_state = one_state.ry_phase(0, theta, phi).unwrap();
+    let expected_one_state = one_state.p(0, phi).ry(0, theta).unwrap();
+    let new_plus_state = plus_state.ry_phase(0, theta, phi).unwrap();
+    let expected_plus_state = plus_state.p(0, phi).ry(0, theta).unwrap();
+    let new_minus_state = minus_state.ry_phase(0, theta, phi).unwrap();
+    let expected_minus_state = minus_state.p(0, phi).ry(0, theta).unwrap();
+
+    assert_eq!(new_zero_state, expected_zero_state);
+    assert_eq!(new_one_state, expected_one_state);
+    assert_eq!(new_plus_state, expected_plus_state);
+    assert_eq!(new_minus_state, expected_minus_state);
+
+    // Test special case on 3 qubits: U(Theta, 0) = Ry(Theta)
+    let zero_state_3q: State = State::new_zero(3).unwrap();
+    let new_zero_state_3q = zero_state_3q.ry_phase(0, theta, 0.0).unwrap();
+    let expected_zero_state_3q = zero_state_3q.ry(0, theta).unwrap();
+    let one_state_3q: State = State::new_basis_n(3, 1).unwrap();
+    let new_one_state_3q = one_state_3q.ry_phase(0, theta, 0.0).unwrap();
+    let expected_one_state_3q = one_state_3q.ry(0, theta).unwrap();
+    let plus_state_3q: State = State::new_plus(3).unwrap();
+    let new_plus_state_3q = plus_state_3q.ry_phase(0, theta, 0.0).unwrap();
+    let expected_plus_state_3q = plus_state_3q.ry(0, theta).unwrap();
+    let minus_state_3q: State = State::new_minus(3).unwrap();
+    let new_minus_state_3q = minus_state_3q.ry_phase(0, theta, 0.0).unwrap();
+    let expected_minus_state_3q = minus_state_3q.ry(0, theta).unwrap();
+
+    assert_eq!(new_zero_state_3q, expected_zero_state_3q);
+    assert_eq!(new_one_state_3q, expected_one_state_3q);
+    assert_eq!(new_plus_state_3q, expected_plus_state_3q);
+    assert_eq!(new_minus_state_3q, expected_minus_state_3q);
+
+    // Test special case on 3 qubits: U(0, Phi) = P(Phi)
+    let zero_state_3q_p: State = State::new_zero(3).unwrap();
+    let new_zero_state_3q_p = zero_state_3q_p.ry_phase(0, 0.0, phi).unwrap();
+    let expected_zero_state_3q_p = zero_state_3q_p.p(0, phi).unwrap();
+    let one_state_3q_p: State = State::new_basis_n(3, 1).unwrap();
+    let new_one_state_3q_p = one_state_3q_p.ry_phase(0, 0.0, phi).unwrap();
+    let expected_one_state_3q_p = one_state_3q_p.p(0, phi).unwrap();
+    let plus_state_3q_p: State = State::new_plus(3).unwrap();
+    let new_plus_state_3q_p = plus_state_3q_p.ry_phase(0, 0.0, phi).unwrap();
+    let expected_plus_state_3q_p = plus_state_3q_p.p(0, phi).unwrap();
+    let minus_state_3q_p: State = State::new_minus(3).unwrap();
+    let new_minus_state_3q_p = minus_state_3q_p.ry_phase(0, 0.0, phi).unwrap();
+    let expected_minus_state_3q_p = minus_state_3q_p.p(0, phi).unwrap();
+
+    assert_eq!(new_zero_state_3q_p, expected_zero_state_3q_p);
+    assert_eq!(new_one_state_3q_p, expected_one_state_3q_p);
+    assert_eq!(new_plus_state_3q_p, expected_plus_state_3q_p);
+    assert_eq!(new_minus_state_3q_p, expected_minus_state_3q_p);
+
+    // Test special case on 3 qubits: U(Pi/2, Pi) = Hadamard
+    let theta_pi2: f64 = PI / 2.0;
+    let phi_pi: f64 = PI;
+
+    let zero_state_3q_h: State = State::new_zero(3).unwrap();
+    let new_zero_state_3q_h = zero_state_3q_h.ry_phase(0, theta_pi2, phi_pi).unwrap();
+    let expected_zero_state_3q_h = zero_state_3q_h.h(0).unwrap();
+    let one_state_3q_h: State = State::new_basis_n(3, 1).unwrap();
+    let new_one_state_3q_h = one_state_3q_h.ry_phase(0, theta_pi2, phi_pi).unwrap();
+    let expected_one_state_3q_h = one_state_3q_h.h(0).unwrap();
+    let plus_state_3q_h: State = State::new_plus(3).unwrap();
+    let new_plus_state_3q_h = plus_state_3q_h.ry_phase(0, theta_pi2, phi_pi).unwrap();
+    let expected_plus_state_3q_h = plus_state_3q_h.h(0).unwrap();
+    let minus_state_3q_h: State = State::new_minus(3).unwrap();
+    let new_minus_state_3q_h = minus_state_3q_h.ry_phase(0, theta_pi2, phi_pi).unwrap();
+    let expected_minus_state_3q_h = minus_state_3q_h.h(0).unwrap();
+
+    assert_eq!(new_zero_state_3q_h, expected_zero_state_3q_h);
+    assert_eq!(new_one_state_3q_h, expected_one_state_3q_h);
+    assert_eq!(new_plus_state_3q_h, expected_plus_state_3q_h);
+    assert_eq!(new_minus_state_3q_h, expected_minus_state_3q_h);
+
+    // Test special case on 3 qubits: U(Pi, Pi) = Pauli-X
+    let theta_pi: f64 = PI;
+    let phi_pi: f64 = PI;
+
+    let zero_state_3q_x: State = State::new_zero(3).unwrap();
+    let new_zero_state_3q_x = zero_state_3q_x.ry_phase(0, theta_pi, phi_pi).unwrap();
+    let expected_zero_state_3q_x = zero_state_3q_x.x(0).unwrap();
+    let one_state_3q_x: State = State::new_basis_n(3, 1).unwrap();
+    let new_one_state_3q_x = one_state_3q_x.ry_phase(0, theta_pi, phi_pi).unwrap();
+    let expected_one_state_3q_x = one_state_3q_x.x(0).unwrap();
+    let plus_state_3q_x: State = State::new_plus(3).unwrap();
+    let new_plus_state_3q_x = plus_state_3q_x.ry_phase(0, theta_pi, phi_pi).unwrap();
+    let expected_plus_state_3q_x = plus_state_3q_x.x(0).unwrap();
+    let minus_state_3q_x: State = State::new_minus(3).unwrap();
+    let new_minus_state_3q_x = minus_state_3q_x.ry_phase(0, theta_pi, phi_pi).unwrap();
+    let expected_minus_state_3q_x = minus_state_3q_x.x(0).unwrap();
+
+    assert_eq!(new_zero_state_3q_x, expected_zero_state_3q_x);
+    assert_eq!(new_one_state_3q_x, expected_one_state_3q_x);
+    assert_eq!(new_plus_state_3q_x, expected_plus_state_3q_x);
+    assert_eq!(new_minus_state_3q_x, expected_minus_state_3q_x);
+}
+
 // -- MULTI-QUBIT OPERATORS --
 
 #[test]
