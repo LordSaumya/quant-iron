@@ -2,7 +2,7 @@ use crate::components::{
     measurement::{MeasurementBasis, MeasurementResult},
     operator::{
         CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-        PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2,
+        PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
     },
 };
 use crate::errors::Error;
@@ -1820,6 +1820,49 @@ impl State {
         SWAP {}.apply(self, &[target1, target2], controls)
     }
 
+    /// Applies the Matchgate to the state vector
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target` - The index of the first target qubit. The second target qubit is automatically determined to be the next qubit.
+    /// * `theta` - The rotation angle in radians
+    /// * `phi1` - The first phase angle in radians
+    /// * `phi2` - The second phase angle in radians
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if any index is out of bounds for the state vector.
+    /// * Returns an error if target or control qubits overlap.
+    pub fn matchgate(&self, target: usize, theta: f64, phi1: f64, phi2: f64) -> Result<State, Error> {
+        Matchgate {theta, phi1, phi2}.apply(self, &[target], &[])
+    }
+
+    /// Applies the controlled Matchgate to the state vector
+    ///
+    /// # Arguments
+    ///
+    /// * `target` - The index of the first target qubit. The second target qubit is automatically determined to be the next qubit.
+    /// * `theta` - The rotation angle in radians
+    /// * `phi1` - The first phase angle in radians
+    /// * `phi2` - The second phase angle in radians
+    /// * `controls` - The indices of the control qubits
+    ///
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if any index is out of bounds for the state vector.
+    /// * Returns an error if target or control qubits overlap.
+    pub fn cmatchgate(&self, target: usize, theta: f64, phi1: f64, phi2: f64, controls: &[usize]) -> Result<State, Error> {
+        Matchgate {theta, phi1, phi2}.apply(self, &[target], controls)
+    }
+
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
     ///
     /// # Arguments
@@ -2039,6 +2082,19 @@ pub trait ChainableState {
     /// Applies the Toffoli (Controlled-Controlled-NOT) gate to the state vector.
     fn toffoli(self, control1: usize, control2: usize, target: usize) -> Result<State, Error>;
 
+    /// Applies the Matchgate to the state vector.
+    fn matchgate(self, target: usize, theta: f64, phi1: f64, phi2: f64) -> Result<State, Error>;
+
+    /// Applies the controlled Matchgate to the state vector.
+    fn cmatchgate(
+        self,
+        target: usize,
+        theta: f64,
+        phi1: f64,
+        phi2: f64,
+        controls: &[usize],
+    ) -> Result<State, Error>;
+
     /// Applies a unitary operation to the state vector.
     fn operate(
         self,
@@ -2127,6 +2183,8 @@ impl_chainable_state! {
     swap(qubit1: usize, qubit2: usize) -> Result<State, Error>;
     cswap(target1: usize, target2: usize, controls: &[usize]) -> Result<State, Error>;
     toffoli(control1: usize, control2: usize, target: usize) -> Result<State, Error>;
+    matchgate(target: usize, theta: f64, phi1: f64, phi2: f64) -> Result<State, Error>;
+    cmatchgate(target: usize, theta: f64, phi1: f64, phi2: f64, controls: &[usize]) -> Result<State, Error>;
     operate(unitary: impl Operator, target_qubits: &[usize], control_qubits: &[usize]) -> Result<State, Error>;
     measure(basis: MeasurementBasis, measured_qubits: &[usize]) -> Result<MeasurementResult, Error>;
     measure_n(basis: MeasurementBasis, measured_qubits: &[usize], n: usize) -> Result<Vec<MeasurementResult>, Error>;
