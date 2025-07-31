@@ -935,7 +935,7 @@ impl CircuitBuilder {
     /// * `theta` - The angle of rotation in radians.
     /// * `phi1` - The first phase shift in radians.
     /// * `phi2` - The second phase shift in radians.
-    pub fn match_gate(
+    pub fn matchgate(
         &mut self,
         target_qubit: usize,
         theta: f64,
