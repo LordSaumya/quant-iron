@@ -295,3 +295,18 @@ fn test_circuit_macro_angle_gates_success() {
     assert_eq!(circuit.num_qubits, 3);
     assert_eq!(circuit.gates.len(), 4 + 2 + 2 + 2 + 3);
 }
+
+#[test]
+fn test_circuit_macro_match_gates_success() {
+    let circuit = circuit! {
+        qubits: 4,
+        matchgate(0, PI / 2.0, PI / 3.0, PI / 4.0),
+        
+        cmatchgate(0, PI / 2.0, PI / 3.0, PI / 4.0, 2),
+        cmatchgate(0, PI / 2.0, PI / 3.0, PI / 4.0, [2, 3])
+    }
+    .expect("Failed to create circuit with match gates");
+
+    assert_eq!(circuit.num_qubits, 4);
+    assert_eq!(circuit.gates.len(), 3);
+}
