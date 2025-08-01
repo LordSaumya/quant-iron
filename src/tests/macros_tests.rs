@@ -206,7 +206,7 @@ fn test_circuit_macro_controlled_gates_success() {
     .expect("Failed to create circuit with controlled gates");
 
     assert_eq!(circuit.num_qubits, 4);
-    assert_eq!(circuit.gates.len(), 6 * 12);
+    assert_eq!(circuit.gates.len(), 6 * 13 + 2);
 }
 
 #[test]
@@ -304,7 +304,7 @@ fn test_circuit_macro_angle_gates_success() {
     .expect("Failed to create circuit with angle gates");
 
     assert_eq!(circuit.num_qubits, 3);
-    assert_eq!(circuit.gates.len(), 4 + 2 + 2 + 2 + 3);
+    assert_eq!(circuit.gates.len(), 4 + 2 + 2 + 2 + 3 + 4);
 }
 
 #[test]
