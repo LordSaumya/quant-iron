@@ -68,7 +68,7 @@
 /// - `toffoli(target, control1, control2)`
 /// - `cswap(target1, target2, control)` or `cswap(target1, target2, [controls])`
 /// - `matchgate(target, theta, phi1, phi2)`
-/// - `cmatchgate(target, theta, phi1, phi2, control)` or `cmatchgate(target, theta, phi1, phi2, [controls])`
+/// - `cmatchgate(target, control, theta, phi1, phi2)` or `cmatchgate(target, [controls], theta, phi1, phi2)`
 ///
 /// ## Unitary Gates
 ///
@@ -200,7 +200,7 @@ macro_rules! circuit_internal {
     ($builder:ident, cp([$($targets:expr),*], $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$($targets),*], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cp($target:expr, [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$target], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cp($target:expr, $control:expr, $angle:expr), $($rest:tt)*) => { $builder.cp_gates(vec![$target], vec![$control], $angle); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cry_phase([$($targets:expr),*], [#($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase([$($targets:expr),*], [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cry_phase([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cry_phase($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cry_phase($target:expr, $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
@@ -218,8 +218,8 @@ macro_rules! circuit_internal {
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr), $($rest:tt)*) => { $builder.cswap_gate($target1, $target2, vec![$control]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr), $($rest:tt)*) => { $builder.matchgate($target1, $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, [$($controls:expr),*]), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, $control:expr), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cmatchgate($target1:expr, [$($controls:expr),*], $theta:expr, $phi1:expr, $phi2:expr), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cmatchgate($target1:expr, $control:expr, $theta:expr, $phi1:expr, $phi2:expr), $($rest:tt)*) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); $crate::circuit_internal!($builder, $($rest)*); };
 
     // --- Measurement rules ---
     ($builder:ident, measurex([$($qubits:expr),*]), $($rest:tt)*) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
@@ -322,10 +322,10 @@ macro_rules! circuit_internal {
     ($builder:ident, cp([$($targets:expr),*], $control:expr, $angle:expr)) => { $builder.cp_gates(vec![$($targets),*], vec![$control], $angle); };
     ($builder:ident, cp($target:expr, [$($controls:expr),*], $angle:expr)) => { $builder.cp_gates(vec![$target], vec![$($controls),*], $angle); };
     ($builder:ident, cp($target:expr, $control:expr, $angle:expr)) => { $builder.cp_gates(vec![$target], vec![$control], $angle); };
-    ($builder:ident, cry_phase([$($targets:expr),*], [#($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cry_phase([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cry_phase($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
-    ($builder:ident, cry_phase($target:expr, $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase([$($targets:expr),*], [$($controls:expr),*], $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); };
+    ($builder:ident, cry_phase([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$control], $theta, $phi); };
+    ($builder:ident, cry_phase($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$target], vec![$($controls),*], $theta, $phi); };
+    ($builder:ident, cry_phase($target:expr, $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$target], vec![$control], $theta, $phi); };
 
     // Unitary and Controlled Unitary Gates
     ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr)) => { $builder.unitary_gates(vec![$($qubits),*], $matrix).unwrap(); };
@@ -340,8 +340,8 @@ macro_rules! circuit_internal {
     ($builder:ident, cswap($target1:expr, $target2:expr, [$($controls:expr),*])) => { $builder.cswap_gate($target1, $target2, vec![$($controls),*]); };
     ($builder:ident, cswap($target1:expr, $target2:expr, $control:expr)) => { $builder.cswap_gate($target1, $target2, vec![$control]); };
     ($builder:ident, matchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr)) => { $builder.matchgate($target1, $theta, $phi1, $phi2); };
-    ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, [$($controls:expr),*])) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); };
-    ($builder:ident, cmatchgate($target1:expr, $theta:expr, $phi1:expr, $phi2:expr, $control:expr)) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); };
+    ($builder:ident, cmatchgate($target1:expr, [$($controls:expr),*], $theta:expr, $phi1:expr, $phi2:expr)) => { $builder.cmatchgate($target1, vec![$($controls),*], $theta, $phi1, $phi2); };
+    ($builder:ident, cmatchgate($target1:expr, $control:expr, $theta:expr, $phi1:expr, $phi2:expr)) => { $builder.cmatchgate($target1, vec![$control], $theta, $phi1, $phi2); };
 
     // Measurement gates
     ($builder:ident, measurex([$($qubits:expr),*])) => { $builder.measure_gate($crate::components::measurement::MeasurementBasis::X, vec![$($qubits),*]); };

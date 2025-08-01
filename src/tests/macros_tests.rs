@@ -184,6 +184,14 @@ fn test_circuit_macro_controlled_gates_success() {
         cry([0, 1], 2, PI / 4.0),
         cry(0, [1, 2], PI / 4.0),
         cry([0, 1], [2, 3], PI / 4.0),
+
+        cry_phase(0, 1, PI / 4.0, PI / 2.0),
+        cry_phase([0, 1], 2, PI / 4.0, PI / 2.0),
+        cry_phase(0, [1, 2], PI / 4.0, PI / 2.0),
+        cry_phase([0, 1], [2, 3], PI / 4.0, PI / 2.0),
+
+        cmatchgate(0, 1, PI / 4.0, PI / 2.0, PI / 3.0),
+        cmatchgate(0, [1, 2], PI / 4.0, PI / 2.0, PI / 3.0),
         
         crz(0, 1, PI / 4.0),
         crz([0, 1], 2, PI / 4.0),
@@ -285,9 +293,12 @@ fn test_circuit_macro_angle_gates_success() {
         ry(1, PI / 2.0),
         rz(2, PI / 2.0),
         p(0, PI / 2.0),
+        ry_phase(1, PI / 2.0, PI / 4.0),
+        matchgate(0, PI / 2.0, PI / 3.0, PI / 4.0),
         rx([0, 1], PI / 2.0),
         ry([1, 2], PI / 2.0),
         rz([0, 2], PI / 2.0),
+        ry_phase([0, 1], PI / 2.0, PI / 4.0),
         p([0, 1, 2], PI / 2.0)
     }
     .expect("Failed to create circuit with angle gates");
@@ -301,9 +312,9 @@ fn test_circuit_macro_match_gates_success() {
     let circuit = circuit! {
         qubits: 4,
         matchgate(0, PI / 2.0, PI / 3.0, PI / 4.0),
-        
-        cmatchgate(0, PI / 2.0, PI / 3.0, PI / 4.0, 2),
-        cmatchgate(0, PI / 2.0, PI / 3.0, PI / 4.0, [2, 3])
+
+        cmatchgate(0, 2, PI / 2.0, PI / 3.0, PI / 4.0),
+        cmatchgate(0, [2, 3], PI / 2.0, PI / 3.0, PI / 4.0)
     }
     .expect("Failed to create circuit with match gates");
 
