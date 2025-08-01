@@ -100,9 +100,9 @@ impl Circuit {
     /// # Arguments
     ///
     /// * `gates` - A vector of gates to be added to the circuit.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result<(), Error>` - An empty result if the gates are added successfully, or an error if any gate cannot be added.
     pub fn add_gates(&mut self, gates: Vec<Gate>) -> Result<(), Error> {
         for gate in &gates {
@@ -230,7 +230,7 @@ impl Circuit {
                     e
                 ))
             })?;
-            
+
             file.write_all(qasm_string.as_bytes()).map_err(|e| {
                 CompilerError::IOError(format!(
                     "Error writing to file '{}': {}",
@@ -575,7 +575,11 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn csdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
+    pub fn csdag_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::s_dag_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
         self
@@ -643,7 +647,11 @@ impl CircuitBuilder {
     ///
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
-    pub fn ctdag_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>) -> &mut Self {
+    pub fn ctdag_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::t_dag_controlled_gates(target_qubits, control_qubits);
         self.add_gates(gates);
         self
@@ -680,7 +688,12 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The phase shift angle in radians for all gates.
-    pub fn cp_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
+    pub fn cp_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        angle: f64,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::p_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
         self
@@ -717,7 +730,12 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn crx_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
+    pub fn crx_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        angle: f64,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::rx_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
         self
@@ -754,7 +772,12 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn cry_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
+    pub fn cry_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        angle: f64,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::ry_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
         self
@@ -791,7 +814,12 @@ impl CircuitBuilder {
     /// * `target_qubits` - A vector of indices of the target qubits.
     /// * `control_qubits` - A vector of indices of the control qubits.
     /// * `angle` - The rotation angle in radians for all gates.
-    pub fn crz_gates(&mut self, target_qubits: Vec<usize>, control_qubits: Vec<usize>, angle: f64) -> &mut Self {
+    pub fn crz_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        angle: f64,
+    ) -> &mut Self {
         let gates: Vec<Gate> = Gate::rz_controlled_gates(target_qubits, control_qubits, angle);
         self.add_gates(gates);
         self
@@ -804,13 +832,17 @@ impl CircuitBuilder {
     /// * `qubit` - The index of the qubit to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// This method is fallible due to the potential for invalid unitary matrices.
     /// If the unitary matrix is not valid, it will return an error.
     /// Therefore, the `Result` must be handled appropriately before chaining further operations.
-    pub fn unitary_gate(&mut self, qubit: usize, unitary: [[Complex<f64>; 2]; 2]) -> Result<&mut Self, Error> {
+    pub fn unitary_gate(
+        &mut self,
+        qubit: usize,
+        unitary: [[Complex<f64>; 2]; 2],
+    ) -> Result<&mut Self, Error> {
         let gate: Gate = Gate::unitary2_gate(qubit, unitary)?;
         self.add_gate(gate);
         Ok(self)
@@ -823,13 +855,17 @@ impl CircuitBuilder {
     /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// This method is fallible due to the potential for invalid unitary matrices.
     /// If the unitary matrix is not valid, it will return an error.
     /// Therefore, the `Result` must be handled appropriately before chaining further operations.
-    pub fn unitary_gates(&mut self, qubits: Vec<usize>, unitary: [[Complex<f64>; 2]; 2]) -> Result<&mut Self, Error> {
+    pub fn unitary_gates(
+        &mut self,
+        qubits: Vec<usize>,
+        unitary: [[Complex<f64>; 2]; 2],
+    ) -> Result<&mut Self, Error> {
         let gates: Vec<Gate> = Gate::unitary2_multi_gate(qubits, unitary)?;
         self.add_gates(gates);
         Ok(self)
@@ -844,9 +880,9 @@ impl CircuitBuilder {
     /// * `control_qubits` - A vector of indices of the control qubits.
     ///
     /// * `unitary` - Matrix representing the unitary operator.
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// This method is fallible due to the potential for invalid unitary matrices.
     /// If the unitary matrix is not valid, it will return an error.
     /// Therefore, the `Result` must be handled appropriately before chaining further operations.
@@ -862,40 +898,35 @@ impl CircuitBuilder {
     }
 
     /// Creates and adds a new Unitary2 operator gate from a rotation angle theta and phase shift angle phi.
-    /// 
+    ///
     /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
     /// The enclosed unitary matrix is guaranteed to be unitary.
-    /// 
+    ///
     /// Special cases include:
-    /// 
+    ///
     /// * U(theta, 0) = RY(theta)
     /// * U(0, phi) = PhaseShift(phi)
     /// * U(Pi/2, Pi) = Hadamard
     /// * U(Pi, Pi) = Pauli-X
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubit` - The index of the qubit to which the operator will be applied.
-    /// 
+    ///
     /// * `theta` - The rotation angle in radians.
-    /// 
+    ///
     /// * `phi` - The phase shift angle in radians.
-    pub fn ry_phase_gate(
-        &mut self,
-        qubit: usize,
-        theta: f64,
-        phi: f64,
-    ) -> &mut Self{
+    pub fn ry_phase_gate(&mut self, qubit: usize, theta: f64, phi: f64) -> &mut Self {
         let gate: Gate = Gate::ry_phase_gate(qubit, theta, phi);
         self.add_gate(gate);
         self
     }
 
     /// Creates and adds multiple new Unitary2 operator gates from a rotation angle theta and phase shift angle phi.
-    /// 
+    ///
     /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
     /// The enclosed unitary matrix is guaranteed to be unitary.
-    /// 
+    ///
     /// Special cases include:
     /// * U(theta, 0) = RY(theta)
     /// * U(0, phi) = PhaseShift(phi)
@@ -906,36 +937,31 @@ impl CircuitBuilder {
     /// * `qubits` - A vector of indices of the qubits to which the operator will be applied.
     /// * `theta` - The rotation angle in radians for all gates.
     /// * `phi` - The phase shift angle in radians for all gates.
-    pub fn ry_phase_gates(
-        &mut self,
-        qubits: Vec<usize>,
-        theta: f64,
-        phi: f64,
-    ) -> &mut Self {
+    pub fn ry_phase_gates(&mut self, qubits: Vec<usize>, theta: f64, phi: f64) -> &mut Self {
         let gates: Vec<Gate> = Gate::ry_phase_multi_gate(qubits, theta, phi);
         self.add_gates(gates);
         self
     }
 
     /// Creates and adds controlled Unitary2 operator gates from a rotation angle theta and phase shift angle phi.
-    /// 
+    ///
     /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
     /// The enclosed unitary matrix is guaranteed to be unitary.
-    /// 
+    ///
     /// Special cases include:
     /// * U(theta, 0) = RY(theta)
     /// * U(0, phi) = PhaseShift(phi)
     /// * U(Pi/2, Pi) = Hadamard
     /// * U(Pi, Pi) = Pauli-X
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `target_qubits` - A vector of indices of the target qubits.
-    /// 
+    ///
     /// * `control_qubits` - A vector of indices of the control qubits.
-    /// 
+    ///
     /// * `theta` - The rotation angle in radians for all gates.
-    /// 
+    ///
     /// * `phi` - The phase shift angle in radians for all gates.
     pub fn cry_phase_gates(
         &mut self,
@@ -944,11 +970,12 @@ impl CircuitBuilder {
         theta: f64,
         phi: f64,
     ) -> &mut Self {
-        let gates: Vec<Gate> = Gate::ry_phase_controlled_gates(target_qubits, control_qubits, theta, phi);
+        let gates: Vec<Gate> =
+            Gate::ry_phase_controlled_gates(target_qubits, control_qubits, theta, phi);
         self.add_gates(gates);
         self
     }
-    
+
     // -- MULTI-QUBIT GATES --
 
     /// Adds a CNOT gate to the circuit builder.
@@ -1023,6 +1050,10 @@ impl CircuitBuilder {
     /// * `theta` - The angle of rotation in radians.
     /// * `phi1` - The first phase shift in radians.
     /// * `phi2` - The second phase shift in radians.
+    ///
+    /// # Warning
+    ///
+    /// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
     pub fn matchgate(
         &mut self,
         target_qubit: usize,
@@ -1044,6 +1075,10 @@ impl CircuitBuilder {
     /// * `theta` - The angle of rotation in radians.
     /// * `phi1` - The first phase shift in radians.
     /// * `phi2` - The second phase shift in radians.
+    /// 
+    /// # Warning
+    ///
+    /// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
     pub fn cmatchgate(
         &mut self,
         target_qubit: usize,

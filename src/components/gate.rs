@@ -1074,6 +1074,10 @@ impl Gate {
     /// # Returns
     ///
     /// * `Gate` - A new instance of the Gate struct representing a Matchgate.
+    /// 
+    /// # Warning
+    ///
+    /// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
     pub fn matchgate(
         target_index: usize,
         theta: f64,
@@ -1100,6 +1104,10 @@ impl Gate {
     /// # Returns
     ///
     /// * `Gate` - A new instance of the Gate struct representing a controlled Matchgate.
+    /// 
+    /// # Warning
+    ///
+    /// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
     pub fn controlled_matchgate(
         target_index: usize,
         control_indices: Vec<usize>,

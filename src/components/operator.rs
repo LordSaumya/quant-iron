@@ -813,6 +813,10 @@ impl Operator for SWAP {
 /// ```
 /// [1 0 0 0; 0 cos(theta/2) -e^(i*phi1)sin(theta/2) 0; 0 sin(theta/2) e^(i*phi2)cos(theta/2) 0; 0 0 0 e^(i*phi2)]
 /// ```
+/// 
+/// # Warning
+/// 
+/// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
 #[derive(Debug, Clone, Copy)]
 pub struct Matchgate {
     pub(crate) theta: f64,
