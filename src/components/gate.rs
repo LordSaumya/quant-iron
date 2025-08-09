@@ -6,10 +6,10 @@ use crate::{
             PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
         },
         state::State,
+        parametric::parametric_gate::ParametricGate,
     },
     errors::Error,
 };
-
 use num_complex::Complex;
 
 /// Represents a quantum gate as part of a quantum circuit.
@@ -33,6 +33,9 @@ pub enum Gate {
     /// * `MeasurementBasis` - The basis of measurement (e.g., computational basis).
     /// * `indices` - The indices of the measured qubits.
     Measurement(MeasurementBasis, Vec<usize>),
+
+    /// Represents a parametric gate.
+    Parametric(Box<dyn ParametricGate>, Vec<usize>, Vec<usize>),
 }
 
 impl Gate {
@@ -88,6 +91,14 @@ impl Gate {
             Gate::Measurement(basis, indices) => state
                 .measure(*basis, indices.as_slice())
                 .map(|measurementresult| measurementresult.get_new_state().clone()),
+            Gate::Parametric(p_gate, target_indices, control_indices) => {
+                let concrete_gates = p_gate.to_concrete_gates(target_indices, control_indices);
+                concrete_gates
+                    .into_iter()
+                    .try_fold(state.clone(), |current_state, gate| {
+                        gate.apply(&current_state)
+                    })
+            }
         }
     }
 
@@ -100,6 +111,7 @@ impl Gate {
         match self {
             Gate::Operator(_, target_indices, _) => target_indices,
             Gate::Measurement(_, indices) => indices,
+            Gate::Parametric(_, target_indices, _) => target_indices,
         }
     }
 
@@ -112,6 +124,7 @@ impl Gate {
         match self {
             Gate::Operator(_, _, control_indices) => Some(control_indices),
             Gate::Measurement(_, _) => None,
+            Gate::Parametric(_, _, control_indices) => Some(control_indices),
         }
     }
 
