@@ -122,6 +122,9 @@ impl TryFrom<&Circuit> for CompilableCircuit {
                     };
 
                     compilable_gates.push(gate);
+                },
+                Gate::Parametric(_, _, _) => {
+                    unreachable!("All parametric gates should be converted to concrete gates before compilation")
                 }
             }
         }
