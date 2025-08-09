@@ -52,6 +52,15 @@ pub enum Error {
     #[error("Unexpected number of inputs: expected {1}, got {0}")]
     InvalidNumberOfInputs(usize, usize),
 
+    /// The number of parameters does not match the number of target qubits.
+    ///
+    /// # Arguments:
+    ///
+    /// * `expected` - The expected number of parameters.
+    /// * `actual` - The actual number of parameters.
+    #[error("Mismatched number of parameters: expected {expected}, got {actual}")]
+    MismatchedNumberOfParameters { expected: usize, actual: usize },
+
     /// Unexpected error occurred
     #[error("An unknown error occurred")]
     UnknownError,
