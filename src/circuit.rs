@@ -1,6 +1,15 @@
 use crate::{
     compiler::{compilable::CompilableCircuit, qasm::QasmCircuit},
-    components::{gate::Gate, measurement::MeasurementBasis, operator::Operator, state::State},
+    components::{
+        gate::Gate,
+        measurement::MeasurementBasis,
+        operator::Operator,
+        parametric::{
+            parameter::Parameter,
+            parametric_gate::{ParametricMatchgate, ParametricRyPhase},
+        },
+        state::State,
+    },
     errors::{CompilerError, Error},
     subroutine::Subroutine,
 };
@@ -188,9 +197,27 @@ impl Circuit {
         Ok(states)
     }
 
+    /// Converts a parametric circuit into a circuit with concrete gates.
+    pub(crate) fn to_concrete_circuit(&self) -> Self {
+        let concrete_gates = self.gates.iter().flat_map(|g| {
+            match g {
+                Gate::Parametric(p_gate, targets, controls) => {
+                    p_gate.to_concrete_gates(targets, controls)
+                }
+                _ => vec![g.clone()],
+            }
+        }).collect();
+
+        Circuit {
+            gates: concrete_gates,
+            num_qubits: self.num_qubits,
+        }
+    }
+
     /// Converts the circuit to its internal QASM circuit if the circuit is compilable, and return an error if it is not, or if the conversion fails.
     pub(crate) fn to_qasm_circuit(&self) -> Result<QasmCircuit, CompilerError> {
-        let compilable_circuit = CompilableCircuit::try_from(self)?;
+        let concrete_circuit = self.to_concrete_circuit();
+        let compilable_circuit = CompilableCircuit::try_from(&concrete_circuit)?;
         let qasm_instructions =
             compilable_circuit
                 .to_ir()
