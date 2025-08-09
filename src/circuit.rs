@@ -1138,6 +1138,105 @@ impl CircuitBuilder {
         self
     }
 
+    // -- PARAMETRIC GATES --
+
+    /// Adds a parametric Ry phase gate to the circuit builder.
+    /// 
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 2 to be used in the gate.
+    pub fn parametric_ry_phase_gate(&mut self, target_index: usize, parameter: Parameter<2>) -> &mut Self {
+        let p_gate = ParametricRyPhase { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric Ry phase gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `parameters` - A vector of parameters of size 2 to be used in the gates.
+    /// 
+    /// # Warning
+    /// 
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_ry_phase_gates(&mut self, target_indices: Vec<usize>, parameters: Vec<Parameter<2>>) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            self.parametric_ry_phase_gate(target_index, parameter);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric Ry phase gates to the circuit builder, each with its own parameter.
+    /// 
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameters` - A vector of parameters of size 2 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_cry_phase_gates(&mut self, target_indices: Vec<usize>, control_indices: Vec<usize>, parameters: Vec<Parameter<2>>) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            let p_gate = ParametricRyPhase { parameter: parameter.clone() };
+            let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
+            self.add_gate(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds a parametric matchgate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 3 to be used in the gate.
+    pub fn parametric_matchgate(&mut self, target_index: usize, parameter: Parameter<3>) -> &mut Self {
+        let p_gate = ParametricMatchgate { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds a controlled parametric matchgate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameter` - The parameter of size 3 to be used in the gate.
+    pub fn parametric_cmatchgate(&mut self, target_index: usize, control_indices: Vec<usize>, parameter: Parameter<3>) -> &mut Self {
+        let p_gate = ParametricMatchgate { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices);
+        self.add_gate(gate);
+        self
+    }
+
+    // -- MEASUREMENT GATES --
+
     /// Adds a measurement gate to the circuit builder.
     ///
     /// # Arguments
