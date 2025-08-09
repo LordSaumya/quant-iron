@@ -8,3 +8,4 @@ pub mod heisenberg_tests;
 pub mod time_evolution_tests;
 pub mod circuit_tests;
 pub mod macros_tests;
+pub mod parametric_tests;
