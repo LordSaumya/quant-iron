@@ -1000,11 +1000,92 @@ impl Gate {
         let op_template = Unitary2::from_ry_phase(theta, phi);
         target_indices
             .into_iter()
-            .map(|target_index| Gate::Operator(
-                Box::new(op_template),
-                vec![target_index],
-                control_indices.clone(),
-            ))
+            .map(|target_index| {
+                Gate::Operator(
+                    Box::new(op_template.clone()),
+                    vec![target_index],
+                    control_indices.clone(),
+                )
+            })
+            .collect()
+    }
+
+    /// Creates a new Unitary2 gate from a rotation angle theta and phase shift angle phi.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_index` - The index of the qubit on which the Unitary2 gate acts.
+    /// * `theta` - The rotation angle in radians.
+    /// * `phi` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * Gate - A new instance of the Gate struct representing a Unitary2 gate.
+    pub fn ry_phase_dag_gate(
+        qubit_index: usize,
+        theta: f64,
+        phi: f64,
+    ) -> Self {
+        Gate::Operator(
+            Box::new(Unitary2::from_ry_phase_dagger(theta, phi)),
+            vec![qubit_index],
+            vec![],
+        )
+    }
+
+    /// Creates new Unitary2 gates from a rotation angle theta and phase shift angle phi.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit_indices` - The indices of the qubits on which the Unitary2 gates act.
+    /// * `theta` - The rotation angle in radians.
+    /// * `phi` - The phase shift angle in radians.
+    ///
+    // # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing Unitary2 gates for each qubit index.
+    pub fn ry_phase_dag_multi_gate(
+        qubit_indices: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> Vec<Self> {
+        let op_template = Unitary2::from_ry_phase_dagger(theta, phi);
+        qubit_indices
+            .into_iter()
+            .map(|qubit_index| {
+                Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![])
+            })
+            .collect()
+    }
+
+    /// Creates new controlled Unitary2 gates from a rotation angle theta and phase shift angle phi.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - The indices of the target qubits.
+    /// * `control_indices` - The indices of the control qubits.
+    /// * `theta` - The rotation angle in radians.
+    /// * `phi` - The phase shift angle in radians.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Gate>` - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
+    pub fn ry_phase_dag_controlled_gates(
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> Vec<Self> {
+        let op_template = Unitary2::from_ry_phase_dagger(theta, phi);
+        target_indices
+            .into_iter()
+            .map(|target_index| {
+                Gate::Operator(
+                    Box::new(op_template.clone()),
+                    vec![target_index],
+                    control_indices.clone(),
+                )
+            })
             .collect()
     }
 

@@ -8,7 +8,7 @@ use crate::{
             parameter::Parameter,
             parametric_gate::{
                 ParametricMatchgate, ParametricP, ParametricRx, ParametricRy, ParametricRz,
-                ParametricRyPhase,
+                ParametricRyPhase, ParametricRyPhaseDag,
             },
         },
         state::State,
@@ -1006,6 +1006,56 @@ impl CircuitBuilder {
         self
     }
 
+    /// Adds a Unitary2 gate to the circuit builder, applying a phase shift and then a Y-axis rotation.
+    /// This is the adjoint of the `ry_phase_gate` operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubit` - The index of the qubit to which the gate will be applied.
+    /// * `theta` - The rotation angle in radians.
+    /// * `phi` - The phase shift angle in radians.
+    pub fn ry_phase_dag_gate(&mut self, qubit: usize, theta: f64, phi: f64) -> &mut Self {
+        let gate: Gate = Gate::ry_phase_dag_gate(qubit, theta, phi);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple Unitary2 gates to the circuit builder, each applying a phase shift and then a Y-axis rotation.
+    /// This is the adjoint of the `ry_phase_gates` operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `qubits` - A vector of indices of the qubits to which the gates will be applied.
+    /// * `theta` - The rotation angle in radians for all gates.
+    /// * `phi` - The phase shift angle in radians for all gates.
+    pub fn ry_phase_dag_gates(&mut self, qubits: Vec<usize>, theta: f64, phi: f64) -> &mut Self {
+        let gates: Vec<Gate> = Gate::ry_phase_dag_multi_gate(qubits, theta, phi);
+        self.add_gates(gates);
+        self
+    }
+
+    /// Adds controlled Unitary2 gates to the circuit builder, each applying a phase shift and then a Y-axis rotation.
+    /// This is the adjoint of the `cry_phase_gates` operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_qubits` - A vector of indices of the target qubits.
+    /// * `control_qubits` - A vector of indices of the control qubits.
+    /// * `theta` - The rotation angle in radians for all gates.
+    /// * `phi` - The phase shift angle in radians for all gates.
+    pub fn cry_phase_dag_gates(
+        &mut self,
+        target_qubits: Vec<usize>,
+        control_qubits: Vec<usize>,
+        theta: f64,
+        phi: f64,
+    ) -> &mut Self {
+        let gates: Vec<Gate> =
+            Gate::ry_phase_dag_controlled_gates(target_qubits, control_qubits, theta, phi);
+        self.add_gates(gates);
+        self
+    }
+
     // -- MULTI-QUBIT GATES --
 
     /// Adds a CNOT gate to the circuit builder.
@@ -1207,6 +1257,91 @@ impl CircuitBuilder {
             let p_gate = ParametricRyPhase { parameter: parameter.clone() };
             let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
             self.add_gate(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds a parametric Ry phase dagger gate to the circuit builder.
+    /// 
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 2 to be used in the gate.
+    pub fn parametric_ry_phase_dag_gate(&mut self, target_index: usize, parameter: Parameter<2>) -> &mut Self {
+        let p_gate = ParametricRyPhaseDag { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric Ry phase dagger gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of target qubit indices.
+    /// * `parameters` - A vector of `Parameter<2>` instances for the gates.
+    /// 
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_ry_phase_dag_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        parameters: Vec<Parameter<2>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters) {
+            let gate = Gate::Parametric(
+                Box::new(ParametricRyPhaseDag { parameter }),
+                vec![target_index],
+                vec![],
+            );
+            self.gates.push(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric Ry phase gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of target qubit indices.
+    /// * `control_indices` - A vector of control qubit indices.
+    /// * `parameters` - A vector of `Parameter<2>` instances for the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_cry_phase_dag_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        parameters: Vec<Parameter<2>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters) {
+            let gate = Gate::Parametric(
+                Box::new(ParametricRyPhaseDag { parameter }),
+                vec![target_index],
+                control_indices.clone(),
+            );
+            self.gates.push(gate);
         }
         Ok(self)
     }

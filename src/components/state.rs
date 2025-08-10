@@ -1858,6 +1858,106 @@ impl State {
         Ok(new_state)
     }
 
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubit in the state vector.
+    /// This is the adjoint of the ry_phase operation.
+    /// 
+    /// # Arguments
+    ///
+    /// * `qubit` - The index of the qubit to apply the adjoint operation to.
+    /// 
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// * `phase` - The phase shift angle in radians.
+    /// 
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the target qubit is out of bounds for the state vector
+    pub fn ry_phase_dag(
+        &self,
+        qubit: usize,
+        angle: f64,
+        phase: f64,
+    ) -> Result<Self, Error> {
+        Unitary2::from_ry_phase_dagger(angle, phase).apply(self, &[qubit], &[])
+    }
+
+    /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    /// This is the adjoint of the ry_phase operation.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `qubits` - The indices of the qubits to apply the adjoint ry_phase operation to.
+    /// 
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// * `phase` - The phase shift angle in radians.
+    /// 
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    /// 
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    /// 
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    pub fn ry_phase_dag_multi(
+        &self,
+        qubits: &[usize],
+        angle: f64,
+        phase: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let unitary_gate: Unitary2 = Unitary2::from_ry_phase_dagger(angle, phase);
+        for &qubit in qubits {
+            new_state = unitary_gate.apply(&new_state, &[qubit], &[])?;
+        }
+        Ok(new_state)
+    }
+
+    /// Applies the controlled Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    /// This is the controlled adjoint of the ry_phase operation.
+    /// 
+    /// # Arguments
+    ///
+    /// * `target_qubits` - The index of the target qubit.
+    /// 
+    /// * `control_qubits` - The indices of the control qubits.
+    ///
+    /// * `angle` - The rotation angle in radians.
+    /// 
+    /// * `phase` - The phase shift angle in radians.
+    /// 
+    /// # Returns
+    ///
+    /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits provided is invalid.
+    ///
+    /// * Returns an error if the indices are out of bounds for the state vector.
+    ///
+    /// * Returns an error if the control qubits and target qubits overlap.
+    pub fn cry_phase_dag_gates(
+        &self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+        phase: f64,
+    ) -> Result<Self, Error> {
+        let mut new_state: State = self.clone();
+        let unitary_gate: Unitary2 = Unitary2::from_ry_phase_dagger(angle, phase);
+        for &qubit in target_qubits {
+            new_state = unitary_gate.apply(&new_state, &[qubit], control_qubits)?;
+        }
+        Ok(new_state)
+    }
+
     // -- MULTI-QUBIT GATES --
 
     /// Applies the CNOT (Controlled-NOT) gate to the state vector.
@@ -2189,6 +2289,18 @@ pub trait ChainableState {
         angle: f64,
         phase: f64,
     ) -> Result<State, Error>;
+    /// Applies the adjoint of the Unitary (constructed from rotation angle and phase shift) to the specified qubit in the state vector.
+    fn ry_phase_dag(self, index: usize, angle: f64, phase: f64) -> Result<State, Error>;
+    /// Applies the adjoint of the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    fn ry_phase_dag_multi(self, qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
+    /// Applies the controlled adjoint of the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
+    fn cry_phase_dag_gates(
+        self,
+        target_qubits: &[usize],
+        control_qubits: &[usize],
+        angle: f64,
+        phase: f64,
+    ) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
 
@@ -2302,6 +2414,9 @@ impl_chainable_state! {
     ry_phase(index: usize, angle: f64, phase: f64) -> Result<State, Error>;
     ry_phase_multi(qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
     cry_phase_gates(target_qubits: &[usize], control_qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
+    ry_phase_dag(index: usize, angle: f64, phase: f64) -> Result<State, Error>;
+    ry_phase_dag_multi(qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
+    cry_phase_dag_gates(target_qubits: &[usize], control_qubits: &[usize], angle: f64, phase: f64) -> Result<State, Error>;
 
     // -- MULTI-QUBIT GATES --
     cnot(control: usize, target: usize) -> Result<State, Error>;

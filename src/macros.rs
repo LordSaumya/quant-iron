@@ -54,6 +54,7 @@
 /// - `rz(qubit, angle)` or `rz([qubits], angle)`
 /// - `p(qubit, angle)` or `p([qubits], angle)`
 /// - `ry_phase(qubit, theta, phi)` or `ry_phase([qubits], theta, phi)`
+/// - `ry_phase_dag(qubit, theta, phi)` or `ry_phase_dag([qubits], theta, phi)`
 ///
 /// ## Controlled Gates with Angles
 ///
@@ -62,6 +63,7 @@
 /// - `crz(target, control, angle)` or `crz([targets], [controls], angle)`
 /// - `cp(target, control, angle)` or `cp([targets], [controls], angle)`
 /// - `cry_phase(target, control, theta, phi)` or `cry_phase([targets], [controls], theta, phi)`
+/// - `cry_phase_dag(target, control, theta, phi)` or `cry_phase_dag([targets], [controls], theta, phi)`
 ///
 /// ## Special Gates
 ///
@@ -177,11 +179,13 @@ macro_rules! circuit_internal {
     ($builder:ident, rz([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.rz_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, p([$($qubits:expr),*], $angle:expr), $($rest:tt)*) => { $builder.p_gates(vec![$($qubits),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, ry_phase([$($qubits:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.ry_phase_gates(vec![$($qubits),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ry_phase_dag([$($qubits:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.ry_phase_dag_gates(vec![$($qubits),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, rx($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rx_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, ry($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.ry_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, rz($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.rz_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, p($qubit:expr, $angle:expr), $($rest:tt)*) => { $builder.p_gate($qubit, $angle); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, ry_phase($qubit:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.ry_phase_gate($qubit, $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, ry_phase_dag($qubit:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.ry_phase_dag_gate($qubit, $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
 
     // --- Controlled angle gate overloading ---
     ($builder:ident, crx([$($targets:expr),*], [$($controls:expr),*], $angle:expr), $($rest:tt)*) => { $builder.crx_gates(vec![$($targets),*], vec![$($controls),*], $angle); $crate::circuit_internal!($builder, $($rest)*); };
@@ -204,6 +208,10 @@ macro_rules! circuit_internal {
     ($builder:ident, cry_phase([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cry_phase($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, cry_phase($target:expr, $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_gates(vec![$target], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase_dag([$($targets:expr),*], [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_dag_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase_dag([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_dag_gates(vec![$($targets),*], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase_dag($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_dag_gates(vec![$target], vec![$($controls),*], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, cry_phase_dag($target:expr, $control:expr, $theta:expr, $phi:expr), $($rest:tt)*) => { $builder.cry_phase_dag_gates(vec![$target], vec![$control], $theta, $phi); $crate::circuit_internal!($builder, $($rest)*); };
 
     // --- Unitary and controlled unitary gates ---
     ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr), $($rest:tt)*) => { $builder.unitary_gates(vec![$($qubits),*], $matrix).unwrap(); $crate::circuit_internal!($builder, $($rest)*); };
@@ -299,11 +307,13 @@ macro_rules! circuit_internal {
     ($builder:ident, rz([$($qubits:expr),*], $angle:expr)) => { $builder.rz_gates(vec![$($qubits),*], $angle); };
     ($builder:ident, p([$($qubits:expr),*], $angle:expr)) => { $builder.p_gates(vec![$($qubits),*], $angle); };
     ($builder:ident, ry_phase([$($qubits:expr),*], $theta:expr, $phi:expr)) => { $builder.ry_phase_gates(vec![$($qubits),*], $theta, $phi); };
+    ($builder:ident, ry_phase_dag([$($qubits:expr),*], $theta:expr, $phi:expr)) => { $builder.ry_phase_dag_gates(vec![$($qubits),*], $theta, $phi); };
     ($builder:ident, rx($qubit:expr, $angle:expr)) => { $builder.rx_gate($qubit, $angle); };
     ($builder:ident, ry($qubit:expr, $angle:expr)) => { $builder.ry_gate($qubit, $angle); };
     ($builder:ident, rz($qubit:expr, $angle:expr)) => { $builder.rz_gate($qubit, $angle); };
     ($builder:ident, p($qubit:expr, $angle:expr)) => { $builder.p_gate($qubit, $angle); };
     ($builder:ident, ry_phase($qubit:expr, $theta:expr, $phi:expr)) => { $builder.ry_phase_gate($qubit, $theta, $phi); };
+    ($builder:ident, ry_phase_dag($qubit:expr, $theta:expr, $phi:expr)) => { $builder.ry_phase_dag_gate($qubit, $theta, $phi); };
 
     // Controlled angle gates
     ($builder:ident, crx([$($targets:expr),*], [$($controls:expr),*], $angle:expr)) => { $builder.crx_gates(vec![$($targets),*], vec![$($controls),*], $angle); };
@@ -326,6 +336,10 @@ macro_rules! circuit_internal {
     ($builder:ident, cry_phase([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$($targets),*], vec![$control], $theta, $phi); };
     ($builder:ident, cry_phase($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$target], vec![$($controls),*], $theta, $phi); };
     ($builder:ident, cry_phase($target:expr, $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_gates(vec![$target], vec![$control], $theta, $phi); };
+    ($builder:ident, cry_phase_dag([$($targets:expr),*], [$($controls:expr),*], $theta:expr, $phi:expr)) => { $builder.cry_phase_dag_gates(vec![$($targets),*], vec![$($controls),*], $theta, $phi); };
+    ($builder:ident, cry_phase_dag([$($targets:expr),*], $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_dag_gates(vec![$($targets),*], vec![$control], $theta, $phi); };
+    ($builder:ident, cry_phase_dag($target:expr, [$($controls:expr),*], $theta:expr, $phi:expr)) => { $builder.cry_phase_dag_gates(vec![$target], vec![$($controls),*], $theta, $phi); };
+    ($builder:ident, cry_phase_dag($target:expr, $control:expr, $theta:expr, $phi:expr)) => { $builder.cry_phase_dag_gates(vec![$target], vec![$control], $theta, $phi); };
 
     // Unitary and Controlled Unitary Gates
     ($builder:ident, unitary([$($qubits:expr),*], $matrix:expr)) => { $builder.unitary_gates(vec![$($qubits),*], $matrix).unwrap(); };

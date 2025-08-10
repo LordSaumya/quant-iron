@@ -813,9 +813,9 @@ impl Operator for SWAP {
 /// ```
 /// [1 0 0 0; 0 cos(theta/2) -e^(i*phi1)sin(theta/2) 0; 0 sin(theta/2) e^(i*phi2)cos(theta/2) 0; 0 0 0 e^(i*phi2)]
 /// ```
-/// 
+///
 /// # Warning
-/// 
+///
 /// This gate is not yet compilable to OpenQASM, since it requires advanced decomposition techniques.
 #[derive(Debug, Clone, Copy)]
 pub struct Matchgate {
@@ -2008,9 +2008,9 @@ impl Unitary2 {
     /// Creates a new Unitary2 operator from a rotation angle theta and phase shift angle phi.
     /// This operator can be decomposed into a rotation around the Y axis followed by a phase shift.
     /// The enclosed unitary matrix is guaranteed to be unitary.
-    /// 
+    ///
     /// Special cases include:
-    /// 
+    ///
     /// * U(theta, 0) = RY(theta)
     /// * U(0, phi) = PhaseShift(phi)
     /// * U(Pi/2, Pi) = Hadamard
@@ -2037,6 +2037,42 @@ impl Unitary2 {
                 -expi_phi * sin_half_theta,
             ],
             [Complex::new(sin_half_theta, 0.0), expi_phi * cos_half_theta],
+        ];
+
+        // Create Unitary2 operator unchecked
+        Unitary2 { matrix }
+    }
+
+    /// Creates a new Unitary2 operator from a rotation angle theta and phase shift angle phi.
+    /// This operator can be decomposed into a phase shift followed by a rotation around the Y axis.
+    /// The enclosed unitary matrix is guaranteed to be unitary.
+    ///
+    /// This is the adjoint of the `ry_phase` operator.
+    ///
+    /// # Arguments:
+    ///
+    /// * `theta` - The rotation angle in radians.
+    ///
+    /// * `phi` - The phase shift angle in radians.
+    ///
+    /// # Returns:
+    ///
+    /// * `Self` - A new Unitary2 operator representing the phase shift and rotation.
+    pub fn from_ry_phase_dagger(theta: f64, phi: f64) -> Self {
+        let cos_half_theta = (theta / 2.0).cos();
+        let sin_half_theta = (theta / 2.0).sin();
+        let expi_neg_phi = Complex::new(0.0, -phi).exp();
+
+        // Construct the unitary matrix
+        let matrix = [
+            [
+                Complex::new(cos_half_theta, 0.0),
+                Complex::new(sin_half_theta, 0.0),
+            ],
+            [
+                -expi_neg_phi * sin_half_theta,
+                expi_neg_phi * cos_half_theta,
+            ],
         ];
 
         // Create Unitary2 operator unchecked

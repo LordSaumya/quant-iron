@@ -1912,6 +1912,33 @@ fn test_operator_ry_phase_success() {
     assert_eq!(new_minus_state_3q_x, expected_minus_state_3q_x);
 }
 
+#[test]
+fn test_operator_ry_phase_dag_success() {
+    // Test if RyPhase dagger correctly inverts RyPhase
+    let theta = PI / 1.5; // Example angle
+    let phi = PI / 3.25; // Example phase
+
+    let zero_state = State::new_zero(3).unwrap();
+    let new_zero_state = zero_state.ry_phase(0, theta, phi).ry_phase_dag(0, theta, phi).unwrap();
+
+    assert_eq!(new_zero_state, zero_state);
+
+    let one_state = State::new_basis_n(3, 1).unwrap();
+    let new_one_state = one_state.ry_phase(0, theta, phi).ry_phase_dag(0, theta, phi).unwrap();
+
+    assert_eq!(new_one_state, one_state);
+
+    let plus_state = State::new_plus(3).unwrap();
+    let new_plus_state = plus_state.ry_phase(0, theta, phi).ry_phase_dag(0, theta, phi).unwrap();
+
+    assert_eq!(new_plus_state, plus_state);
+
+    let minus_state = State::new_minus(3).unwrap();
+    let new_minus_state = minus_state.ry_phase(0, theta, phi).ry_phase_dag(0, theta, phi).unwrap();
+
+    assert_eq!(new_minus_state, minus_state);
+}
+
 // -- MULTI-QUBIT OPERATORS --
 
 #[test]

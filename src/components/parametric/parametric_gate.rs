@@ -58,6 +58,33 @@ impl ParametricGate for ParametricRyPhase {
     }
 }
 
+/// A parametrised RY phase dagger gate
+///
+/// This operator is the dagger of the RY phase gate.
+///
+/// # Fields
+/// - `parameter`: A `Parameter<2>` instance that holds the rotation angle (theta) and phase shift (phi).
+#[derive(Debug, Clone)]
+pub struct ParametricRyPhaseDag {
+    pub parameter: Parameter<2>, // theta, phi
+}
+
+impl ParametricGate for ParametricRyPhaseDag {
+    fn to_concrete_gates(&self, target_indices: &[usize], control_indices: &[usize]) -> Vec<Gate> {
+        let params = self.parameter.get();
+        Gate::ry_phase_dag_controlled_gates(
+            target_indices.to_vec(),
+            control_indices.to_vec(),
+            params[0],
+            params[1],
+        )
+    }
+
+    fn box_clone(&self) -> Box<dyn ParametricGate> {
+        Box::new(self.clone())
+    }
+}
+
 /// A parametrised matchgate
 ///
 /// A two-qubit operator that applies a matchgate transformation to the adjacent target qubits.

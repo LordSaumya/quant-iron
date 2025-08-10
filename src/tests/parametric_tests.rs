@@ -194,6 +194,38 @@ fn test_parametric_mismatched_parameters_error() {
     } else {
         panic!("Expected an error due to mismatched parameters for cp");
     }
+
+    // Add mismatched parameter tests for ry_phase_dag variants
+    let parameter = Parameter::new([0.5, 1.0]);
+
+    let mut builder = CircuitBuilder::new(3);
+    let err_cry_phase_dag = builder.parametric_cry_phase_dag_gates(
+        vec![0, 1],
+        vec![2],
+        vec![parameter.clone()],
+    );
+    if let Err(err) = err_cry_phase_dag {
+        assert_eq!(
+            err.to_string(),
+            "Mismatched number of parameters: expected 2, got 1"
+        );
+    } else {
+        panic!("Expected an error due to mismatched parameters for cry_phase_dag");
+    }
+
+    let mut builder = CircuitBuilder::new(3);
+    let err_ry_phase_dag = builder.parametric_ry_phase_dag_gates(
+        vec![0, 1],
+        vec![parameter.clone()],
+    );
+    if let Err(err) = err_ry_phase_dag {
+        assert_eq!(
+            err.to_string(),
+            "Mismatched number of parameters: expected 2, got 1"
+        );
+    } else {
+        panic!("Expected an error due to mismatched parameters for ry_phase_dag");
+    }
 }
 
 #[test]
@@ -335,5 +367,64 @@ fn test_parametric_phase() {
     assert_eq!(
         format!("{:?}", circuit_cp),
         format!("{:?}", concrete_circuit_cp)
+    );
+}
+
+#[test]
+fn test_parametric_ry_phase_dag() {
+    let parameter = Parameter::new([0.5, 1.0]);
+
+    // Single-qubit parametric_ry_phase_dag
+    let circuit_ry_phase_dag_single = CircuitBuilder::new(1)
+        .parametric_ry_phase_dag_gate(0, parameter.clone())
+        .build_final()
+        .expect("Failed to build circuit")
+        .to_concrete_circuit();
+
+    let concrete_circuit_ry_phase_dag_single = circuit! {
+        qubits: 1,
+        ry_phase_dag(0, parameter.get()[0], parameter.get()[1])
+    }
+    .expect("Failed to create concrete circuit");
+
+    assert_eq!(
+        format!("{:?}", circuit_ry_phase_dag_single),
+        format!("{:?}", concrete_circuit_ry_phase_dag_single)
+    );
+
+    let circuit_ry_phase_dag = CircuitBuilder::new(2)
+        .parametric_ry_phase_dag_gates(vec![0, 1], vec![parameter.clone(), parameter.clone()])
+        .unwrap()
+        .build_final()
+        .expect("Failed to build circuit")
+        .to_concrete_circuit();
+
+    let concrete_circuit_ry_phase_dag = circuit! {
+        qubits: 2,
+        ry_phase_dag([0, 1], parameter.get()[0], parameter.get()[1])
+    }
+    .expect("Failed to create concrete circuit");
+
+    assert_eq!(
+        format!("{:?}", circuit_ry_phase_dag),
+        format!("{:?}", concrete_circuit_ry_phase_dag)
+    );
+
+    let circuit_cry_phase_dag = CircuitBuilder::new(3)
+        .parametric_cry_phase_dag_gates(vec![0, 1], vec![2], vec![parameter.clone(), parameter.clone()])
+        .unwrap()
+        .build_final()
+        .expect("Failed to build circuit")
+        .to_concrete_circuit();
+
+    let concrete_circuit_cry_phase_dag = circuit! {
+        qubits: 3,
+        cry_phase_dag([0, 1], 2, parameter.get()[0], parameter.get()[1])
+    }
+    .expect("Failed to create concrete circuit");
+
+    assert_eq!(
+        format!("{:?}", circuit_cry_phase_dag),
+        format!("{:?}", concrete_circuit_cry_phase_dag)
     );
 }
