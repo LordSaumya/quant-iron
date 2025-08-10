@@ -86,3 +86,99 @@ impl ParametricGate for ParametricMatchgate {
         Box::new(self.clone())
     }
 }
+
+/// A parametrised RX gate
+///
+/// # Fields
+/// - `parameter`: A `Parameter<1>` instance that holds the rotation angle (theta).
+#[derive(Debug, Clone)]
+pub struct ParametricRx {
+    pub parameter: Parameter<1>, // theta
+}
+
+impl ParametricGate for ParametricRx {
+    fn to_concrete_gates(&self, target_indices: &[usize], control_indices: &[usize]) -> Vec<Gate> {
+        let params = self.parameter.get();
+        Gate::rx_controlled_gates(
+            target_indices.to_vec(),
+            control_indices.to_vec(),
+            params[0],
+        )
+    }
+
+    fn box_clone(&self) -> Box<dyn ParametricGate> {
+        Box::new(self.clone())
+    }
+}
+
+/// A parametrised RY gate
+///
+/// # Fields
+/// - `parameter`: A `Parameter<1>` instance that holds the rotation angle (theta).
+#[derive(Debug, Clone)]
+pub struct ParametricRy {
+    pub parameter: Parameter<1>, // theta
+}
+
+impl ParametricGate for ParametricRy {
+    fn to_concrete_gates(&self, target_indices: &[usize], control_indices: &[usize]) -> Vec<Gate> {
+        let params = self.parameter.get();
+        Gate::ry_controlled_gates(
+            target_indices.to_vec(),
+            control_indices.to_vec(),
+            params[0],
+        )
+    }
+
+    fn box_clone(&self) -> Box<dyn ParametricGate> {
+        Box::new(self.clone())
+    }
+}
+
+/// A parametrised RZ gate
+///
+/// # Fields
+/// - `parameter`: A `Parameter<1>` instance that holds the rotation angle (theta).
+#[derive(Debug, Clone)]
+pub struct ParametricRz {
+    pub parameter: Parameter<1>, // theta
+}
+
+impl ParametricGate for ParametricRz {
+    fn to_concrete_gates(&self, target_indices: &[usize], control_indices: &[usize]) -> Vec<Gate> {
+        let params = self.parameter.get();
+        Gate::rz_controlled_gates(
+            target_indices.to_vec(),
+            control_indices.to_vec(),
+            params[0],
+        )
+    }
+
+    fn box_clone(&self) -> Box<dyn ParametricGate> {
+        Box::new(self.clone())
+    }
+}
+
+/// A parametrised Phase Shift gate
+///
+/// # Fields
+/// - `parameter`: A `Parameter<1>` instance that holds the phase shift (phi).
+#[derive(Debug, Clone)]
+pub struct ParametricP {
+    pub parameter: Parameter<1>, // phi
+}
+
+impl ParametricGate for ParametricP {
+    fn to_concrete_gates(&self, target_indices: &[usize], control_indices: &[usize]) -> Vec<Gate> {
+        let params = self.parameter.get();
+        Gate::p_controlled_gates(
+            target_indices.to_vec(),
+            control_indices.to_vec(),
+            params[0],
+        )
+    }
+
+    fn box_clone(&self) -> Box<dyn ParametricGate> {
+        Box::new(self.clone())
+    }
+}

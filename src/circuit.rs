@@ -6,7 +6,10 @@ use crate::{
         operator::Operator,
         parametric::{
             parameter::Parameter,
-            parametric_gate::{ParametricMatchgate, ParametricRyPhase},
+            parametric_gate::{
+                ParametricMatchgate, ParametricP, ParametricRx, ParametricRy, ParametricRz,
+                ParametricRyPhase,
+            },
         },
         state::State,
     },
@@ -1233,6 +1236,326 @@ impl CircuitBuilder {
         let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices);
         self.add_gate(gate);
         self
+    }
+
+    /// Adds a parametric Rx gate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 1 to be used in the gate.
+    pub fn parametric_rx_gate(&mut self, target_index: usize, parameter: Parameter<1>) -> &mut Self {
+        let p_gate = ParametricRx { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric Rx gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_rx_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            self.parametric_rx_gate(target_index, parameter);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric Rx gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_crx_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            let p_gate = ParametricRx {
+                parameter: parameter.clone(),
+            };
+            let gate =
+                Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
+            self.add_gate(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds a parametric Ry gate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 1 to be used in the gate.
+    pub fn parametric_ry_gate(&mut self, target_index: usize, parameter: Parameter<1>) -> &mut Self {
+        let p_gate = ParametricRy { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric Ry gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_ry_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            self.parametric_ry_gate(target_index, parameter);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric Ry gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_cry_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            let p_gate = ParametricRy {
+                parameter: parameter.clone(),
+            };
+            let gate =
+                Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
+            self.add_gate(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds a parametric Rz gate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 1 to be used in the gate.
+    pub fn parametric_rz_gate(&mut self, target_index: usize, parameter: Parameter<1>) -> &mut Self {
+        let p_gate = ParametricRz { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric Rz gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_rz_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            self.parametric_rz_gate(target_index, parameter);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric Rz gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_crz_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            let p_gate = ParametricRz {
+                parameter: parameter.clone(),
+            };
+            let gate =
+                Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
+            self.add_gate(gate);
+        }
+        Ok(self)
+    }
+
+    /// Adds a parametric P gate to the circuit builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_index` - The index of the target qubit.
+    /// * `parameter` - The parameter of size 1 to be used in the gate.
+    pub fn parametric_p_gate(&mut self, target_index: usize, parameter: Parameter<1>) -> &mut Self {
+        let p_gate = ParametricP { parameter };
+        let gate = Gate::Parametric(Box::new(p_gate), vec![target_index], vec![]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds multiple parametric P gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_p_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            self.parametric_p_gate(target_index, parameter);
+        }
+        Ok(self)
+    }
+
+    /// Adds multiple controlled parametric P gates to the circuit builder, each with its own parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_indices` - A vector of indices of the target qubits.
+    /// * `control_indices` - A vector of indices of the control qubits.
+    /// * `parameters` - A vector of parameters of size 1 to be used in the gates.
+    ///
+    /// # Warning
+    ///
+    /// This method is fallible due to the potential for a mismatch in the number of parameters.
+    /// If the number of parameters is not equal to the number of target indices, it will return an error.
+    /// Therefore, the `Result` must be handled appropriately before chaining further operations.
+    pub fn parametric_cp_gates(
+        &mut self,
+        target_indices: Vec<usize>,
+        control_indices: Vec<usize>,
+        parameters: Vec<Parameter<1>>,
+    ) -> Result<&mut Self, Error> {
+        if target_indices.len() != parameters.len() {
+            return Err(Error::MismatchedNumberOfParameters {
+                expected: target_indices.len(),
+                actual: parameters.len(),
+            });
+        }
+
+        for (target_index, parameter) in target_indices.into_iter().zip(parameters.into_iter()) {
+            let p_gate = ParametricP {
+                parameter: parameter.clone(),
+            };
+            let gate =
+                Gate::Parametric(Box::new(p_gate), vec![target_index], control_indices.clone());
+            self.add_gate(gate);
+        }
+        Ok(self)
     }
 
     // -- MEASUREMENT GATES --
