@@ -7,6 +7,8 @@
 //! - [Measurement](measurement): Provides functionality for quantum measurements in the X, Y, Z, and custom bases.
 //! - [Operator](operator): Represents quantum operators that can be applied to states.
 //! - [pauli_string]: Represents a string of Pauli operators with a coefficient, useful for defining Hamiltonians and other operations.
+//! - [Parameter](crate::components::parametric::parameter::Parameter): Represents a dynamic parameter used to construct parametric gates.
+//! - [Parametric_Gate](crate::components::parametric::parametric_gate::ParametricGate): A trait for gates that can be parametrised, allowing for dynamic adjustment of gate parameters.
 
 pub mod gate;
 #[cfg(feature = "gpu")]

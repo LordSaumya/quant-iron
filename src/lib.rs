@@ -5,6 +5,7 @@
 //! ## Features
 //! - **Quantum State Representation**: Create and manipulate predefined or custom quantum states of arbitrary qubit count.
 //! - **Standard Operations**: Hadamard (H), Pauli (X, Y, Z), CNOT, SWAP, Toffoli, Phase shifts, Rotations, and custom unitary operations.
+//! - **Parametric Gates**: Support for parametrised gates allowing for dynamic adjustment of gate parameters.
 //! - **Hardware Acceleration**: Optimised for parallel execution (CPU and GPU) and low memory overhead, with OpenCL-accelerated operations for enhanced performance on compatible hardware. (Requires `gpu` feature flag).
 //! - **Circuit Builder**: High-level interface for constructing quantum circuits with a fluent API and the `circuit!` macro with support for subroutines.
 //! - **Measurement**: Collapse wavefunction in the measurement basis with single or repeated measurements in the `Computational`, `X`, `Y`, and custom bases.
@@ -28,6 +29,7 @@
 //! ## Important Components
 //! 
 //! - [Circuit](mod@circuit): Provides the `Circuit` and `CircuitBuilder` for constructing quantum circuits.
+//! - [Circuit!](circuit!) - Provides a macro for easily constructing circuits.
 //! - [Components](components): Contains the core components of the library:
 //!   - [Operator]: Contains standard quantum gates and operators like Hadamard
 //!   - [State]: Represents quantum states and provides methods for state manipulation.
@@ -65,6 +67,7 @@ pub use crate::circuit::{Circuit, CircuitBuilder};
 pub use crate::subroutine::Subroutine;
 pub use crate::models::{heisenberg, ising};
 pub use crate::algorithms::time_evolution;
+pub use crate::components::parametric::{parameter, parametric_gate};
 
 #[cfg(test)]
 pub mod tests;
