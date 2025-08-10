@@ -904,7 +904,7 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * Result<Vec<Gate>, Error> - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index if the unitary is valid, else an error.
+    /// * `Result<Vec<Gate>, Error>` - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index if the unitary is valid, else an error.
     pub fn unitary2_controlled_gates(
         target_indices: Vec<usize>,
         control_indices: Vec<usize>,
@@ -963,7 +963,7 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * Vec<Gate> - A vector of Gate structs representing Unitary2 gates for each qubit index.
+    /// * `Vec<Gate>` - A vector of Gate structs representing Unitary2 gates for each qubit index.
     pub fn ry_phase_multi_gate(
         qubit_indices: Vec<usize>,
         theta: f64,
@@ -990,7 +990,7 @@ impl Gate {
     /// 
     /// # Returns
     /// 
-    /// * Vec<Gate> - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
+    /// * `Vec<Gate>` - A vector of Gate structs representing controlled Unitary2 gates for each target qubit index.
     pub fn ry_phase_controlled_gates(
         target_indices: Vec<usize>,
         control_indices: Vec<usize>,

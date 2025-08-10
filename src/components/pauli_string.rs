@@ -386,20 +386,20 @@ impl SumOp {
 
     /// Calculates the expectation value <psi|H|psi> = Sum_i <psi|P_i|psi>.
     ///
-    /// The expectation value is generally real for Hermitian operators and normalized states.
-    /// However, this function returns a Complex<f64> as intermediate PauliStrings
+    /// The expectation value is generally real for Hermitian operators and normalised states.
+    /// However, this function returns a `Complex<f64>` as intermediate PauliStrings
     /// might have complex coefficients or the operator/state might not be strictly physical.
     ///
     /// # Arguments
     /// * `state` - The state |psi> for which to calculate the expectation value.
-    ///             For a physically meaningful expectation value, this state should be normalized.
+    ///             For a physically meaningful expectation value, this state should be normalised.
     ///
     /// # Returns
     /// * `Result<Complex<f64>, Error>` - The expectation value, or an error if the operation fails.
     ///
     /// # Errors
-    /// * Returns an error if any underlying `PauliString::apply` fails (e.g., invalid qubit index).
-    /// * Returns an error if `state.inner_product` fails (e.g., mismatched number of qubits,
+    /// * Returns an error if any underlying `PauliString::apply` fails (eg., invalid qubit index).
+    /// * Returns an error if `state.inner_product` fails (eg., mismatched number of qubits,
     ///   though `PauliString::apply` should also catch qubit count issues).
     pub fn expectation_value(&self, state: &State) -> Result<Complex<f64>, Error> {
         if self.terms.is_empty() {
