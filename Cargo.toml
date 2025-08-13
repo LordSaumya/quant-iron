@@ -1,6 +1,6 @@
 [package]
 name = "quant-iron"
-version = "1.4.1"
+version = "1.4.2"
 edition = "2024"
 keywords = ["quantum_computing", "science", "gpu"]
 categories = ["science"]
