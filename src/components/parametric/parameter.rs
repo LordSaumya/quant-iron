@@ -30,6 +30,17 @@ impl<const N: usize> Parameter<N> {
         }
     }
 
+    /// Creates a new `Parameter` instance as an independent copy of the given parameter.
+    ///
+    /// # Returns
+    ///
+    /// A new `Parameter` instance.
+    pub fn deep_clone(&self) -> Self {
+        Self {
+            values: Arc::new(Mutex::new(self.get())),
+        }
+    }
+
     /// Gets the current values of the parameters.
     /// This will lock the underlying mutex.
     ///

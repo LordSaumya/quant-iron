@@ -24,6 +24,21 @@ fn test_parametric_parameter_set() {
 }
 
 #[test]
+fn test_parametric_parameter_deep_clone() {
+    let parameter = Parameter::new([0.5, 1.0]);
+    let cloned_parameter = parameter.clone();
+    let deep_cloned_parameter = parameter.deep_clone();
+    
+    assert_eq!(cloned_parameter.get(), [0.5, 1.0]);
+    assert_eq!(deep_cloned_parameter.get(), [0.5, 1.0]);
+
+    // Change original parameter and check that deep cloned parameter is unaffected
+    parameter.set([0.6, 1.1]);
+    assert_eq!(cloned_parameter.get(), [0.6, 1.1]);
+    assert_eq!(deep_cloned_parameter.get(), [0.5, 1.0]);
+}
+
+#[test]
 fn test_parametric_parametric_ryphase() {
     let parameter = Parameter::new([0.5, 1.0]);
 
