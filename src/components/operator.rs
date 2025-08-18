@@ -11,6 +11,7 @@ use ocl::prm::Float2;
 use rayon::prelude::*;
 #[cfg(feature = "gpu")]
 use std::f64::consts::PI;
+use std::fmt::Display;
 use std::{collections::HashSet, fmt::Debug};
 
 /// Threshold for using parallel CPU implementation
@@ -147,7 +148,7 @@ fn execute_on_gpu(
 }
 
 /// A trait defining the interface for all operators.
-pub trait Operator: Send + Sync + Debug + DynClone {
+pub trait Operator: Send + Sync + Debug + DynClone + Display {
     /// Applies the operator to the given state's target qubits, using the control qubits if required.
     ///
     /// # Arguments:
@@ -431,6 +432,12 @@ impl Operator for Hadamard {
     }
 }
 
+impl Display for Hadamard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "H")
+    }
+}
+
 /// Defines the Pauli operators: X, Y, Z.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Pauli {
@@ -674,6 +681,12 @@ impl Operator for CNOT {
     }
 }
 
+impl std::fmt::Display for CNOT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CNOT")
+    }
+}
+
 /// Defines a SWAP operator.
 ///
 /// A two-qubit operator that swaps the states of the two qubits.
@@ -800,6 +813,12 @@ impl Operator for SWAP {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for SWAP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SWAP")
     }
 }
 
@@ -987,6 +1006,12 @@ impl Operator for Matchgate {
     }
 }
 
+impl std::fmt::Display for Matchgate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Matchgate({:.3}, {:.3}, {:.3})", self.theta, self.phi1, self.phi2)
+    }
+}
+
 /// Defines a Toffoli operator.
 ///
 /// A three-qubit operator that flips the target qubit if both control qubits are in the |1> state. Also known as CCNOT (Controlled-Controlled-NOT).
@@ -1046,6 +1071,12 @@ impl Operator for Toffoli {
     }
 }
 
+impl std::fmt::Display for Toffoli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Toffoli")
+    }
+}
+
 /// Defines an identity operator
 ///
 /// A single-qubit operator that does not change the state of the qubit.
@@ -1085,6 +1116,12 @@ impl Operator for Identity {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for Identity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "I")
     }
 }
 
@@ -1172,6 +1209,12 @@ impl Operator for PhaseS {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for PhaseS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "S")
     }
 }
 
@@ -1268,6 +1311,12 @@ impl Operator for PhaseT {
     }
 }
 
+impl std::fmt::Display for PhaseT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "T")
+    }
+}
+
 /// Defines a Phase Sdag operator.
 ///
 /// A single-qubit operator that applies a phase shift to the |1> state. Also known as the S† gate or Phase† gate. Inverse of S gate.
@@ -1352,6 +1401,12 @@ impl Operator for PhaseSdag {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for PhaseSdag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "S†")
     }
 }
 
@@ -1445,6 +1500,12 @@ impl Operator for PhaseTdag {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for PhaseTdag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "T†")
     }
 }
 
@@ -1556,6 +1617,12 @@ impl Operator for PhaseShift {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for PhaseShift {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "P({:.3})", self.angle)
     }
 }
 
@@ -1696,6 +1763,12 @@ impl Operator for RotateX {
     }
 }
 
+impl std::fmt::Display for RotateX {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RX({:.3})", self.angle)
+    }
+}
+
 /// Defines the rotate-Y operator
 ///
 /// A single-qubit operator that applies a rotation around the Y axis of the Bloch sphere by the given angle. Also known as the RY gate.
@@ -1831,6 +1904,12 @@ impl Operator for RotateY {
     }
 }
 
+impl std::fmt::Display for RotateY {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RY({:.3})", self.angle)
+    }
+}
+
 /// Defines the rotate-Z operator
 ///
 /// A single-qubit operator that applies a rotation around the Z axis of the Bloch sphere by the given angle. Also known as the RZ gate.
@@ -1952,6 +2031,12 @@ impl Operator for RotateZ {
     }
 }
 
+impl std::fmt::Display for RotateZ {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RZ({:.3})", self.angle)
+    }
+}
+
 /// An arbitrary 2×2 unitary operator.
 ///
 /// This operator can be applied to a single qubit in a quantum state. It is represented by a 2×2 unitary matrix.
@@ -1961,6 +2046,21 @@ impl Operator for RotateZ {
 pub struct Unitary2 {
     /// The 2×2 unitary matrix representing the operator.
     pub(crate) matrix: [[Complex<f64>; 2]; 2],
+    /// Flag to indicate whether the unitary was created from the ry_phase or ry_phase dagger constructor
+    pub(crate) is_ryphase: IsRyPhase
+}
+
+/// Indicates whether the unitary operator is a standard RY phase operator, a RY phase dagger operator, or neither.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum IsRyPhase {
+    /// The operator is a standard RY phase operator.
+    /// Stores the original angles
+    RYPhase(f64, f64), // (theta, phi)
+    /// The operator is a RY phase dagger operator.
+    /// Stores the original angles
+    RYPhaseDagger(f64, f64), // (theta, phi)
+    /// The operator is not a standard RY phase operator.
+    None
 }
 
 impl Unitary2 {
@@ -2002,7 +2102,7 @@ impl Unitary2 {
             return Err(Error::NonUnitaryMatrix);
         }
 
-        Ok(Unitary2 { matrix })
+        Ok(Unitary2 { matrix, is_ryphase: IsRyPhase::None })
     }
 
     /// Creates a new Unitary2 operator from a rotation angle theta and phase shift angle phi.
@@ -2040,7 +2140,7 @@ impl Unitary2 {
         ];
 
         // Create Unitary2 operator unchecked
-        Unitary2 { matrix }
+        Unitary2 { matrix, is_ryphase: IsRyPhase::RYPhase(theta, phi) }
     }
 
     /// Creates a new Unitary2 operator from a rotation angle theta and phase shift angle phi.
@@ -2076,7 +2176,7 @@ impl Unitary2 {
         ];
 
         // Create Unitary2 operator unchecked
-        Unitary2 { matrix }
+        Unitary2 { matrix, is_ryphase: IsRyPhase::RYPhaseDagger(theta, phi) }
     }
 }
 
@@ -2159,5 +2259,15 @@ impl Operator for Unitary2 {
 
     fn to_compilable(&self) -> Option<&dyn Compilable> {
         Some(self)
+    }
+}
+
+impl std::fmt::Display for Unitary2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.is_ryphase {
+            IsRyPhase::RYPhase(theta, phi) => write!(f, "RYP({:.3}, {:.3})", theta, phi),
+            IsRyPhase::RYPhaseDagger(theta, phi) => write!(f, "RYP†({:.3}, {:.3})", theta, phi),
+            IsRyPhase::None => write!(f, "Unitary2"),
+        }
     }
 }
