@@ -79,6 +79,23 @@ impl State {
         })
     }
 
+    /// Checks the phase-independent equality of two states
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - The other state to compare with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `true` if the states are equal (ignoring phase), `false` otherwise.
+    pub fn equals_without_phase(&self, other: &Self) -> bool {
+        if self.num_qubits != other.num_qubits {
+            return false;
+        }
+        // Safe to unwrap since number of qubits is the same
+        (self.inner_product(other).unwrap().norm() - 1.0).abs() < f32::EPSILON.into()
+    }
+
     /// Creates a new state object with the given number of qubits initialised to the |0...0> state.
     ///
     /// # Arguments
