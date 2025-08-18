@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// # Generic Parameters
 /// - `N`: The number of values in the parameter array.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Parameter<const N: usize> {
     /// The values of the parameters
     values: Arc<Mutex<[f64; N]>>,
@@ -53,5 +53,12 @@ impl<const N: usize> Parameter<N> {
             Err(poisoned) => poisoned.into_inner(),
         };
         *guard = new_values;
+    }
+}
+
+impl<const N: usize> std::fmt::Debug for Parameter<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let values = self.get();
+        write!(f, "Parameter({:?})", values)
     }
 }
