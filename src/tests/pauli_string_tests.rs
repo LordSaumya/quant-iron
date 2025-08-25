@@ -119,6 +119,32 @@ fn test_pauli_string_apply_error() {
 }
 
 #[test]
+fn test_pauli_string_apply_normalised_success_non_empty() {
+    let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
+    pauli_string.add_op(0, Pauli::X);
+    pauli_string.add_op(1, Pauli::Y);
+
+    let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
+    let result: State = pauli_string.apply_normalised(&state).unwrap();
+    let expected_result: State = state.x(0).y(1).unwrap(); // Apply X on qubit 0 and Y on qubit 1
+
+    assert_eq!(result, expected_result);
+}
+
+#[test]
+fn test_pauli_string_apply_normalised_success_empty() {
+    let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
+    let pauli_string: PauliString = PauliString::new(coefficient);
+
+    let state: State = State::new_basis_n(2, 3).unwrap(); // Example state |11>
+    let result: State = pauli_string.apply_normalised(&state).unwrap();
+    let expected_result: State = state.clone(); // Just return the state as-is
+
+    assert_eq!(result, expected_result);
+}
+
+#[test]
 fn test_pauli_string_apply_exp_success_non_empty() {
     let coefficient: Complex<f64> = Complex::new(2.0, 2.0);
     let mut pauli_string: PauliString = PauliString::new(coefficient);
