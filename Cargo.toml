@@ -1,5 +1,6 @@
 [workspace]
 members = ["rl_framework"]
+default-members = [""]
 resolver = "2"
 
 [package]
