@@ -21,7 +21,7 @@ fn test_pauli_string_new() {
 }
 
 #[test]
-fn test_pauli_string_with_ops() {
+fn test_pauli_string_with_ops_success() {
     // Test creating a new PauliString with a coefficient and operators
     let coefficient: Complex<f64> = Complex::new(1.0, 0.0);
     let mut ops: HashMap<usize, Pauli> = HashMap::new();
@@ -36,7 +36,7 @@ fn test_pauli_string_with_ops() {
 }
 
 #[test]
-fn test_pauli_string_add_op() {
+fn test_pauli_string_add_op_success() {
     // Test adding a Pauli operator to the PauliString
     let coefficient: Complex<f64> = Complex::new(1.0, 0.0);
     let mut pauli_string: PauliString = PauliString::new(coefficient);
@@ -51,7 +51,16 @@ fn test_pauli_string_add_op() {
 }
 
 #[test]
-fn test_pauli_string_with_op() {
+#[should_panic]
+fn test_pauli_string_add_op_panics() {
+    let coefficient: Complex<f64> = Complex::new(1.0, 0.0);
+    let mut pauli_string: PauliString = PauliString::new(coefficient);
+    pauli_string.add_op(0, Pauli::X);
+    pauli_string.add_op(0, Pauli::Y); // This should panic
+}
+
+#[test]
+fn test_pauli_string_with_op_success() {
     let pauli_string: PauliString = PauliString::new(Complex::new(1.0, 0.0))
         .with_op(0, Pauli::X)
         .with_op(1, Pauli::Y);
@@ -60,6 +69,14 @@ fn test_pauli_string_with_op() {
     assert_eq!(pauli_string.ops().len(), 2);
     assert_eq!(pauli_string.ops().get(&0), Some(&Pauli::X));
     assert_eq!(pauli_string.ops().get(&1), Some(&Pauli::Y));
+}
+
+#[test]
+#[should_panic]
+fn test_pauli_string_with_op_panics() {
+    let _pauli_string: PauliString = PauliString::new(Complex::new(1.0, 0.0))
+        .with_op(0, Pauli::X)
+        .with_op(0, Pauli::Y); // This should panic
 }
 
 #[test]
