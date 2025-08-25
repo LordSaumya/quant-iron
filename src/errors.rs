@@ -84,14 +84,6 @@ pub enum Error {
     /// Invalid input value for operation
     #[error("Invalid input value for operation: {0}")]
     InvalidInputValue(usize),
-
-    /// A Pauli string contains duplicate operators for the same qubit
-    ///
-    /// # Arguments:
-    ///
-    /// * `0` - The qubit index
-    #[error("Duplicate Pauli string operator for qubit: {0}")]
-    DuplicatePauliStringOperator(usize),
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
