@@ -125,6 +125,26 @@ fn test_state_new_minus_errors() {
 }
 
 #[test]
+fn test_state_normalise_success() {
+    let state_vector: Vec<Complex<f64>> = vec![Complex::new(3.0, 0.0), Complex::new(4.0, 0.0)];
+    let state: State = State { state_vector, num_qubits: 2 };
+
+    let normalised_state = state.normalise().unwrap();
+    let expected_state_vector: Vec<Complex<f64>> = vec![Complex::new(0.6, 0.0), Complex::new(0.8, 0.0)];
+    assert_eq!(normalised_state.state_vector, expected_state_vector);
+}
+
+#[test]
+fn test_state_normalise_error() {
+    let state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0), Complex::new(0.0, 0.0)];
+    let state: State = State { state_vector, num_qubits: 2 };
+
+    let result = state.normalise();
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), Error::ZeroNorm);
+}
+
+#[test]
 fn test_state_probability_success() {
     let state: State = State::new_plus(1).unwrap();
     let expected_probability: f64 = 0.5;
