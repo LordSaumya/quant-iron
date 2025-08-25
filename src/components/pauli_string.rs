@@ -121,6 +121,23 @@ impl PauliString {
         Ok(new_state * self.coefficient)
     }
 
+    /// Applies the Pauli string to a given state and normalises the new state.
+    ///
+    /// # Arguments
+    /// * `state` - The state to which the Pauli string is applied.
+    /// 
+    /// # Returns
+    /// * `Result<State, Error>` - The resulting state after applying the Pauli string, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the operations in the Pauli string refer to qubits outside the range of the state.
+    /// * Returns an error if the resulting state cannot be normalised (eg., has zero norm).
+    pub fn apply_normalised(&self, state: &State) -> Result<State, Error> {
+        let new_state: State = self.apply_operators(state)?;
+        new_state.normalise()
+    }
+
     /// Helper function to apply only the operator part of the Pauli string (P_ops) to a state.
     /// This does not include the PauliString's own coefficient.
     fn apply_operators(&self, state: &State) -> Result<State, Error> {
