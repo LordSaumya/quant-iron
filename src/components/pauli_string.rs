@@ -40,6 +40,8 @@ impl PauliString {
     ///
     /// # Returns
     /// A new `PauliString` instance with the specified coefficient and operators.
+    ///
+    /// Note that the Hashmap ensures uniqueness of operators for each qubit.
     pub fn with_ops(coefficient: Complex<f64>, ops: HashMap<usize, Pauli>) -> Self {
         Self { ops, coefficient }
     }
@@ -49,8 +51,13 @@ impl PauliString {
     /// # Arguments
     /// * `qubit` - The index of the qubit to which the operator is applied.
     /// * `op` - The Pauli operator to be added (X, Y, or Z).
+    /// 
+    /// # Panics
+    /// This function will panic if an operator for the same qubit index is added more than once.
     pub fn add_op(&mut self, qubit: usize, op: Pauli) {
-        self.ops.insert(qubit, op);
+        if self.ops.insert(qubit, op).is_some() {
+            panic!("Duplicate Pauli string operator for qubit: {}", qubit);
+        }
     }
 
     /// Adds a Pauli operator to the Pauli string at the specified qubit index and returns the new `PauliString` instance.
@@ -63,6 +70,9 @@ impl PauliString {
     /// # Returns
     ///
     /// * `Self` - A new `PauliString` instance with the added operator.
+    /// 
+    /// # Panics
+    /// This function will panic if an operator for the same qubit index is added more than once.
     pub fn with_op(mut self, qubit: usize, op: Pauli) -> Self {
         self.add_op(qubit, op);
         self
