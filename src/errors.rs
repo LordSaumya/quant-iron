@@ -80,6 +80,10 @@ pub enum Error {
     /// Failed to create circuit from macro
     #[error("Failed to create circuit from macro: {0}")]
     CircuitMacroError(String),
+
+    /// Invalid input value for operation
+    #[error("Invalid input value for operation: {0}")]
+    InvalidInputValue(usize),
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
