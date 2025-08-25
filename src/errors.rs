@@ -84,6 +84,10 @@ pub enum Error {
     /// Invalid input value for operation
     #[error("Invalid input value for operation: {0}")]
     InvalidInputValue(usize),
+
+    /// The state cannot be normalised because it has zero norm.
+    #[error("The state cannot be normalised because it has zero norm.")]
+    ZeroNorm,
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
