@@ -725,6 +725,32 @@ impl State {
         Ok(inner_product)
     }
 
+    /// Normalises the state vector and returns the state.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<State, Error>` - The resulting state after normalisation, or an error if the operation fails.
+    pub fn normalise(&self) -> Result<Self, Error> {
+        let norm = self.state_vector.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
+        if norm == 0.0 {
+            return Err(Error::ZeroNorm);
+        }
+        if norm == 1.0 {
+            return Ok(self.clone());
+        }
+
+        let new_state_vector: Vec<Complex<f64>> = self
+            .state_vector
+            .iter()
+            .map(|x| x / norm)
+            .collect();
+
+        Ok(Self {
+            state_vector: new_state_vector,
+            num_qubits: self.num_qubits,
+        })
+    }
+
     // ***** OPERATION FUNCTIONS *****
 
     /// Applies a unitary operation to the state vector.
