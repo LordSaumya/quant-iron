@@ -97,7 +97,7 @@ impl State {
 
         let n = ((1_usize.wrapping_shl(num_electrons as u32)) - 1).wrapping_shl((num_orbitals - num_electrons) as u32);
 
-        Ok(State::new_basis_n(num_orbitals, n)?)
+        State::new_basis_n(num_orbitals, n)
     }
 
     /// Checks the phase-independent equality of two states

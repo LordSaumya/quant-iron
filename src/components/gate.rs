@@ -1002,7 +1002,7 @@ impl Gate {
             .into_iter()
             .map(|target_index| {
                 Gate::Operator(
-                    Box::new(op_template.clone()),
+                    Box::new(op_template),
                     vec![target_index],
                     control_indices.clone(),
                 )
@@ -1053,7 +1053,7 @@ impl Gate {
         qubit_indices
             .into_iter()
             .map(|qubit_index| {
-                Gate::Operator(Box::new(op_template.clone()), vec![qubit_index], vec![])
+                Gate::Operator(Box::new(op_template), vec![qubit_index], vec![])
             })
             .collect()
     }
@@ -1081,7 +1081,7 @@ impl Gate {
             .into_iter()
             .map(|target_index| {
                 Gate::Operator(
-                    Box::new(op_template.clone()),
+                    Box::new(op_template),
                     vec![target_index],
                     control_indices.clone(),
                 )
