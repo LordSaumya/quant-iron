@@ -1,8 +1,7 @@
 use crate::components::{
     measurement::{MeasurementBasis, MeasurementResult},
     operator::{
-        CNOT, Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift,
-        PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2,
+        Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, Toffoli, Unitary2, CNOT, SWAP
     },
 };
 use crate::errors::Error;
@@ -79,6 +78,28 @@ impl State {
         })
     }
 
+    /// Creates a new Hartree-Fock state object with the given number of electrons and orbitals.
+    /// 
+    /// # Arguments
+    ///
+    /// * `num_electrons` - The number of electrons in the system.
+    /// 
+    /// * `num_orbitals` - The number of orbitals in the system.
+    ///
+    /// # Returns
+    ///
+    /// * `state` - A result containing the state object if successful, or an error if the input is invalid.
+    pub fn new_hartree_fock(num_electrons: usize, num_orbitals: usize) -> Result<Self, Error> {
+        // Validate input (num_orbitals must be > 0 and >= num_electrons)
+        if num_orbitals == 0 || num_orbitals < num_electrons {
+            return Err(Error::InvalidInputValue(num_orbitals));
+        }
+
+        let n = ((1_usize.wrapping_shl(num_electrons as u32)) - 1).wrapping_shl((num_orbitals - num_electrons) as u32);
+
+        Ok(State::new_basis_n(num_orbitals, n)?)
+    }
+
     /// Checks the phase-independent equality of two states
     /// 
     /// # Arguments
@@ -113,6 +134,7 @@ impl State {
         if num_qubits == 0 {
             return Err(Error::InvalidNumberOfQubits(num_qubits));
         }
+
         let dim: usize = 1 << num_qubits;
         let mut state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); dim];
         state_vector[0] = Complex::new(1.0, 0.0); // |0...0> state has amplitude 1.0 at index 0
