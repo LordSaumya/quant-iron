@@ -44,6 +44,12 @@ name = "circuits"
 name = "hamiltonian"
 [[example]]
 name = "heisenberg"
+[[example]]
+name = "circuit_macro"
+[[example]]
+name = "parametric"
+[[example]]
+name = "qasm"
 
 # Optimise dependencies in release mode
 [profile.release]
