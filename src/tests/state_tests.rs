@@ -33,6 +33,21 @@ fn test_state_new_errors() {
 }
 
 #[test]
+fn test_state_new_hartree_fock_success() {
+    let hf_state: State = State::new_hartree_fock(2, 2).unwrap();
+    let expected_state: State = State::new_basis_n(2, 3).unwrap(); // |11>
+    assert_eq!(hf_state, expected_state);
+
+    let hf_state: State = State::new_hartree_fock(4, 6).unwrap();
+    let expected_state: State = State::new_basis_n(6, 60).unwrap(); // |111100>
+    assert_eq!(hf_state, expected_state);
+
+    let hf_state: State = State::new_hartree_fock(1, 4).unwrap();
+    let expected_state: State = State::new_basis_n(4, 8).unwrap(); // |1000>
+    assert_eq!(hf_state, expected_state);
+}
+
+#[test]
 fn test_state_new_zero_success() {
     let expected_state_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, 0.0), Complex::new(0.0, 0.0)];
     let state: State = State::new_zero(1).unwrap();
