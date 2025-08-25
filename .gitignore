@@ -22,3 +22,4 @@ crossover_analysis.md
 # Ignore IDEA / RustRover ide files
 .idea
 src/main.rs
+rl_framework/
