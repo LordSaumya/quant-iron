@@ -1,5 +1,6 @@
-use crate::{errors::Error, components::state::{State}};
+use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
+use std::f64::consts::PI;
 
 #[test]
 fn test_state_new_success() {
@@ -187,4 +188,87 @@ fn test_state_tensor_product_success() {
     let expected: State = State::new_basis_n(2, 1).unwrap(); // |01>
     let actual: State = state1.tensor_product(&state2).unwrap();
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_state_conj() {
+    let state_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, 1.0), Complex::new(0.0, -1.0)];
+    let conj_state_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, -1.0), Complex::new(0.0, 1.0)];
+
+    let state: State = State { state_vector, num_qubits: 1 };
+    let conj_state: State = state.conj();
+    let expected_state = State { state_vector: conj_state_vector, num_qubits: 1 };
+    assert_eq!(conj_state, expected_state);
+}
+
+#[test]
+fn test_state_fs_dist_success() {
+    // Zero distance
+    let zero_dist_state = State::new_plus(2).unwrap();
+    assert!((zero_dist_state.fs_dist(&zero_dist_state).unwrap() - 0.0).abs() < f64::EPSILON);
+
+    // Nonzero distance
+    let state1_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, 0.0), Complex::new(0.0, 1.0)];
+    let state1 = State { state_vector: state1_vector, num_qubits: 2 };
+
+    let state2_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0), Complex::new(1.0, 0.0)];
+    let state2 = State { state_vector: state2_vector, num_qubits: 2 };
+
+    let fs_dist = state1.fs_dist(&state2).unwrap();
+
+    assert!((fs_dist - PI/4.0).abs() < f64::EPSILON);
+
+    // Check if D = arccos(sqrt(F))
+    assert!((fs_dist.sqrt().acos() - 0.5) < f64::EPSILON);
+}
+
+#[test]
+fn test_state_fs_dist_errors() {
+    // Empty state vector (norm is 0)
+    let empty_state_vector: Vec<Complex<f64>> = vec![];
+    let state = State { state_vector: empty_state_vector, num_qubits: 0 };
+    let result = state.fs_dist(&state);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), Error::ZeroNorm);
+    
+    // Different number of qubits
+    let state1 = State::new_plus(2).unwrap();
+    let state2 = State::new_plus(1).unwrap();
+    let result = state1.fs_dist(&state2);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), Error::InvalidNumberOfQubits(2));
+
+    // Zero norm error
+    let zero_norm_state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0), Complex::new(0.0, 0.0)];
+    let state = State { state_vector: zero_norm_state_vector, num_qubits: 2 };
+    let state_2 = State::new_basis_n(2, 1).unwrap();
+    let result = state.fs_dist(&state_2);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), Error::ZeroNorm);
+}
+
+#[test]
+fn test_state_fs_fidelity_success() {
+    // Zero fidelity
+    let state1_vector: Vec<Complex<f64>> = vec![Complex::new(1.0, 0.0), Complex::new(0.0, 0.0)];
+    let orthogonal_state_vector: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0), Complex::new(1.0, 0.0)];
+    let state1 = State { state_vector: state1_vector, num_qubits: 2 };
+    let state2 = State { state_vector: orthogonal_state_vector, num_qubits: 2 };
+    let fidelity = state1.fs_fidelity(&state2).unwrap();
+    assert!((fidelity - 0.0).abs() < f64::EPSILON);
+
+    // Perfect fidelity
+    let state = State::new_plus(2).unwrap();
+    let fidelity = state.fs_fidelity(&state).unwrap();
+    assert!((fidelity - 1.0).abs() < f64::EPSILON);
+
+    // Nonzero fidelity
+    let plus_state = State::new_plus(1).unwrap();
+    let basis_state = State::new_basis_n(1, 1).unwrap();
+
+    let fidelity = plus_state.fs_fidelity(&basis_state).unwrap();
+    assert!((fidelity - 0.5).abs() < f64::EPSILON);
+
+    // Check if F = cos^2(D)
+    assert!((fidelity - (PI/4.0).cos().powi(2)).abs() < f64::EPSILON);
 }
