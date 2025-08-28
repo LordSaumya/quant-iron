@@ -100,23 +100,6 @@ impl State {
         State::new_basis_n(num_orbitals, n)
     }
 
-    /// Checks the phase-independent equality of two states
-    /// 
-    /// # Arguments
-    /// 
-    /// * `other` - The other state to compare with.
-    /// 
-    /// # Returns
-    /// 
-    /// * `true` if the states are equal (ignoring phase), `false` otherwise.
-    pub fn equals_without_phase(&self, other: &Self) -> bool {
-        if self.num_qubits != other.num_qubits {
-            return false;
-        }
-        // Safe to unwrap since number of qubits is the same
-        (self.inner_product(other).unwrap().norm() - 1.0).abs() < f32::EPSILON.into()
-    }
-
     /// Creates a new state object with the given number of qubits initialised to the |0...0> state.
     ///
     /// # Arguments
@@ -256,6 +239,36 @@ impl State {
         })
     }
 
+    /// Checks the phase-independent equality of two states
+    /// 
+    /// # Arguments
+    /// 
+    /// * `other` - The other state to compare with.
+    /// 
+    /// # Returns
+    /// 
+    /// * `true` if the states are equal (ignoring phase), `false` otherwise.
+    pub fn equals_without_phase(&self, other: &Self) -> bool {
+        if self.num_qubits != other.num_qubits {
+            return false;
+        }
+        // Safe to unwrap since number of qubits is the same
+        (self.inner_product(other).unwrap().norm() - 1.0).abs() < f32::EPSILON.into()
+    }
+
+    /// Returns the Hermitian conjugate (<self|) of the state.
+    /// 
+    /// # Returns
+    ///
+    /// * `Self` - The Hermitian conjugate of the state.
+    pub fn conj(&self) -> Self {
+        let state_vector = self.state_vector.iter().map(|amp| amp.conj()).collect();
+        Self {
+            state_vector,
+            num_qubits: self.num_qubits,
+        }
+    }
+
     /// Returns the probability of a basis state at index `n` in the state vector.
     ///
     /// # Arguments
@@ -304,6 +317,50 @@ impl State {
             return Err(Error::InvalidQubitIndex(n, self.num_qubits));
         }
         Ok(self.state_vector[n])
+    }
+
+
+
+    /// Returns the Fubini-Study metric distance between two normalised quantum states.
+    /// Expressed as `D = arccos(<Self|Other>) = arccos(F^0.5)`.
+    /// 
+    /// # Arguments
+    ///
+    /// * `other` - The other quantum state to compare against.
+    ///
+    /// # Returns
+    ///
+    /// * `distance` - The Fubini-Study metric distance between the two states.
+    /// 
+    /// # Errors
+    ///
+    /// Returns an error if the inner product calculation fails (ie. if one of the state vectors is empty, or if the dimensions do not match)
+    /// Returns an error is the normalisation of either of the states fails (ie. if one of the states has zero norm).
+    pub fn fs_dist(&self, other: &Self) -> Result<f64, Error> {
+        // Normalise states
+        let normalised_self = self.normalise()?;
+        let normalised_other = other.normalise()?;
+
+        Ok(normalised_self.inner_product(&normalised_other)?.norm().acos())
+    }
+
+    /// Returns the Fubini-Study fidelity metric between two quantum states.
+    /// Expressed as `F = |<Self|Other>|^2 = cos^2(D)`.
+    /// 
+    /// # Arguments
+    ///
+    /// * `other` - The other quantum state to compare against.
+    /// 
+    /// # Errors
+    ///
+    /// Returns an error if the inner product calculation fails (ie. if one of the state vectors is empty, or if the dimensions do not match)
+    /// Returns an error if the normalisation of either of the states fails (ie. if one of the states has zero norm).
+    pub fn fs_fidelity(&self, other: &Self) -> Result<f64, Error> {
+        // Normalise states
+        let normalised_self = self.normalise()?;
+        let normalised_other = other.normalise()?;
+
+        Ok(normalised_self.inner_product(&normalised_other)?.norm_sqr())
     }
 
     // ***** MEASUREMENT FUNCTIONS *****
@@ -682,7 +739,7 @@ impl State {
         }
     }
 
-    /// Performs an inner product of two state vectors and returns the resulting complex number.
+    /// Performs an inner product of two state vectors (<Self | Other>) and returns the resulting complex number.
     ///
     /// # Arguments
     ///
@@ -702,7 +759,7 @@ impl State {
         }
 
         if self.state_vector.len() != other.state_vector.len() {
-            return Err(Error::InvalidNumberOfQubits(self.state_vector.len()));
+            return Err(Error::InvalidNumberOfQubits(self.num_qubits));
         }
 
         const PARALLEL_THRESHOLD: usize = 1 << 6; // Threshold for parallelisation
