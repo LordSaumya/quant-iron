@@ -1,15 +1,17 @@
 use crate::components::{
     measurement::{MeasurementBasis, MeasurementResult},
     operator::{
-        Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, Toffoli, Unitary2, CNOT, SWAP
+        CNOT, Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift,
+        PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2,
     },
 };
 use crate::errors::Error;
 use num_complex::Complex;
+use once_cell::sync::Lazy;
 use rand::Rng;
 use rayon::prelude::*;
-use std::ops::{Add, Mul, Sub};
 use std::f64::consts::FRAC_1_SQRT_2;
+use std::ops::{Add, Mul, Sub};
 
 // Helper function to calculate the adjoint (conjugate transpose) of a 2x2 matrix
 fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] {
@@ -17,6 +19,51 @@ fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] 
         [matrix[0][0].conj(), matrix[1][0].conj()],
         [matrix[0][1].conj(), matrix[1][1].conj()],
     ]
+}
+
+/// Bell state vectors
+pub(crate) mod bell_vectors {
+    use super::*;
+
+    pub static PHI_PLUS: Lazy<Vec<Complex<f64>>> = Lazy::new(|| {
+        let amplitude = Complex::new(FRAC_1_SQRT_2, 0.0);
+        vec![
+            amplitude,
+            Complex::new(0.0, 0.0),
+            Complex::new(0.0, 0.0),
+            amplitude,
+        ]
+    });
+
+    pub static PHI_MINUS: Lazy<Vec<Complex<f64>>> = Lazy::new(|| {
+        let amplitude = Complex::new(FRAC_1_SQRT_2, 0.0);
+        vec![
+            amplitude,
+            Complex::new(0.0, 0.0),
+            Complex::new(0.0, 0.0),
+            -amplitude,
+        ]
+    });
+
+    pub static PSI_PLUS: Lazy<Vec<Complex<f64>>> = Lazy::new(|| {
+        let amplitude = Complex::new(FRAC_1_SQRT_2, 0.0);
+        vec![
+            Complex::new(0.0, 0.0),
+            amplitude,
+            amplitude,
+            Complex::new(0.0, 0.0),
+        ]
+    });
+
+    pub static PSI_MINUS: Lazy<Vec<Complex<f64>>> = Lazy::new(|| {
+        let amplitude = Complex::new(FRAC_1_SQRT_2, 0.0);
+        vec![
+            Complex::new(0.0, 0.0),
+            amplitude,
+            -amplitude,
+            Complex::new(0.0, 0.0),
+        ]
+    });
 }
 
 #[derive(Clone)]
@@ -80,11 +127,11 @@ impl State {
     }
 
     /// Creates a new Hartree-Fock state object with the given number of electrons and orbitals.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `num_electrons` - The number of electrons in the system.
-    /// 
+    ///
     /// * `num_orbitals` - The number of orbitals in the system.
     ///
     /// # Returns
@@ -96,7 +143,8 @@ impl State {
             return Err(Error::InvalidInputValue(num_orbitals));
         }
 
-        let n = ((1_usize.wrapping_shl(num_electrons as u32)) - 1).wrapping_shl((num_orbitals - num_electrons) as u32);
+        let n = ((1_usize.wrapping_shl(num_electrons as u32)) - 1)
+            .wrapping_shl((num_orbitals - num_electrons) as u32);
 
         State::new_basis_n(num_orbitals, n)
     }
@@ -276,14 +324,62 @@ impl State {
         })
     }
 
-    /// Checks the phase-independent equality of two states
-    /// 
-    /// # Arguments
-    /// 
-    /// * `other` - The other state to compare with.
-    /// 
+    /// Creates a new two-qubit Phi plus Bell state |Φ+⟩.
+    ///
     /// # Returns
-    /// 
+    ///
+    /// * `Self` - A new instance of the two-qubit Bell state |Φ+⟩.
+    pub fn new_phi_plus() -> Self {
+        Self {
+            state_vector: bell_vectors::PHI_PLUS.clone(),
+            num_qubits: 2,
+        }
+    }
+
+    /// Creates a new two-qubit Phi minus Bell state |Φ-⟩.
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - A new instance of the two-qubit Bell state |Φ-⟩.
+    pub fn new_phi_minus() -> Self {
+        Self {
+            state_vector: bell_vectors::PHI_MINUS.clone(),
+            num_qubits: 2,
+        }
+    }
+
+    /// Creates a new two-qubit Psi plus Bell state |Ψ+⟩.
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - A new instance of the two-qubit Bell state |Ψ+⟩.
+    pub fn new_psi_plus() -> Self {
+        Self {
+            state_vector: bell_vectors::PSI_PLUS.clone(),
+            num_qubits: 2,
+        }
+    }
+
+    /// Creates a new two-qubit Psi minus Bell state |Ψ-⟩.
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - A new instance of the two-qubit Bell state |Ψ-⟩.
+    pub fn new_psi_minus() -> Self {
+        Self {
+            state_vector: bell_vectors::PSI_MINUS.clone(),
+            num_qubits: 2,
+        }
+    }
+
+    /// Checks the phase-independent equality of two states
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The other state to compare with.
+    ///
+    /// # Returns
+    ///
     /// * `true` if the states are equal (ignoring phase), `false` otherwise.
     pub fn equals_without_phase(&self, other: &Self) -> bool {
         if self.num_qubits != other.num_qubits {
@@ -294,7 +390,7 @@ impl State {
     }
 
     /// Returns the Hermitian conjugate (<self|) of the state.
-    /// 
+    ///
     /// # Returns
     ///
     /// * `Self` - The Hermitian conjugate of the state.
@@ -358,7 +454,7 @@ impl State {
 
     /// Returns the Fubini-Study metric distance between two normalised quantum states.
     /// Expressed as `D = arccos(<Self|Other>) = arccos(F^0.5)`.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `other` - The other quantum state to compare against.
@@ -366,7 +462,7 @@ impl State {
     /// # Returns
     ///
     /// * `distance` - The Fubini-Study metric distance between the two states.
-    /// 
+    ///
     /// # Errors
     ///
     /// Returns an error if the inner product calculation fails (ie. if one of the state vectors is empty, or if the dimensions do not match)
@@ -376,16 +472,19 @@ impl State {
         let normalised_self = self.normalise()?;
         let normalised_other = other.normalise()?;
 
-        Ok(normalised_self.inner_product(&normalised_other)?.norm().acos())
+        Ok(normalised_self
+            .inner_product(&normalised_other)?
+            .norm()
+            .acos())
     }
 
     /// Returns the Fubini-Study fidelity metric between two quantum states.
     /// Expressed as `F = |<Self|Other>|^2 = cos^2(D)`.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `other` - The other quantum state to compare against.
-    /// 
+    ///
     /// # Errors
     ///
     /// Returns an error if the inner product calculation fails (ie. if one of the state vectors is empty, or if the dimensions do not match)
@@ -823,7 +922,12 @@ impl State {
     ///
     /// * `Result<State, Error>` - The resulting state after normalisation, or an error if the operation fails.
     pub fn normalise(&self) -> Result<Self, Error> {
-        let norm = self.state_vector.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
+        let norm = self
+            .state_vector
+            .iter()
+            .map(|x| x.norm_sqr())
+            .sum::<f64>()
+            .sqrt();
         if norm == 0.0 {
             return Err(Error::ZeroNorm);
         }
@@ -831,11 +935,8 @@ impl State {
             return Ok(self.clone());
         }
 
-        let new_state_vector: Vec<Complex<f64>> = self
-            .state_vector
-            .iter()
-            .map(|x| x / norm)
-            .collect();
+        let new_state_vector: Vec<Complex<f64>> =
+            self.state_vector.iter().map(|x| x / norm).collect();
 
         Ok(Self {
             state_vector: new_state_vector,
@@ -2017,50 +2118,45 @@ impl State {
 
     /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubit in the state vector.
     /// This is the adjoint of the ry_phase operation.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `qubit` - The index of the qubit to apply the adjoint operation to.
-    /// 
+    ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// * `phase` - The phase shift angle in radians.
-    /// 
+    ///
     /// # Returns
     ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Returns an error if the target qubit is out of bounds for the state vector
-    pub fn ry_phase_dag(
-        &self,
-        qubit: usize,
-        angle: f64,
-        phase: f64,
-    ) -> Result<Self, Error> {
+    pub fn ry_phase_dag(&self, qubit: usize, angle: f64, phase: f64) -> Result<Self, Error> {
         Unitary2::from_ry_phase_dagger(angle, phase).apply(self, &[qubit], &[])
     }
 
     /// Applies the Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
     /// This is the adjoint of the ry_phase operation.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `qubits` - The indices of the qubits to apply the adjoint ry_phase operation to.
-    /// 
+    ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// * `phase` - The phase shift angle in radians.
-    /// 
+    ///
     /// # Returns
     ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
-    /// 
+    ///
     /// # Errors
     ///
     /// * Returns an error if the number of qubits provided is invalid.
-    /// 
+    ///
     /// * Returns an error if the indices are out of bounds for the state vector.
     pub fn ry_phase_dag_multi(
         &self,
@@ -2078,17 +2174,17 @@ impl State {
 
     /// Applies the controlled Unitary (constructed from rotation angle and phase shift) to the specified qubits in the state vector in the given order.
     /// This is the controlled adjoint of the ry_phase operation.
-    /// 
+    ///
     /// # Arguments
     ///
     /// * `target_qubits` - The index of the target qubit.
-    /// 
+    ///
     /// * `control_qubits` - The indices of the control qubits.
     ///
     /// * `angle` - The rotation angle in radians.
-    /// 
+    ///
     /// * `phase` - The phase shift angle in radians.
-    /// 
+    ///
     /// # Returns
     ///
     /// * `Result` - A result containing the new state object if successful, or an error if the operation fails.
