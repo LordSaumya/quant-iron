@@ -125,6 +125,9 @@ impl TryFrom<&Circuit> for CompilableCircuit {
                 },
                 Gate::Parametric(_, _, _) => {
                     unreachable!("All parametric gates should be converted to concrete gates before compilation")
+                },
+                Gate::PauliString(_) => {
+                    unreachable!("All Pauli strings should be converted to Pauli gates before compilation")
                 }
             }
         }
