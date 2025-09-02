@@ -1,6 +1,6 @@
 use crate::{components::state::State, errors::Error};
 use num_complex::Complex;
-use std::f64::consts::PI;
+use std::f64::consts::{PI, FRAC_1_SQRT_2};
 
 #[test]
 fn test_state_new_success() {
@@ -121,6 +121,26 @@ fn test_state_new_minus_errors() {
     // Invalid number of qubits
     let state: Result<State, Error> = State::new_minus(0);
 
+    assert!(state.is_err());
+    assert_eq!(state.unwrap_err(), Error::InvalidNumberOfQubits(0));
+}
+
+#[test]
+fn test_state_new_ghz_success() {
+    let n: usize = 6;
+    let dim = (1 << n) - 1;
+    let ones_state = State::new_basis_n(n, dim).unwrap();
+    let zeros_state = State::new_zero(n).unwrap();
+    let expected_state = FRAC_1_SQRT_2 * (ones_state + zeros_state);
+
+    let ghz_state = State::new_ghz(n).unwrap();
+    assert_eq!(ghz_state, expected_state);
+}
+
+#[test]
+fn test_state_new_ghz_error() {
+    // Invalid number of qubits
+    let state: Result<State, Error> = State::new_ghz(0);
     assert!(state.is_err());
     assert_eq!(state.unwrap_err(), Error::InvalidNumberOfQubits(0));
 }
