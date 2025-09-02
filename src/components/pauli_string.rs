@@ -1,5 +1,5 @@
 use crate::{
-    components::{operator::Operator, operator::Pauli, state::State},
+    components::{operator::Operator, operator::Pauli, state::State, gate::Gate},
     errors::Error,
 };
 use num_complex::Complex;
@@ -94,6 +94,24 @@ impl PauliString {
     /// * `&HashMap<usize, Pauli>` - A reference to the mapping of qubit indices to Pauli operators.
     pub fn ops(&self) -> &HashMap<usize, Pauli> {
         &self.ops
+    }
+
+    /// Returns the list of targets of the Pauli string
+    /// 
+    /// # Returns
+    /// * `Vec<usize>` - A vector of qubit indices that the Pauli string acts upon.
+    pub fn get_targets(&self) -> Vec<usize> {
+        self.ops.keys().cloned().collect()
+    }
+
+    /// Converts the Pauli string to a vector of operator gates.
+    ///
+    /// # Returns
+    /// * `Vec<Gate>` - A vector of Gate structs representing the individual Pauli operators.
+    pub fn to_gates(&self) -> Vec<Gate> {
+        self.ops.iter().map(|(qubit, op)| {
+            Gate::Operator(Box::new(*op), vec![*qubit], vec![])
+        }).collect()
     }
 
     /// Applies the Pauli string to a given state.
