@@ -12,6 +12,7 @@ use crate::{
             },
         },
         state::State,
+        pauli_string::PauliString,
     },
     errors::{CompilerError, Error},
     subroutine::Subroutine,
@@ -41,7 +42,7 @@ impl Circuit {
     // Helper function to validate gate qubits
     fn _validate_gate_qubits(gate: &Gate, circuit_num_qubits: usize) -> Result<(), Error> {
         // Check if the gate's target qubits are within the circuit's qubit range
-        for &qubit in gate.get_target_qubits() {
+        for &qubit in &gate.get_target_qubits() {
             if qubit >= circuit_num_qubits {
                 return Err(Error::InvalidQubitIndex(qubit, circuit_num_qubits));
             }
@@ -200,13 +201,16 @@ impl Circuit {
         Ok(states)
     }
 
-    /// Converts a parametric circuit into a circuit with concrete gates.
+    /// Converts a circuit with Pauli string gates and parametric gates into a circuit with concrete `Gate::Operator` gates.
     pub(crate) fn to_concrete_circuit(&self) -> Self {
         let concrete_gates = self.gates.iter().flat_map(|g| {
             match g {
                 Gate::Parametric(p_gate, targets, controls) => {
                     p_gate.to_concrete_gates(targets, controls)
-                }
+                },
+                Gate::PauliString(pauli_string) => {
+                    pauli_string.to_gates()
+                },
                 _ => vec![g.clone()],
             }
         }).collect();
@@ -1118,6 +1122,18 @@ impl CircuitBuilder {
         target_qubit: usize,
     ) -> &mut Self {
         let gate: Gate = Gate::toffoli_gate(target_qubit, vec![control_qubit1, control_qubit2]);
+        self.add_gate(gate);
+        self
+    }
+
+    /// Adds a Pauli String gate to the circuit builder.
+    /// Note that the coefficient of the Pauli String is ignored in order to return a normalised state.
+    /// 
+    /// # Arguments
+    ///
+    /// * `pauli_string` - The Pauli string to be represented by the gate.
+    pub fn pauli_string_gate(&mut self, pauli_string: PauliString) -> &mut Self {
+        let gate: Gate = Gate::pauli_string_gate(pauli_string);
         self.add_gate(gate);
         self
     }
