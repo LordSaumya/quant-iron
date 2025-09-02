@@ -292,3 +292,32 @@ fn test_state_fs_fidelity_success() {
     // Check if F = cos^2(D)
     assert!((fidelity - (PI/4.0).cos().powi(2)).abs() < f64::EPSILON);
 }
+
+#[test]
+fn test_state_new_bell_states() {
+    let amplitude = Complex::new(FRAC_1_SQRT_2, 0.0);
+
+    // Test |Φ+⟩
+    let phi_plus = State::new_phi_plus();
+    let expected_phi_plus_vec = vec![amplitude, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), amplitude];
+    assert_eq!(phi_plus.num_qubits, 2);
+    assert_eq!(phi_plus.state_vector, expected_phi_plus_vec);
+
+    // Test |Φ-⟩
+    let phi_minus = State::new_phi_minus();
+    let expected_phi_minus_vec = vec![amplitude, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), -amplitude];
+    assert_eq!(phi_minus.num_qubits, 2);
+    assert_eq!(phi_minus.state_vector, expected_phi_minus_vec);
+
+    // Test |Ψ+⟩
+    let psi_plus = State::new_psi_plus();
+    let expected_psi_plus_vec = vec![Complex::new(0.0, 0.0), amplitude, amplitude, Complex::new(0.0, 0.0)];
+    assert_eq!(psi_plus.num_qubits, 2);
+    assert_eq!(psi_plus.state_vector, expected_psi_plus_vec);
+
+    // Test |Ψ-⟩
+    let psi_minus = State::new_psi_minus();
+    let expected_psi_minus_vec = vec![Complex::new(0.0, 0.0), amplitude, -amplitude, Complex::new(0.0, 0.0)];
+    assert_eq!(psi_minus.num_qubits, 2);
+    assert_eq!(psi_minus.state_vector, expected_psi_minus_vec);
+}
