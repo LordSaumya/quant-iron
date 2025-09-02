@@ -1,8 +1,6 @@
 use crate::{
     components::{
-        operator::Pauli,
-        pauli_string::{PauliString, SumOp},
-        state::{ChainableState, State},
+        gate::Gate, operator::Pauli, pauli_string::{PauliString, SumOp}, state::{ChainableState, State}
     },
     errors::Error,
 };
@@ -348,4 +346,43 @@ fn test_sumop_expectation_value() {
     let expected_result: Complex<f64> = Complex::new(-4.0, 0.0); // Expectation value of X on qubit 0 and Y on qubit 1
 
     assert_eq!(result, expected_result);
+}
+
+#[test]
+fn test_pauli_string_get_targets() {
+    let mut pauli_string: PauliString = PauliString::new(Complex::new(1.0, 0.0));
+    pauli_string.add_op(2, Pauli::X);
+    pauli_string.add_op(0, Pauli::Y);
+    pauli_string.add_op(1, Pauli::Z);
+
+    let mut targets: Vec<usize> = pauli_string.get_targets();
+    targets.sort();
+
+    let expected_targets: Vec<usize> = vec![0, 1, 2];
+
+    assert_eq!(targets, expected_targets);
+}
+
+#[test]
+fn test_pauli_string_to_gates() {
+    let mut pauli_string: PauliString = PauliString::new(Complex::new(1.0, 0.0));
+    pauli_string.add_op(2, Pauli::X);
+    pauli_string.add_op(0, Pauli::Y);
+    pauli_string.add_op(1, Pauli::Z);
+
+    let gates = pauli_string.to_gates();
+    assert_eq!(gates.len(), 3);
+
+    let expected_gates = vec![
+        Gate::x_gate(2),
+        Gate::y_gate(0),
+        Gate::z_gate(1),
+    ];
+
+    let gates_strings = gates.iter().map(|g| format!("{:?}", g)).collect::<Vec<String>>();
+    let expected_gates_strings = expected_gates.iter().map(|g| format!("{:?}", g)).collect::<Vec<String>>();
+
+    for str in gates_strings {
+        assert!(expected_gates_strings.contains(&str));
+    }
 }
