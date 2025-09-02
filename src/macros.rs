@@ -71,6 +71,7 @@
 /// - `cswap(target1, target2, control)` or `cswap(target1, target2, [controls])`
 /// - `matchgate(target, theta, phi1, phi2)`
 /// - `cmatchgate(target, control, theta, phi1, phi2)` or `cmatchgate(target, [controls], theta, phi1, phi2)`
+/// - `pauli_string(pauli_string)`
 ///
 /// ## Unitary Gates
 ///
@@ -123,6 +124,7 @@ macro_rules! circuit_internal {
     ($builder:ident, id([$($qubits:expr),*]), $($rest:tt)*) => { $builder.id_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, sdag([$($qubits:expr),*]), $($rest:tt)*) => { $builder.sdag_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
     ($builder:ident, tdag([$($qubits:expr),*]), $($rest:tt)*) => { $builder.tdag_gates(vec![$($qubits),*]); $crate::circuit_internal!($builder, $($rest)*); };
+    ($builder:ident, pauli_string($pauli_string:expr), $($rest:tt)*) => { $builder.pauli_string_gate($pauli_string); $crate::circuit_internal!($builder, $($rest)*); };
 
     // Single-qubit gates
     ($builder:ident, h($qubit:expr), $($rest:tt)*) => { $builder.h_gate($qubit); $crate::circuit_internal!($builder, $($rest)*); };
@@ -251,6 +253,7 @@ macro_rules! circuit_internal {
     ($builder:ident, id([$($qubits:expr),*])) => { $builder.id_gates(vec![$($qubits),*]); };
     ($builder:ident, sdag([$($qubits:expr),*])) => { $builder.sdag_gates(vec![$($qubits),*]); };
     ($builder:ident, tdag([$($qubits:expr),*])) => { $builder.tdag_gates(vec![$($qubits),*]); };
+    ($builder:ident, pauli_string($pauli_string:expr)) => { $builder.pauli_string_gate($pauli_string); };
 
     // Single-qubit gates
     ($builder:ident, h($qubit:expr)) => { $builder.h_gate($qubit); };
