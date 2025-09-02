@@ -9,6 +9,7 @@ use num_complex::Complex;
 use rand::Rng;
 use rayon::prelude::*;
 use std::ops::{Add, Mul, Sub};
+use std::f64::consts::FRAC_1_SQRT_2;
 
 // Helper function to calculate the adjoint (conjugate transpose) of a 2x2 matrix
 fn calculate_adjoint(matrix: &[[Complex<f64>; 2]; 2]) -> [[Complex<f64>; 2]; 2] {
@@ -239,6 +240,42 @@ impl State {
         })
     }
 
+    /// Creates a new Greenberger–Horne–Zeilinger state object with the given number of qubits initialised to the |GHZ> state.
+    /// The GHZ state is the maximally entangled state 1/sqrt(2) * (|0...0> + |1...1>).
+    ///
+    /// # Arguments
+    ///
+    /// * `num_qubits` - The number of qubits in the system.
+    ///
+    /// # Returns
+    ///
+    /// * `state` - A result containing a new state object with the specified number of qubits, initialised to the |GHZ> state or an error if the number of qubits is invalid.
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the number of qubits is 0.
+    pub fn new_ghz(num_qubits: usize) -> Result<Self, Error> {
+        if num_qubits == 0 {
+            return Err(Error::InvalidNumberOfQubits(num_qubits));
+        }
+        let dim: usize = 1 << num_qubits;
+        let amplitude: Complex<f64> = Complex::new(FRAC_1_SQRT_2, 0.0);
+        let state_vector: Vec<Complex<f64>> = (0..dim)
+            .map(|i| {
+                if i == 0 || i == dim - 1 {
+                    amplitude
+                } else {
+                    Complex::new(0.0, 0.0)
+                }
+            })
+            .collect();
+
+        Ok(Self {
+            state_vector,
+            num_qubits,
+        })
+    }
+
     /// Checks the phase-independent equality of two states
     /// 
     /// # Arguments
@@ -318,8 +355,6 @@ impl State {
         }
         Ok(self.state_vector[n])
     }
-
-
 
     /// Returns the Fubini-Study metric distance between two normalised quantum states.
     /// Expressed as `D = arccos(<Self|Other>) = arccos(F^0.5)`.
