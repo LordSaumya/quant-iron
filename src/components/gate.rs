@@ -1,14 +1,10 @@
 use crate::{
     components::{
-        measurement::MeasurementBasis,
-        operator::{
-            CNOT, Hadamard, Identity, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT,
-            PhaseTdag, RotateX, RotateY, RotateZ, SWAP, Toffoli, Unitary2, Matchgate
-        },
-        state::State,
-        parametric::parametric_gate::ParametricGate,
+        measurement::MeasurementBasis, operator::{
+            Hadamard, Identity, Matchgate, Operator, Pauli, PhaseS, PhaseSdag, PhaseShift, PhaseT, PhaseTdag, RotateX, RotateY, RotateZ, Toffoli, Unitary2, CNOT, SWAP
+        }, parametric::parametric_gate::ParametricGate, state::State
     },
-    errors::Error,
+    errors::Error, PauliString,
 };
 use num_complex::Complex;
 
@@ -36,6 +32,13 @@ pub enum Gate {
 
     /// Represents a parametric gate.
     Parametric(Box<dyn ParametricGate>, Vec<usize>, Vec<usize>),
+
+    /// Represents a Pauli String gate.
+    ///
+    /// # Fields
+    ///
+    /// * `PauliString` - The Pauli String operator.
+    PauliString(PauliString),
 }
 
 impl Gate {
@@ -99,6 +102,9 @@ impl Gate {
                         gate.apply(&current_state)
                     })
             }
+            Gate::PauliString(pauli_string) => {
+                pauli_string.apply_normalised(state)
+            }
         }
     }
 
@@ -106,12 +112,13 @@ impl Gate {
     ///
     /// # Returns
     ///
-    /// * `&Vec<usize>` - A vector of indices of the qubits on which the gate acts.
-    pub fn get_target_qubits(&self) -> &Vec<usize> {
+    /// * `Vec<usize>` - A vector of indices of the qubits on which the gate acts.
+    pub fn get_target_qubits(&self) -> Vec<usize> {
         match self {
-            Gate::Operator(_, target_indices, _) => target_indices,
-            Gate::Measurement(_, indices) => indices,
-            Gate::Parametric(_, target_indices, _) => target_indices,
+            Gate::Operator(_, target_indices, _) => target_indices.clone(),
+            Gate::Measurement(_, indices) => indices.clone(),
+            Gate::Parametric(_, target_indices, _) => target_indices.clone(),
+            Gate::PauliString(pauli_string) => pauli_string.get_targets(),
         }
     }
 
@@ -125,6 +132,7 @@ impl Gate {
             Gate::Operator(_, _, control_indices) => Some(control_indices),
             Gate::Measurement(_, _) => None,
             Gate::Parametric(_, _, control_indices) => Some(control_indices),
+            Gate::PauliString(_) => None,
         }
     }
 
@@ -1146,7 +1154,6 @@ impl Gate {
     /// # Arguments
     ///
     /// * `target_index` - The index of the target qubit.
-    ///
     /// * `control_indices` - The indices of the control qubits.
     ///
     /// # Returns
@@ -1154,6 +1161,19 @@ impl Gate {
     /// * `Gate` - A new instance of the Gate struct representing a Toffoli gate.
     pub fn toffoli_gate(target_index: usize, control_indices: Vec<usize>) -> Self {
         Gate::Operator(Box::new(Toffoli), vec![target_index], control_indices)
+    }
+
+    /// Creates a new PauliString gate with the specified Pauli String.
+    ///
+    /// # Arguments
+    ///
+    /// * `pauli_string` - The Pauli string to be represented by the gate.
+    ///
+    /// # Returns
+    ///
+    /// * `Gate` - A new instance of the Gate struct representing a PauliString gate.
+    pub fn pauli_string_gate(pauli_string: PauliString) -> Self {
+        Gate::PauliString(pauli_string)
     }
 
     /// Creates a new Matchgate with the specified qubit index and its adjacent as targets.
