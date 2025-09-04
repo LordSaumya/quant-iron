@@ -1138,6 +1138,22 @@ impl CircuitBuilder {
         self
     }
 
+    /// Adds a Pauli time evolution gate to the circuit builder.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `pauli_string` - The Pauli string to be represented by the gate.
+    /// * `time` - The time parameter for the evolution.
+    /// 
+    /// # Warning
+    /// 
+    /// This gate is not yet compilable to OpenQASM.
+    pub fn pauli_time_evolution_gate(&mut self, pauli_string: PauliString, time: f64) -> &mut Self {
+        let gate: Gate = Gate::pauli_time_evolution_gate(pauli_string, time);
+        self.add_gate(gate);
+        self
+    }
+
     /// Adds a Matchgate to the circuit builder.
     ///
     /// # Arguments
