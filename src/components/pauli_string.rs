@@ -261,6 +261,31 @@ impl PauliString {
         Ok(term_identity_part + term_operator_part)
     }
 
+    /// Applies the exponential of the Pauli string to the given state with a negative imaginary factor.
+    /// Represents a time evolution step of the form exp(-i * coefficient * P_ops * dt).
+    /// Guaranteed to return a normalised state if the input state is normalised.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `state` - The state to which the exponential of the Pauli string is applied.
+    /// * `dt` - The time step for the evolution.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Result<State, Error>` - The resulting state after applying the exponential of the Pauli string with the negative imaginary factor, or an error if the operation fails.
+    /// 
+    /// # Errors
+    /// 
+    /// * Returns an error if the operations in the Pauli string refer to qubits outside the range of the state.
+    /// * Returns an error if the coefficient for the Pauli string has an imaginary component.
+    pub fn apply_exp_neg_i_dt(&self, state: &State, dt: f64) -> Result<State, Error> {
+            if self.coefficient.im != 0.0 {
+                return Err(Error::InvalidPauliStringCoefficient(self.coefficient));
+            }
+            let factor: Complex<f64> = Complex::new(0.0, -dt);
+            self.apply_exp_factor(state, factor)
+    }
+
     /// Returns the Hermitian conjugate of the Pauli string.
     ///
     /// # Returns
