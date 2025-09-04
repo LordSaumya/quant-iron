@@ -3,7 +3,7 @@ use crate::compiler::compilable::Compilable;
 use crate::components::gpu_context::GpuKernelArgs;
 #[cfg(feature = "gpu")]
 use crate::components::gpu_context::{GPU_CONTEXT, KernelType};
-use crate::{components::state::State, errors::Error};
+use crate::{components::{state::State, pauli_string::PauliString}, errors::Error};
 use dyn_clone::DynClone;
 use num_complex::Complex;
 #[cfg(feature = "gpu")]
@@ -621,6 +621,18 @@ impl std::fmt::Display for Pauli {
             Pauli::Y => write!(f, "Y"),
             Pauli::Z => write!(f, "Z"),
         }
+    }
+}
+
+impl Pauli {
+    /// Returns the Pauli string representation of the operator.
+    /// 
+    /// # Returns
+    /// * A Pauli string with the specified Pauli operator on the target qubit and a coefficient of 1.0.
+    pub fn to_pauli_string(&self, target_qubit: usize) -> PauliString {
+        let mut pauli_map = std::collections::HashMap::new();
+        pauli_map.insert(target_qubit, *self);
+        PauliString::with_ops(1.0.into(), pauli_map)
     }
 }
 
