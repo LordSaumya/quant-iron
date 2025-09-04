@@ -67,7 +67,7 @@ Add `quant-iron` to your Cargo.toml:
 
 ```toml
 [dependencies]
-quant-iron = "0.1.0"
+quant-iron = "2.0.0"
 ```
 
 Or via cargo:
