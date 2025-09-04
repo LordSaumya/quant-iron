@@ -1,6 +1,9 @@
 use crate::{
     components::{
-        gate::Gate, operator::Pauli, pauli_string::{PauliString, SumOp}, state::{ChainableState, State}
+        gate::Gate,
+        operator::Pauli,
+        pauli_string::{PauliString, SumOp},
+        state::{ChainableState, State},
     },
     errors::Error,
 };
@@ -16,6 +19,18 @@ fn test_pauli_string_new() {
 
     assert_eq!(pauli_string.coefficient(), coefficient);
     assert_eq!(pauli_string.ops().len(), 0);
+}
+
+#[test]
+fn test_pauli_string_len() {
+    let mut pauli_string = PauliString::new(Complex::new(1.0, 0.0));
+    assert_eq!(pauli_string.len(), 0);
+
+    pauli_string.add_op(0, Pauli::X);
+    assert_eq!(pauli_string.len(), 1);
+
+    pauli_string.add_op(1, Pauli::Y);
+    assert_eq!(pauli_string.len(), 2);
 }
 
 #[test]
@@ -373,16 +388,74 @@ fn test_pauli_string_to_gates() {
     let gates = pauli_string.to_gates();
     assert_eq!(gates.len(), 3);
 
-    let expected_gates = vec![
-        Gate::x_gate(2),
-        Gate::y_gate(0),
-        Gate::z_gate(1),
-    ];
+    let expected_gates = vec![Gate::x_gate(2), Gate::y_gate(0), Gate::z_gate(1)];
 
-    let gates_strings = gates.iter().map(|g| format!("{:?}", g)).collect::<Vec<String>>();
-    let expected_gates_strings = expected_gates.iter().map(|g| format!("{:?}", g)).collect::<Vec<String>>();
+    let gates_strings = gates
+        .iter()
+        .map(|g| format!("{:?}", g))
+        .collect::<Vec<String>>();
+    let expected_gates_strings = expected_gates
+        .iter()
+        .map(|g| format!("{:?}", g))
+        .collect::<Vec<String>>();
 
     for str in gates_strings {
         assert!(expected_gates_strings.contains(&str));
     }
+}
+
+#[test]
+fn test_pauli_string_apply_exp_neg_i_dt_success() {
+    use std::f64::consts::FRAC_1_SQRT_2;
+    use std::f64::consts::PI;
+
+    // Create a new pauli string
+    let ps = PauliString::new((0.5 * PI).into())
+        .with_op(0, Pauli::Z)
+        .with_op(1, Pauli::X);
+    let state: State = State::new_zero(2).unwrap();
+
+    // Apply gate
+    let result: Result<State, Error> = ps.apply_exp_neg_i_dt(&state, 0.5);
+    let expected_state_vector = vec![
+        Complex::new(FRAC_1_SQRT_2, 0.0),
+        Complex::new(0.0, 0.0),
+        Complex::new(0.0, -FRAC_1_SQRT_2),
+        Complex::new(0.0, 0.0),
+    ];
+    let expected_state = State::new(expected_state_vector).unwrap();
+
+    // Check if the result is correct
+    assert!(result.is_ok());
+    let result_state = result.unwrap();
+    assert_eq!(result_state, expected_state);
+
+    // Apply gate with zero time step
+    let result_zero: Result<State, Error> = ps.apply_exp_neg_i_dt(&state, 0.0);
+    assert!(result_zero.is_ok());
+    let result_zero_state = result_zero.unwrap();
+    assert_eq!(result_zero_state, state);
+}
+
+#[test]
+fn test_pauli_string_apply_exp_neg_i_dt_error() {
+    // Create a new pauli string with incorrect number of qubits
+    let ps = PauliString::new((0.5 * std::f64::consts::PI).into())
+        .with_op(0, Pauli::Z)
+        .with_op(1, Pauli::X);
+    let state: State = State::new_zero(1).unwrap(); // Incorrect number of qubits
+
+    // Apply gate
+    let result: Result<State, Error> = ps.apply_exp_neg_i_dt(&state, 0.5);
+
+    // Check if the result is an error
+    assert!(result.is_err());
+
+    // Create a new pauli string where the coefficient has imaginary part
+    let ps_imag = PauliString::new(Complex::new(1.0, 1.0))
+        .with_op(0, Pauli::Z)
+        .with_op(1, Pauli::X);
+    let state_imag: State = State::new_zero(2).unwrap();
+    let result_imag: Result<State, Error> = ps_imag.apply_exp_neg_i_dt(&state_imag, 0.5);
+    assert!(result_imag.is_err());
 }
