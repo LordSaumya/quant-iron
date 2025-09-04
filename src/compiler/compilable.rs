@@ -128,6 +128,9 @@ impl TryFrom<&Circuit> for CompilableCircuit {
                 },
                 Gate::PauliString(_) => {
                     unreachable!("All Pauli strings should be converted to Pauli gates before compilation")
+                },
+                Gate::PauliTimeEvolution(_, _) => {
+                    unimplemented!("Compilation for Pauli time evolution gates is not yet implemented")
                 }
             }
         }
