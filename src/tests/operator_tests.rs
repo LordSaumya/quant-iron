@@ -485,6 +485,47 @@ fn test_operator_pauli_z_success() {
 }
 
 #[test]
+fn test_operator_pauli_to_pauli_string_success() {
+    // Test conversion from Pauli enum to PauliString struct
+    let pauli_x = Pauli::X;
+    let pauli_y = Pauli::Y;
+    let pauli_z = Pauli::Z;
+
+    let pauli_string_x = pauli_x.to_pauli_string(0);
+    let pauli_string_y = pauli_y.to_pauli_string(0);
+    let pauli_string_z = pauli_z.to_pauli_string(0);
+
+    assert_eq!(pauli_string_x.len(), 1);
+    assert_eq!(pauli_string_y.len(), 1);
+    assert_eq!(pauli_string_z.len(), 1);
+
+    assert_eq!(pauli_string_x.get_targets(), vec![0]);
+    assert_eq!(pauli_string_y.get_targets(), vec![0]);
+    assert_eq!(pauli_string_z.get_targets(), vec![0]);
+
+    // Test that applying the PauliString gives the same result as applying the Pauli operator
+    let zero_state: State = State::new_zero(1).unwrap();
+    let one_state: State = State::new_basis_n(1, 1).unwrap();
+    let plus_state: State = State::new_plus(1).unwrap();
+    let minus_state: State = State::new_minus(1).unwrap();
+
+    assert_eq!(zero_state.x(0).unwrap(), pauli_string_x.apply(&zero_state).unwrap());
+    assert_eq!(one_state.x(0).unwrap(), pauli_string_x.apply(&one_state).unwrap());
+    assert_eq!(plus_state.x(0).unwrap(), pauli_string_x.apply(&plus_state).unwrap());
+    assert_eq!(minus_state.x(0).unwrap(), pauli_string_x.apply(&minus_state).unwrap());
+    
+    assert_eq!(zero_state.y(0).unwrap(), pauli_string_y.apply(&zero_state).unwrap());
+    assert_eq!(one_state.y(0).unwrap(), pauli_string_y.apply(&one_state).unwrap());
+    assert_eq!(plus_state.y(0).unwrap(), pauli_string_y.apply(&plus_state).unwrap());
+    assert_eq!(minus_state.y(0).unwrap(), pauli_string_y.apply(&minus_state).unwrap());
+
+    assert_eq!(zero_state.z(0).unwrap(), pauli_string_z.apply(&zero_state).unwrap());
+    assert_eq!(one_state.z(0).unwrap(), pauli_string_z.apply(&one_state).unwrap());
+    assert_eq!(plus_state.z(0).unwrap(), pauli_string_z.apply(&plus_state).unwrap());
+    assert_eq!(minus_state.z(0).unwrap(), pauli_string_z.apply(&minus_state).unwrap());
+}
+
+#[test]
 fn test_operator_identity_success() {
     // i(|0>) = |0>
     // i(|1>) = |1>
