@@ -1,3 +1,5 @@
+use num_complex::Complex;
+
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
 pub enum Error {
     /// There is an invalid number of measurements
@@ -88,6 +90,10 @@ pub enum Error {
     /// The state cannot be normalised because it has zero norm.
     #[error("The state cannot be normalised because it has zero norm.")]
     ZeroNorm,
+
+    /// Invalid Pauli String coefficient
+    #[error("Invalid Pauli String coefficient: {0}")]
+    InvalidPauliStringCoefficient(Complex<f64>),
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
