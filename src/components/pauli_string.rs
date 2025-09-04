@@ -32,6 +32,15 @@ impl PauliString {
         }
     }
 
+    /// Returns the length of the Pauli string, defined as the number of operators it contains.
+    /// 
+    /// # Returns
+    /// 
+    /// * `usize` - The number of operators in the Pauli string.
+    pub fn len(&self) -> usize {
+        self.ops.len()
+    }
+
     /// Creates a new Pauli string with the given coefficient and a set of operators.
     ///
     /// # Arguments
