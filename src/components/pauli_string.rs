@@ -101,7 +101,9 @@ impl PauliString {
     /// # Returns
     /// * `Vec<usize>` - A vector of qubit indices that the Pauli string acts upon.
     pub fn get_targets(&self) -> Vec<usize> {
-        self.ops.keys().cloned().collect()
+        let mut keys = self.ops.keys().cloned().collect::<Vec<usize>>();
+        keys.sort();
+        keys
     }
 
     /// Converts the Pauli string to a vector of operator gates.
