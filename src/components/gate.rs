@@ -39,6 +39,16 @@ pub enum Gate {
     ///
     /// * `PauliString` - The Pauli String operator.
     PauliString(PauliString),
+
+    /// Represents a Pauli time evolution gate.
+    /// WARNING: This gate is not yet supported in the compiler and cannot be used in circuits that need to be compiled.
+    /// The compiler will panic if this gate is encountered during compilation.
+    ///
+    /// # Fields
+    /// 
+    /// * `PauliString` - The Pauli String operator.
+    /// * `time` - The time parameter for the evolution.
+    PauliTimeEvolution(PauliString, f64),
 }
 
 impl Gate {
@@ -105,6 +115,9 @@ impl Gate {
             Gate::PauliString(pauli_string) => {
                 pauli_string.apply_normalised(state)
             }
+            Gate::PauliTimeEvolution(pauli_string, time) => {
+                pauli_string.apply_exp_neg_i_dt(state, *time)
+            }
         }
     }
 
@@ -119,6 +132,7 @@ impl Gate {
             Gate::Measurement(_, indices) => indices.clone(),
             Gate::Parametric(_, target_indices, _) => target_indices.clone(),
             Gate::PauliString(pauli_string) => pauli_string.get_targets(),
+            Gate::PauliTimeEvolution(pauli_string, _) => pauli_string.get_targets(),
         }
     }
 
@@ -133,6 +147,7 @@ impl Gate {
             Gate::Measurement(_, _) => None,
             Gate::Parametric(_, _, control_indices) => Some(control_indices),
             Gate::PauliString(_) => None,
+            Gate::PauliTimeEvolution(_, _) => None,
         }
     }
 
@@ -1174,6 +1189,20 @@ impl Gate {
     /// * `Gate` - A new instance of the Gate struct representing a PauliString gate.
     pub fn pauli_string_gate(pauli_string: PauliString) -> Self {
         Gate::PauliString(pauli_string)
+    }
+
+    /// Creates a new Pauli time evolution gate with the specified Pauli String and time.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `pauli_string` - The Pauli string to be represented by the gate.
+    /// * `time` - The time parameter for the evolution.
+    /// 
+    /// # Returns
+    /// 
+    /// * `Gate` - A new instance of the Gate struct representing a Pauli time evolution gate.
+    pub fn pauli_time_evolution_gate(pauli_string: PauliString, time: f64) -> Self {
+        Gate::PauliTimeEvolution(pauli_string, time)
     }
 
     /// Creates a new Matchgate with the specified qubit index and its adjacent as targets.
